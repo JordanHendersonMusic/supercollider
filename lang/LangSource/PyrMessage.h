@@ -40,4 +40,4 @@ void returnFromBlock(VMGlobals* g);
 void returnFromMethod(VMGlobals* g);
 void executeMethod(VMGlobals* g, PyrMethod* meth, long numArgsPushed);
 void executeMethodWithKeys(VMGlobals* g, PyrMethod* meth, long allArgsPushed, long numKeyArgsPushed);
-int keywordFixStack(VMGlobals* g, PyrMethod* meth, PyrMethodRaw* methraw, long allArgsPushed, long numKeyArgsPushed);
+int keywordFixStack(VMGlobals* g, PyrMethod* meth, RawMethodProxy methraw, long allArgsPushed, long numKeyArgsPushed);

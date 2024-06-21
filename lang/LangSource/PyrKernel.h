@@ -117,35 +117,34 @@ struct PyrThread : public PyrObjectHdr {
 #define EVALSTACKDEPTH 512
 
 
-struct PyrMethodRaw {
-#ifdef PYR_SLOTS_GENERIC
-    long padding; // used for the tag in the generic pyrslot implementation
-#endif
-    unsigned short unused1;
-    unsigned short specialIndex;
-    unsigned short methType;
-    unsigned short frameSize;
+struct RawMethodProxy {
+    struct Slot1 {
+        unsigned short unused1;
+        unsigned short specialIndex;
+        unsigned short methType;
+        unsigned short frameSize;
+    } * first;
 
-#ifdef PYR_SLOTS_GENERIC
-    long padding2; // used for the tag in generic pyrslot implementation, second slot
-#endif
+    struct Slot2 {
+        unsigned char unused2;
+        unsigned char numargs;
+        unsigned char varargs;
+        unsigned char numvars;
+        unsigned char numtemps;
+        unsigned char needsHeapContext;
+        unsigned char popSize;
+        unsigned char posargs;
+    } * second;
 
-    unsigned char unused2;
-    unsigned char numargs;
-    unsigned char varargs;
-    unsigned char numvars;
-    unsigned char numtemps;
-    unsigned char needsHeapContext;
-    unsigned char popSize;
-    unsigned char posargs;
+    static_assert(sizeof(RawMethodProxy::Slot1) == sizeof(PyrSlot));
+    static_assert(sizeof(RawMethodProxy::Slot2) == sizeof(PyrSlot));
 };
 
 
-#define METHRAW(obj) ((PyrMethodRaw*)&(((PyrBlock*)obj)->rawData1))
-
 struct PyrBlock : public PyrObjectHdr {
-    PyrSlot rawData1;
-    PyrSlot rawData2;
+    PyrSlot rawMethodProxy1;
+    PyrSlot rawMethodProxy2;
+    //
     PyrSlot code; // byte codes, nil if inlined
     PyrSlot selectors; // method selectors, class names, closures table
     PyrSlot constants; // floating point constants table (to alleviate the literal table problem)
@@ -155,6 +154,11 @@ struct PyrBlock : public PyrObjectHdr {
     PyrSlot varNames; // ***variables in block
     PyrSlot sourceCode; // source code if it is a closed function.
 };
+
+[[nodiscard]] inline RawMethodProxy getRawMethodProxy(PyrBlock* b) noexcept {
+    return { reinterpret_cast<RawMethodProxy::Slot1*>(&b->rawMethodProxy1),
+             reinterpret_cast<RawMethodProxy::Slot2*>(&b->rawMethodProxy2) };
+}
 
 struct PyrMethod : public PyrBlock {
     PyrSlot ownerclass;

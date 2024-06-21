@@ -1231,8 +1231,8 @@ bool detectSendSelectorIn(PyrBlock* theBlock, PyrSymbol* testSelector) {
     unsigned char *ip, *ipbeg, *ipend;
 
     if (slotRawInt8Array(&theBlock->code) == nullptr) {
-        PyrMethodRaw* methraw = METHRAW(theBlock);
-        switch (methraw->methType) {
+        RawMethodProxy methraw = getRawMethodProxy(theBlock);
+        switch (methraw.first->methType) {
         case methRedirect:
         case methRedirectSuper:
         case methForwardInstVar:

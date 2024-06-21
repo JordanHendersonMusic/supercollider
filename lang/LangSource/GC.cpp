@@ -1028,8 +1028,8 @@ bool PyrGC::BlackToWhiteCheck(PyrObject* objA) {
                             // jmc: black stack frames pointing to white nodes can be ignore
                             PyrFrame* frameA = (PyrFrame*)objA;
                             PyrMethod* meth = slotRawMethod(&frameA->method);
-                            PyrMethodRaw* methraw = METHRAW(meth);
-                            if (methraw->needsHeapContext)
+                            RawMethodProxy methraw = getRawMethodProxy(meth);
+                            if (methraw.second->needsHeapContext)
                                 continue;
                         }
 #if DUMPINSANITY

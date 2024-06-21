@@ -1540,7 +1540,7 @@ void addIntrinsicClassVar(PyrClass* classobj, const char* varName, PyrSlot* slot
 
 void initClasses() {
     PyrClass* class_object_meta;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
 
     // BOOTSTRAP THE OBJECT HIERARCHY
 
@@ -1548,8 +1548,8 @@ void initClasses() {
     gClassList = nullptr;
     gNullMethod = newPyrMethod();
     SetSymbol(&gNullMethod->name, (PyrSymbol*)nullptr);
-    methraw = METHRAW(gNullMethod);
-    methraw->methType = methNormal;
+    methraw = getRawMethodProxy(gNullMethod);
+    methraw.first->methType = methNormal;
 
     // build intrinsic classes
     class_class = nullptr;
@@ -2207,7 +2207,7 @@ void DumpFrame(PyrFrame* frame) {
     char str[256];
     int i, numargs;
     PyrMethod* meth;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
 
     if (FrameSanity(frame, "DumpFrame")) {
         post("FRAME CORRUPTED\n");
@@ -2217,11 +2217,11 @@ void DumpFrame(PyrFrame* frame) {
     // slotString(&frame->method, str);
 
     meth = slotRawMethod(&frame->method);
-    methraw = METHRAW(meth);
-    if (methraw->numtemps) {
+    methraw = getRawMethodProxy(meth);
+    if (methraw.second->numtemps) {
         post("\t%s\n", str);
-        numargs = methraw->numargs + methraw->varargs;
-        for (i = 0; i < methraw->numtemps; ++i) {
+        numargs = methraw.second->numargs + methraw.second->varargs;
+        for (i = 0; i < methraw.second->numtemps; ++i) {
             slotOneWord(frame->vars + i, str);
             // slotString(frame->vars + i, str);
             if (i < numargs) {
@@ -2243,7 +2243,7 @@ void DumpDetailedFrame(PyrFrame* frame) {
     char str[256];
     int i, numargs;
     PyrMethod* meth;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
 
     if (FrameSanity(frame, "DumpDetailedFrame")) {
         post("FRAME CORRUPTED\n");
@@ -2253,12 +2253,12 @@ void DumpDetailedFrame(PyrFrame* frame) {
     // slotString(&frame->method, str);
 
     meth = slotRawMethod(&frame->method);
-    methraw = METHRAW(meth);
+    methraw = getRawMethodProxy(meth);
 
-    if (methraw->numtemps) {
+    if (methraw.second->numtemps) {
         post("\t%s\n", mstr);
-        numargs = methraw->numargs + methraw->varargs;
-        for (i = 0; i < methraw->numtemps; ++i) {
+        numargs = methraw.second->numargs + methraw.second->varargs;
+        for (i = 0; i < methraw.second->numtemps; ++i) {
             slotOneWord(frame->vars + i, str);
             // slotString(frame->vars + i, str);
             if (i < numargs) {
@@ -2272,9 +2272,9 @@ void DumpDetailedFrame(PyrFrame* frame) {
     }
 
     post("\t....%s details:\n", mstr);
-    post("\t\tneedsHeapContext  = %d\n", methraw->needsHeapContext);
-    post("\t\tnumtemps  = %d\n", methraw->numtemps);
-    post("\t\tpopSize  = %d\n", methraw->popSize);
+    post("\t\tneedsHeapContext  = %d\n", methraw.second->needsHeapContext);
+    post("\t\tnumtemps  = %d\n", methraw.second->numtemps);
+    post("\t\tpopSize  = %d\n", methraw.second->popSize);
 
     slotString(&frame->method, str);
     post("\t\tmethod  = %s\n", str);
@@ -2469,7 +2469,7 @@ PyrString* newPyrStringN(class PyrGC* gc, int length, int flags, bool runGC) {
 
 PyrBlock* newPyrBlock(int flags) {
     PyrBlock* block;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
 
 
     int32 numbytes = sizeof(PyrBlock) - sizeof(PyrObjectHdr);
@@ -2483,18 +2483,18 @@ PyrBlock* newPyrBlock(int flags) {
     block->size = numSlots;
 
     // clear out raw area
-    methraw = METHRAW(block);
-    methraw->specialIndex = 0;
-    methraw->methType = methBlock;
-    methraw->needsHeapContext = 0;
-    methraw->frameSize = 0;
-    methraw->varargs = 0;
-    methraw->numargs = 0;
-    methraw->numvars = 0;
-    methraw->numtemps = 0;
-    methraw->popSize = 0;
+    methraw = getRawMethodProxy(block);
+    methraw.first->specialIndex = 0;
+    methraw.first->methType = methBlock;
+    methraw.first->frameSize = 0;
+    methraw.second->needsHeapContext = 0;
+    methraw.second->varargs = 0;
+    methraw.second->numargs = 0;
+    methraw.second->numvars = 0;
+    methraw.second->numtemps = 0;
+    methraw.second->popSize = 0;
 
-    nilSlots(&block->rawData1, numSlots);
+    nilSlots(&block->rawMethodProxy1, numSlots);
     return block;
 }
 
@@ -2507,8 +2507,8 @@ PyrMethod* initPyrMethod(PyrMethod* method) {
     method->classptr = class_method;
     method->size = 0;
     method->size = numSlots;
-    SetFloat(&method->rawData1, 0.0);
-    SetFloat(&method->rawData2, 0.0);
+    SetFloat(&method->rawMethodProxy1, 0.0);
+    SetFloat(&method->rawMethodProxy2, 0.0);
     nilSlots(&method->code, numSlots - 2);
     // slotCopy(&method->byteMeter, &o_zero);
     // slotCopy(&method->callMeter, &o_zero);

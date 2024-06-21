@@ -489,7 +489,7 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
     PyrSymbol **inameslot, **cnameslot, **knameslot;
     PyrClass* metaclassobj;
     PyrMethod* method;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
     int instVarIndex, classVarIndex;
 
     // copy superclass's prototype to here
@@ -543,15 +543,15 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                 if (vardef->mFlags & rwReadOnly) {
                     // create getter method
                     method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
-                    methraw->popSize = 0;
+                    methraw = getRawMethodProxy(method);
+                    methraw.first->unused1 = 0;
+                    methraw.second->unused2 = 0;
+                    methraw.second->numargs = 1;
+                    methraw.second->numvars = 0;
+                    methraw.second->posargs = 1;
+                    methraw.second->varargs = 0;
+                    methraw.second->numtemps = 1;
+                    methraw.second->popSize = 0;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
                     SetObject(&method->ownerclass, classobj);
@@ -559,8 +559,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
                     SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
                     slotCopy(&method->name, &vardef->mVarName->mSlot);
-                    methraw->methType = methReturnInstVar;
-                    methraw->specialIndex = instVarIndex;
+                    methraw.first->methType = methReturnInstVar;
+                    methraw.first->specialIndex = instVarIndex;
                     addMethod(classobj, method);
                 }
                 if (vardef->mFlags & rwWriteOnly) {
@@ -573,15 +573,15 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     setterSym = getsym(setterName);
                     // create setter method
                     method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 2;
-                    methraw->numvars = 0;
-                    methraw->posargs = 2;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 2;
-                    methraw->popSize = 1;
+                    methraw = getRawMethodProxy(method);
+                    methraw.first->unused1 = 0;
+                    methraw.second->unused2 = 0;
+                    methraw.second->numargs = 2;
+                    methraw.second->numvars = 0;
+                    methraw.second->posargs = 2;
+                    methraw.second->varargs = 0;
+                    methraw.second->numtemps = 2;
+                    methraw.second->popSize = 1;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
                     SetObject(&method->ownerclass, classobj);
@@ -590,8 +590,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
                     SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
 
-                    methraw->methType = methAssignInstVar;
-                    methraw->specialIndex = instVarIndex;
+                    methraw.first->methType = methAssignInstVar;
+                    methraw.first->specialIndex = instVarIndex;
                     addMethod(classobj, method);
                 }
                 instVarIndex++;
@@ -609,15 +609,15 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                 if (vardef->mFlags & rwReadOnly) {
                     // create getter method
                     method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
-                    methraw->popSize = 0;
+                    methraw = getRawMethodProxy(method);
+                    methraw.first->unused1 = 0;
+                    methraw.second->unused2 = 0;
+                    methraw.second->numargs = 1;
+                    methraw.second->numvars = 0;
+                    methraw.second->posargs = 1;
+                    methraw.second->varargs = 0;
+                    methraw.second->numtemps = 1;
+                    methraw.second->popSize = 0;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
                     SetObject(&method->ownerclass, metaclassobj);
@@ -627,8 +627,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
                     SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
 
-                    methraw->methType = methReturnClassVar;
-                    methraw->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
+                    methraw.first->methType = methReturnClassVar;
+                    methraw.first->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
                     addMethod(metaclassobj, method);
                 }
                 if (vardef->mFlags & rwWriteOnly) {
@@ -641,13 +641,13 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     setterSym = getsym(setterName);
                     // create setter method
                     method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->numargs = 2;
-                    methraw->numvars = 0;
-                    methraw->posargs = 2;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 2;
-                    methraw->popSize = 1;
+                    methraw = getRawMethodProxy(method);
+                    methraw.second->numargs = 2;
+                    methraw.second->numvars = 0;
+                    methraw.second->posargs = 2;
+                    methraw.second->varargs = 0;
+                    methraw.second->numtemps = 2;
+                    methraw.second->popSize = 1;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
                     SetObject(&method->ownerclass, metaclassobj);
@@ -657,8 +657,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
                     SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
 
-                    methraw->methType = methAssignClassVar;
-                    methraw->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
+                    methraw.first->methType = methAssignClassVar;
+                    methraw.first->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
                     addMethod(metaclassobj, method);
                 }
                 classVarIndex++;
@@ -676,15 +676,15 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                 if (vardef->mFlags & rwReadOnly) {
                     // create getter method
                     method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
-                    methraw->popSize = 0;
+                    methraw = getRawMethodProxy(method);
+                    methraw.first->unused1 = 0;
+                    methraw.second->unused2 = 0;
+                    methraw.second->numargs = 1;
+                    methraw.second->numvars = 0;
+                    methraw.second->posargs = 1;
+                    methraw.second->varargs = 0;
+                    methraw.second->numtemps = 1;
+                    methraw.second->popSize = 0;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
                     SetObject(&method->ownerclass, metaclassobj);
@@ -693,7 +693,7 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
                     SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
 
-                    methraw->methType = methReturnLiteral;
+                    methraw.first->methType = methReturnLiteral;
                     slotCopy(&method->selectors, &litslot);
                     addMethod(metaclassobj, method);
                 }
@@ -1139,7 +1139,7 @@ void compilePyrMethodNode(PyrMethodNode* node, PyrSlot* result) { node->compile(
 
 void PyrMethodNode::compile(PyrSlot* result) {
     PyrMethod *method, *oldmethod;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
     int i, j, numArgs, numVars, methType, funcVarArgs, firstKeyIndex;
     int index, numSlots, numArgNames;
     bool hasPrimitive = false;
@@ -1187,9 +1187,9 @@ void PyrMethodNode::compile(PyrSlot* result) {
     }
     SetObject(&method->ownerclass, gCompilingClass);
 
-    methraw = METHRAW(method);
-    methraw->unused1 = 0;
-    methraw->unused2 = 0;
+    methraw = getRawMethodProxy(method);
+    methraw.first->unused1 = 0;
+    methraw.second->unused2 = 0;
 
     // postfl("method %p raw %p\n", method, methraw);
     method->contextDef = o_nil;
@@ -1200,30 +1200,30 @@ void PyrMethodNode::compile(PyrSlot* result) {
     if (mPrimitiveName) {
         hasPrimitive = true;
         method->primitiveName = mPrimitiveName->mSlot;
-        methraw->specialIndex = slotRawSymbol(&mPrimitiveName->mSlot)->u.index;
+        methraw.first->specialIndex = slotRawSymbol(&mPrimitiveName->mSlot)->u.index;
     }
     gCompilingBlock = (PyrBlock*)method;
     gCompilingMethod = (PyrMethod*)method;
     gPartiallyAppliedFunction = nullptr;
     gInliningLevel = 0;
 
-    methraw->needsHeapContext = 0;
+    methraw.second->needsHeapContext = 0;
 
-    methraw->varargs = funcVarArgs = (mArglist && mArglist->mRest) ? 1 : 0;
+    methraw.second->varargs = funcVarArgs = (mArglist && mArglist->mRest) ? 1 : 0;
     numArgs = mArglist ? nodeListLength((PyrParseNode*)mArglist->mVarDefs) + 1 : 1;
     numVars = mVarlist ? nodeListLength((PyrParseNode*)mVarlist->mVarDefs) : 0;
 
     numSlots = numArgs + funcVarArgs + numVars;
-    methraw->frameSize = (numSlots + FRAMESIZE) * sizeof(PyrSlot);
+    methraw.first->frameSize = (numSlots + FRAMESIZE) * sizeof(PyrSlot);
 
-    methraw->numargs = numArgs;
-    methraw->numvars = numVars;
-    methraw->posargs = numArgs + funcVarArgs;
-    methraw->numtemps = numSlots;
-    methraw->popSize = numSlots - 1;
+    methraw.second->numargs = numArgs;
+    methraw.second->numvars = numVars;
+    methraw.second->posargs = numArgs + funcVarArgs;
+    methraw.second->numtemps = numSlots;
+    methraw.second->popSize = numSlots - 1;
     firstKeyIndex = numArgs + funcVarArgs;
 
-    numArgNames = methraw->posargs;
+    numArgNames = methraw.second->posargs;
 
     if (numSlots == 1) {
         slotCopy(&method->argNames, &o_argnamethis);
@@ -1366,11 +1366,11 @@ void PyrMethodNode::compile(PyrSlot* result) {
     } else if (hasPrimitive) {
         methType = methPrimitive;
         /*
-        if (getPrimitiveNumArgs(methraw->specialIndex) != numArgs) {
+        if (getPrimitiveNumArgs(methraw.first->specialIndex) != numArgs) {
             post("warning: number of arguments for method %s:%s does not match primitive %s. %d vs %d\n",
                 slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name,
-                getPrimitiveName(methraw->specialIndex)->name,
-                numArgs, getPrimitiveNumArgs(methraw->specialIndex));
+                getPrimitiveName(methraw.first->specialIndex)->name,
+                numArgs, getPrimitiveNumArgs(methraw.first->specialIndex));
         }
         */
     } else if (slotRawSymbol(&gCompilingMethod->name) == s_doesNotUnderstand) {
@@ -1403,15 +1403,15 @@ void PyrMethodNode::compile(PyrSlot* result) {
                     } else {
                         if (funcFindArg((PyrBlock*)method, slotRawSymbol(rslot), &index)) { // return arg ?
                             // eliminate the case where its an ellipsis or keyword argument
-                            if (index < methraw->numargs) {
+                            if (index < methraw.second->numargs) {
                                 methType = methReturnArg;
-                                methraw->specialIndex = index; // when you change sp to sp - 1
-                                // methraw->specialIndex = index - 1;
+                                methraw.first->specialIndex = index; // when you change sp to sp - 1
+                                // methraw.first->specialIndex = index - 1;
                             }
                         } else if (classFindInstVar(gCompilingClass, slotRawSymbol(rslot), &index)) {
                             // return inst var
                             methType = methReturnInstVar;
-                            methraw->specialIndex = index;
+                            methraw.first->specialIndex = index;
                         }
                     }
                 } else if (rtype == pn_CallNode) {
@@ -1422,7 +1422,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                     cnode = (PyrCallNode*)xnode;
                     methType = compareCallArgs(this, cnode, &specialIndex, &specialClass);
                     if (methType != methNormal) {
-                        methraw->specialIndex = specialIndex;
+                        methraw.first->specialIndex = specialIndex;
                         method->selectors = cnode->mSelector->mSlot;
                         if (specialClass)
                             method->constants = specialClass->name;
@@ -1442,7 +1442,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                 //	slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
                 if (classFindInstVar(gCompilingClass, slotRawSymbol(&anode->mVarName->mSlot), &index)) {
                     methType = methAssignInstVar;
-                    methraw->specialIndex = index;
+                    methraw.first->specialIndex = index;
                     // post("methAssignInstVar 3  %s:%s\n",
                     //	slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
                 }
@@ -1450,7 +1450,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
         }
     }
 
-    methraw->methType = methType;
+    methraw.first->methType = methType;
     // set primitive
     // optimize common cases
 
@@ -1730,17 +1730,17 @@ void PyrCallNodeBase::compilePartialApplication(int numCurryArgs, PyrSlot* resul
     PyrBlock* prevPartiallyAppliedFunction = gPartiallyAppliedFunction;
     gPartiallyAppliedFunction = block;
 
-    PyrMethodRaw* methraw = METHRAW(block);
-    methraw->unused1 = 0;
-    methraw->unused2 = 0;
+    RawMethodProxy methraw = getRawMethodProxy(block);
+    methraw.first->unused1 = 0;
+    methraw.second->unused2 = 0;
 
-    methraw->needsHeapContext = 0;
+    methraw.second->needsHeapContext = 0;
 
     SetObject(&block->contextDef, prevBlock);
     ////
-    methraw->varargs = 0;
+    methraw.second->varargs = 0;
 
-    methraw->frameSize = (numCurryArgs + FRAMESIZE) * sizeof(PyrSlot);
+    methraw.first->frameSize = (numCurryArgs + FRAMESIZE) * sizeof(PyrSlot);
     PyrObject* proto = newPyrArray(compileGC(), numCurryArgs, flags, false);
     proto->size = numCurryArgs;
     SetObject(&block->prototypeFrame, proto);
@@ -1751,12 +1751,12 @@ void PyrCallNodeBase::compilePartialApplication(int numCurryArgs, PyrSlot* resul
 
     SetNil(&block->varNames);
 
-    methraw->numargs = numCurryArgs;
-    methraw->numvars = 0;
-    methraw->posargs = numCurryArgs;
-    methraw->numtemps = numCurryArgs;
-    methraw->popSize = numCurryArgs;
-    methraw->methType = methBlock;
+    methraw.second->numargs = numCurryArgs;
+    methraw.second->numvars = 0;
+    methraw.second->posargs = numCurryArgs;
+    methraw.second->numtemps = numCurryArgs;
+    methraw.second->popSize = numCurryArgs;
+    methraw.first->methType = methBlock;
 
     {
         PyrSymbol* s_empty = getsym("_");
@@ -1789,7 +1789,7 @@ void PyrCallNodeBase::compilePartialApplication(int numCurryArgs, PyrSlot* resul
     if (!gFunctionCantBeClosed && gFunctionHighestExternalRef == 0) {
         SetNil(&block->contextDef);
     } else {
-        METHRAW(prevBlock)->needsHeapContext = 1;
+        getRawMethodProxy(prevBlock).second->needsHeapContext = 1;
     }
 
     gCompilingBlock = prevBlock;
@@ -1832,7 +1832,7 @@ void PyrCallNode::compileCall(PyrSlot* result) {
     int numArgs = nodeListLength(argnode);
     int numKeyArgs = nodeListLength(keynode);
     int isSuper = isSuperObjNode(argnode);
-    int numBlockArgs = METHRAW(gCompilingBlock)->numargs;
+    int numBlockArgs = getRawMethodProxy(gCompilingBlock).second->numargs;
 
     slotRawSymbol(&mSelector->mSlot)->flags |= sym_Called;
     index = conjureSelectorIndex((PyrParseNode*)mSelector, gCompilingBlock, isSuper, slotRawSymbol(&mSelector->mSlot),
@@ -3149,7 +3149,7 @@ void PyrSlotNode::compilePushLit(PyrSlot* result) {
 
             PyrBlock* block = slotRawBlock(&slot);
             if (NotNil(&block->contextDef)) {
-                METHRAW(gCompilingBlock)->needsHeapContext = 1;
+                getRawMethodProxy(gCompilingBlock).second->needsHeapContext = 1;
             }
         } else {
             COMPILENODE(literalObj, &slot, false);
@@ -3219,7 +3219,7 @@ void PyrSlotNode::compileLiteral(PyrSlot* result) {
 
             PyrBlock* block = slotRawBlock(result);
             if (NotNil(&block->contextDef)) {
-                METHRAW(gCompilingBlock)->needsHeapContext = 1;
+                getRawMethodProxy(gCompilingBlock).second->needsHeapContext = 1;
             }
         } else {
             COMPILENODE(literalObj, result, false);
@@ -3723,7 +3723,7 @@ PyrBlockNode* newPyrBlockNode(PyrArgListNode* arglist, PyrVarListNode* varlist, 
 
 void PyrBlockNode::compile(PyrSlot* slotResult) {
     PyrBlock *block, *prevBlock;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
     int i, j, numArgs, numVars, funcVarArgs;
     int numSlots, numArgNames, flags;
     PyrVarDefNode* vardef;
@@ -3752,9 +3752,9 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     PyrBlock* prevPartiallyAppliedFunction = gPartiallyAppliedFunction;
     gPartiallyAppliedFunction = nullptr;
 
-    methraw = METHRAW(block);
-    methraw->unused1 = 0;
-    methraw->unused2 = 0;
+    methraw = getRawMethodProxy(block);
+    methraw.first->unused1 = 0;
+    methraw.second->unused2 = 0;
 
     int endCharNo = linestarts[mLineno] + mCharno;
     int stringLength = endCharNo - mBeginCharNo;
@@ -3762,7 +3762,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     if (lastChar == 0)
         stringLength--;
 
-    methraw->needsHeapContext = 0;
+    methraw.second->needsHeapContext = 0;
     if (mIsTopLevel) {
         gCompilingClass = class_interpreter;
         SetNil(&block->contextDef);
@@ -3770,7 +3770,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         SetObject(&block->contextDef, prevBlock);
     }
 
-    methraw->varargs = funcVarArgs = (mArglist && mArglist->mRest) ? 1 : 0;
+    methraw.second->varargs = funcVarArgs = (mArglist && mArglist->mRest) ? 1 : 0;
     numArgs = mArglist ? nodeListLength((PyrParseNode*)mArglist->mVarDefs) : 0;
     numVars = mVarlist ? nodeListLength((PyrParseNode*)mVarlist->mVarDefs) : 0;
 
@@ -3781,7 +3781,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     }
 
     numSlots = numArgs + funcVarArgs + numVars;
-    methraw->frameSize = (numSlots + FRAMESIZE) * sizeof(PyrSlot);
+    methraw.first->frameSize = (numSlots + FRAMESIZE) * sizeof(PyrSlot);
     if (numSlots) {
         proto = newPyrArray(compileGC(), numSlots, flags, false);
         proto->size = numSlots;
@@ -3808,11 +3808,11 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         SetNil(&block->varNames);
     }
 
-    methraw->numargs = numArgs;
-    methraw->numvars = numVars;
-    methraw->posargs = numArgs + funcVarArgs;
-    methraw->numtemps = numSlots;
-    methraw->popSize = numSlots;
+    methraw.second->numargs = numArgs;
+    methraw.second->numvars = numVars;
+    methraw.second->posargs = numArgs + funcVarArgs;
+    methraw.second->numtemps = numSlots;
+    methraw.second->popSize = numSlots;
 
     // declare args
     if (numArgs) {
@@ -3917,7 +3917,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
             *slot = litval;
         }
     }
-    methraw->methType = methBlock;
+    methraw.first->methType = methBlock;
 
     // compile body
     initByteCodes();
@@ -4197,7 +4197,7 @@ bool findVarName(PyrBlock* func, PyrClass** classobj, PyrSymbol* name, int* varT
     int i, j, k;
     int numargs;
     PyrSymbol *argname, *varname;
-    PyrMethodRaw* methraw;
+    RawMethodProxy methraw;
 
     // postfl("->findVarName %s\n", name->name);
     // find var in enclosing blocks, instance, class
@@ -4210,8 +4210,8 @@ bool findVarName(PyrBlock* func, PyrClass** classobj, PyrSymbol* name, int* varT
 
     j = 0;
     while (func != nullptr) {
-        methraw = METHRAW(func);
-        numargs = methraw->posargs;
+        methraw = getRawMethodProxy(func);
+        numargs = methraw.second->posargs;
         for (i = 0; i < numargs; ++i) {
             argname = slotRawSymbolArray(&func->argNames)->symbols[i];
             // postfl("    %d %d arg '%s' '%s'\n", j, i, argname->name, name->name);
@@ -4226,7 +4226,7 @@ bool findVarName(PyrBlock* func, PyrClass** classobj, PyrSymbol* name, int* varT
                 return true;
             }
         }
-        for (i = 0, k = numargs; i < methraw->numvars; ++i, ++k) {
+        for (i = 0, k = numargs; i < methraw.second->numvars; ++i, ++k) {
             varname = slotRawSymbolArray(&func->varNames)->symbols[i];
             // postfl("    %d %d %d var '%s' '%s'\n", j, i, k, varname->name, name->name);
             if (varname == name) {
