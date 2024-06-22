@@ -154,7 +154,7 @@ TestUGen_RTAlloc : UnitTest {
 			cond.waitFor(1) { nonZeroOut.notNil };
 			if (nonZeroOut.notNil) {
 				this.assert(nonZeroOut,
-					"% allocPass test should produce non-zero output".format(name)
+					"% allocPass test should produce non-zero output, got %".format(name, nonZeroOut)
 				);
 			} {
 				this.assert(false, "% allocPass test should complete".format(name));
@@ -170,7 +170,7 @@ TestUGen_RTAlloc : UnitTest {
 			cond.waitFor(1) { zeroOut.notNil };
 			if (zeroOut.notNil) {
 				this.assert(zeroOut,
-					"% allocFail test should produce zero output".format(name.asString)
+					"% allocFail test should produce zero output, got %".format(name.asString, zeroOut)
 				);
 			} {
 				this.assert(false, "% allocFail test should complete".format(name.asString));
