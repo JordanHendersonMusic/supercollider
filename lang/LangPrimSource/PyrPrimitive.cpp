@@ -58,6 +58,7 @@
 #endif
 
 #include "SCDocPrim.h"
+#include "SCLogger.hpp"
 
 #include <boost/filesystem/path.hpp> // path
 
@@ -3386,6 +3387,8 @@ int nextPrimitiveIndex() { return gPrimitiveTable.size + 1; }
 
 
 void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
+    auto l =
+        sclog::log_scope(slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
 #ifdef GC_SANITYCHECK
     g->gc->SanityCheck();
 #endif
@@ -3449,6 +3452,8 @@ void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
 }
 
 void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int numKeyArgsPushed) {
+    auto l =
+        sclog::log_scope(slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
     int i, j, m, diff, err;
     PyrSlot *pslot, *qslot;
     int numArgsNeeded, numArgsPushed;

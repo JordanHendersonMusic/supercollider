@@ -1,6 +1,28 @@
 String[char] : RawArray {
 	classvar <>unixCmdActions;
 
+    *debug__beginLog {
+        _String_SCLogBegin
+		^this.primitiveFailed
+    }
+    *debug__endLog {
+        _String_SCLogEnd
+		^this.primitiveFailed
+    }
+	*debug__getLog {
+	    _String_SCLogAsString
+		^this.primitiveFailed
+	}
+	*debug__log { |f, path|
+	    var file;
+	    String.debug__beginLog;
+	    f.();
+	    String.debug__endLog;
+	    file = File(path, "w");
+	    file.write(String.debug__getLog);
+	    file.close;
+	}
+
 	*initClass {
 		unixCmdActions = IdentityDictionary.new;
 	}

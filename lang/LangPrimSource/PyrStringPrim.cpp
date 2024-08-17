@@ -50,8 +50,31 @@ Primitives for String.
 
 #include <yaml-cpp/yaml.h>
 
+#include "SCLogger.hpp"
+
 using namespace std;
 namespace bfs = boost::filesystem;
+
+int prSCLogBegin(struct VMGlobals* g, int numArgsPushed) {
+    sclog::begin_logging();
+    return errNone;
+}
+int prSCLogEnd(struct VMGlobals* g, int numArgsPushed) {
+    sclog::end_logging();
+    return errNone;
+}
+
+int prSCLogAsString(struct VMGlobals* g, int numArgsPushed) {
+    std::stringstream ss;
+    sclog::print_log(ss);
+
+    PyrSlot* a = g->sp;
+
+    auto strraw = ss.str();
+    PyrString* str = newPyrString(g->gc, strraw.data(), 0, true);
+    SetObject(a, str);
+    return errNone;
+}
 
 int prStringAsSymbol(struct VMGlobals* g, int numArgsPushed) {
     PyrSlot* a;
@@ -981,6 +1004,9 @@ void initStringPrimitives() {
 
     base = nextPrimitiveIndex();
 
+    definePrimitive(base, index++, "_String_SCLogBegin", prSCLogBegin, 1, 0);
+    definePrimitive(base, index++, "_String_SCLogEnd", prSCLogEnd, 1, 0);
+    definePrimitive(base, index++, "_String_SCLogAsString", prSCLogAsString, 1, 0);
     definePrimitive(base, index++, "_StringCompare", prStringCompare, 3, 0);
     definePrimitive(base, index++, "_StringHash", prStringHash, 1, 0);
     definePrimitive(base, index++, "_StringPathMatch", prString_PathMatch, 1, 0);

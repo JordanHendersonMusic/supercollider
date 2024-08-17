@@ -29,6 +29,8 @@
 #include "PyrObjectProto.h"
 #include "SCBase.h"
 
+#include "SCLogger.hpp"
+
 #include <optional>
 #include <csetjmp>
 
@@ -515,6 +517,8 @@ inline PyrFrame* createFrameForExecuteMethod(VMGlobals* g, PyrBlock* block) {
 }
 
 HOT void executeMethod(VMGlobals* g, PyrBlock* meth, long totalNumArgsPushed, long numKwArgsPushed) {
+    sclog::begin_scope(slotRawSymbol(&slotRawClass(&((PyrMethod*)meth)->ownerclass)->name)->name,
+                       slotRawSymbol(&((PyrMethod*)meth)->name)->name);
     prepForTailCall(g);
     const GCSanityChecker gc_sanity_checker(g, "executeMethod");
 
@@ -523,6 +527,7 @@ HOT void executeMethod(VMGlobals* g, PyrBlock* meth, long totalNumArgsPushed, lo
 
     g->execMethod = numKwArgsPushed == 0 ? 20 : 10;
     g->method = (PyrMethod*)meth;
+
     g->ip = slotRawInt8Array(&meth->code)->b - 1;
     g->frame = callFrame;
     g->block = (PyrBlock*)meth;
@@ -594,6 +599,9 @@ HOT void returnFromMethod(VMGlobals* g) {
     PyrMethod* meth;
     PyrMethodRaw* methraw;
     curframe = g->frame;
+
+    sclog::end_scope(slotRawSymbol(&slotRawClass(&g->method->ownerclass)->name)->name,
+                     slotRawSymbol(&g->method->name)->name);
 
     homeContext = slotRawFrame(&slotRawFrame(&curframe->context)->homeContext);
     if (homeContext == nullptr) {
