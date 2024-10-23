@@ -33,8 +33,12 @@ ListPattern : Pattern {
 		if (list.size > 0) {
 			^super.new.list_(list).repeats_(repeats)
 		}{
+			if (list.isKindOf(Pattern)){
+				^super.new.list_([list].flatten).repeats_(repeats)
+			} {
 			Error("ListPattern (" ++ this.name ++ ") requires a non-empty collection; received "
 				++ list ++ ".").throw;
+			}
 		}
 	}
 	copy {
