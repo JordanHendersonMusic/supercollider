@@ -998,6 +998,78 @@ HOT int blockValueWithKeys(struct VMGlobals* g, int allArgsPushed, int numKeyArg
     return errNone;
 }
 
+
+int blockValueArgs(struct VMGlobals* g, int numArgsPushed) {
+    auto receiverSlot = g->sp - numArgsPushed + 1;
+    auto argsArraySlot = receiverSlot + 1;
+    auto kwargsArraySlot = argsArraySlot + 1;
+
+    PyrObject* argsArray;
+    if (IsNil(argsArraySlot))
+        argsArray = nullptr;
+    else if (IsObj(argsArraySlot) && classOfSlot(argsArraySlot) == class_array)
+        argsArray = slotRawObject(argsArraySlot);
+    else {
+        char str[128];
+        slotString(argsArraySlot, str);
+        post("performArgs 'args' must be either nil or an Array, received: '%s'\n", str);
+        return errWrongType;
+    }
+
+    PyrObject* kwargsArray;
+    if (IsNil(kwargsArraySlot))
+        kwargsArray = nullptr;
+    else if (IsObj(kwargsArraySlot) && classOfSlot(kwargsArraySlot) == class_array)
+        kwargsArray = slotRawObject(kwargsArraySlot);
+    else {
+        char str[128];
+        slotString(kwargsArraySlot, str);
+        post("performArgs 'kwargs' must be either nil or an Array, received: '%s'\n", str);
+        return errWrongType;
+    }
+
+    const auto argsSize = argsArray ? argsArray->size : 0;
+    const auto kwSize = kwargsArray ? kwargsArray->size : 0;
+
+    if (argsSize == 0 && kwSize == 0) {
+        g->sp -= 2;
+        blockValueWithKeys(g, 1, 0);
+        g->numpop = 0;
+        return errNone;
+    }
+
+    if (argsSize > 0)
+        std::copy(argsArray->slots, argsArray->slots + argsSize, argsArraySlot);
+
+    if (kwSize > 0) {
+        if (kwSize % 2 == 1) {
+            error("WARNING: Keyword arguments must be a key-value pair array, where the key is a Symbol.\n");
+            return errFailed;
+        }
+        bool kwargsFailed = false;
+        for (uint32 i = 0; i < kwSize; i += 2) {
+            if (NotSym(&kwargsArray->slots[i])) {
+                char str[128];
+                slotString(kwargsArraySlot, str);
+                post("WARNING: Keyword arguments must be a key-value pair array, where the key is a Symbol.\n"
+                     "Expected a Symbol got '%s'.\n",
+                     str);
+                kwargsFailed = true;
+            }
+        }
+        if (kwargsFailed)
+            return errWrongType;
+
+        std::copy(kwargsArray->slots, kwargsArray->slots + kwSize, argsArraySlot + argsSize);
+    }
+
+    g->sp = receiverSlot + argsSize + kwSize;
+    blockValueWithKeys(g, argsSize + kwSize + 1, kwSize / 2);
+    g->numpop = 0;
+    return errNone;
+}
+
+
 bool identDict_lookupNonNil(PyrObject* dict, PyrSlot* key, int hash, PyrSlot* result);
 
 int blockValueEnvirWithKeys(VMGlobals* g, int allArgsPushed, int numKeyArgsPushed);
@@ -3790,6 +3862,7 @@ void initPrimitives() {
     index += 2;
 
     definePrimitive(base, index++, "_FunctionValueArray", blockValueArray, 1, 1);
+    definePrimitive(base, index++, "_FunctionValueArgs", blockValueArgs, 3, 0);
     definePrimitive(base, index++, "_FunctionValueArrayEnvir", blockValueArrayEnvir, 1, 1);
     definePrimitive(base, index++, "_FunctionDefAsFunction", prFunctionDefAsFunction, 1, 0);
     definePrimitive(base, index++, "_FunctionDefDumpContexts", prFunctionDefDumpContexts, 1, 0);
