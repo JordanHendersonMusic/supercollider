@@ -67,14 +67,14 @@ ServerOptions {
 				numInputBusChannels: 2, // see corresponding setter method below
 				numOutputBusChannels: 2, // see corresponding setter method below
 				numBuffers: 1024,
-				maxNodes: 1024,
-				maxSynthDefs: 1024,
+				maxNodes: 8192,
+				maxSynthDefs: 8192,
 				protocol: \udp,
 				blockSize: 64,
 				hardwareBufferSize: nil,
-				memSize: 8192,
+				memSize: 256000,
 				numRGens: 64,
-				numWireBufs: 64,
+				numWireBufs: 512,
 				sampleRate: nil,
 				loadDefs: true,
 				inputStreamsEnabled: nil,
