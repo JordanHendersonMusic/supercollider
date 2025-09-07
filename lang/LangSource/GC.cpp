@@ -653,6 +653,10 @@ void PyrGC::Collect(int32 inNumToScan) {
 }
 
 HOT void PyrGC::Collect() {
+    if (insidePrimitive) {
+        attemptedToCollectInsidePrimitive = true;
+        return;
+    }
     BEGINPAUSE
     bool stackScanned = false;
     mCollects++;

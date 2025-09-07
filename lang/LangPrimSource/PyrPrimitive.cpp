@@ -3709,6 +3709,8 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         }
     }
     g->numpop = numArgsNeeded - 1;
+
+    g->gc->pushInsidePrimitive();
     try {
         err = (*def->func)(g, numArgsNeeded);
     } catch (std::exception& ex) {
@@ -3718,6 +3720,8 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         g->lastExceptions[g->thread] = std::make_pair(nullptr, meth);
         err = errException;
     }
+    g->gc->popInsidePrimitive();
+
     if (err <= errNone)
         g->sp -= g->numpop;
     else {

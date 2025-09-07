@@ -124,6 +124,21 @@ public:
         }
     }
 
+    // Don't call collect from inside primitives, instead wait until leaving the primitive.
+    // This ensures that objects created inside the primitive are not destroyed by the collection cycle.
+    void pushInsidePrimitive() {
+        insidePrimitive = true;
+        attemptedToCollectInsidePrimitive = false;
+    }
+
+    void popInsidePrimitive() {
+        insidePrimitive = false;
+        if (attemptedToCollectInsidePrimitive) {
+            Collect();
+            attemptedToCollectInsidePrimitive = false;
+        }
+    }
+
     // users should not call anything below.
 
     void Collect();
@@ -207,6 +222,9 @@ private:
     unsigned char mBlackColor, mGreyColor, mWhiteColor, mFreeColor;
     bool mCanSweep;
     bool mRunning;
+
+    bool insidePrimitive { false };
+    bool attemptedToCollectInsidePrimitive { false };
 };
 
 inline void PyrGC::DLRemove(PyrObjectHdr* obj) {
