@@ -653,8 +653,8 @@ void PyrGC::Collect(int32 inNumToScan) {
 }
 
 HOT void PyrGC::Collect() {
-    if (insidePrimitive) {
-        attemptedToCollectInsidePrimitive = true;
+    if (delayCollection) {
+        attemptedToCollectWhenDelayed = true;
         return;
     }
     BEGINPAUSE

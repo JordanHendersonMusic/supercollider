@@ -124,19 +124,26 @@ public:
         }
     }
 
-    // Don't call collect from inside primitives, instead wait until leaving the primitive.
-    // This ensures that objects created inside the primitive are not destroyed by the collection cycle.
-    void pushInsidePrimitive() {
-        insidePrimitive = true;
-        attemptedToCollectInsidePrimitive = false;
+    /// Don't called collect immediately, wait until some context has finished, then call collect.
+    /// This is implemented primarily for use inside primitives, where collecting while creating temporary objects can
+    /// lead to them being freed unless care is taken.
+    void enterDelayedCollectionContext() {
+        delayCollection = true;
+        attemptedToCollectWhenDelayed = false;
     }
-
-    void popInsidePrimitive() {
-        insidePrimitive = false;
-        if (attemptedToCollectInsidePrimitive) {
+    void exitDelayedCollectionContext() {
+        delayCollection = false;
+        if (attemptedToCollectWhenDelayed) {
+            attemptedToCollectWhenDelayed = false;
             Collect();
-            attemptedToCollectInsidePrimitive = false;
         }
+    }
+    /// To be called when you **absolutely** know you want collect to be called inside a delay collection context (e.g.
+    /// a primitive). You probably don't want to call this. If you do (and have benchmarks to prove it), it must be
+    /// called before any allocations are made (at the top of the primitive) otherwise memory leaks may arise.
+    void enableImmediateCollections() {
+        delayCollection = false;
+        attemptedToCollectWhenDelayed = false;
     }
 
     // users should not call anything below.
@@ -223,8 +230,8 @@ private:
     bool mCanSweep;
     bool mRunning;
 
-    bool insidePrimitive { false };
-    bool attemptedToCollectInsidePrimitive { false };
+    bool delayCollection { false };
+    bool attemptedToCollectWhenDelayed { false };
 };
 
 inline void PyrGC::DLRemove(PyrObjectHdr* obj) {
