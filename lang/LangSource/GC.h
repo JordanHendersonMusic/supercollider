@@ -124,7 +124,7 @@ public:
         }
     }
 
-    /// Don't called collect immediately, wait until some context has finished, then call collect.
+    /// Don't call collect immediately, wait until some context has finished, then call collect.
     /// This is implemented primarily for use inside primitives, where collecting while creating temporary objects can
     /// lead to them being freed unless care is taken.
     void enterDelayedCollectionContext() {
