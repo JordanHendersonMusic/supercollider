@@ -128,13 +128,13 @@ public:
     /// This is implemented primarily for use inside primitives, where collecting while creating temporary objects can
     /// lead to them being freed unless care is taken.
     void enterDelayedCollectionContext() {
-        delayCollection = true;
-        attemptedToCollectWhenDelayed = false;
+        mDelayCollection = true;
+        mAttemptedToCollectWhenDelayed = false;
     }
     void exitDelayedCollectionContext() {
-        delayCollection = false;
-        if (attemptedToCollectWhenDelayed) {
-            attemptedToCollectWhenDelayed = false;
+        mDelayCollection = false;
+        if (mAttemptedToCollectWhenDelayed) {
+            mAttemptedToCollectWhenDelayed = false;
             Collect();
         }
     }
@@ -142,8 +142,8 @@ public:
     /// a primitive). You probably don't want to call this. If you do (and have benchmarks to prove it), it must be
     /// called before any allocations are made (at the top of the primitive) otherwise memory leaks may arise.
     void enableImmediateCollections() {
-        delayCollection = false;
-        attemptedToCollectWhenDelayed = false;
+        mDelayCollection = false;
+        mAttemptedToCollectWhenDelayed = false;
     }
 
     // users should not call anything below.
@@ -230,8 +230,8 @@ private:
     bool mCanSweep;
     bool mRunning;
 
-    bool delayCollection { false };
-    bool attemptedToCollectWhenDelayed { false };
+    bool mDelayCollection { false };
+    bool mAttemptedToCollectWhenDelayed { false };
 };
 
 inline void PyrGC::DLRemove(PyrObjectHdr* obj) {
