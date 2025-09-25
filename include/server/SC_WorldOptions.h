@@ -38,15 +38,15 @@ struct WorldOptions {
     const char* mPassword = nullptr;
     uint32 mNumBuffers = 1024;
     uint32 mMaxLogins = 64;
-    uint32 mMaxNodes = 8192;
-    uint32 mMaxGraphDefs = 8192;
-    uint32 mMaxWireBufs = 512;
+    uint32 mMaxNodes = 1024;
+    uint32 mMaxGraphDefs = 1024;
+    uint32 mMaxWireBufs = 64;
     uint32 mNumAudioBusChannels = 1024;
     uint32 mNumInputBusChannels = 8;
     uint32 mNumOutputBusChannels = 8;
     uint32 mNumControlBusChannels = 16384;
     uint32 mBufLength = 64;
-    uint32 mRealTimeMemorySize = 256000; // in kilobytes
+    uint32 mRealTimeMemorySize = 8192; // in kilobytes
 
     int mNumSharedControls = 0;
     float* mSharedControls = nullptr;
