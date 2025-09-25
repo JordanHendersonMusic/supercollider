@@ -2275,7 +2275,7 @@ SCLANG_DLLEXPORT_C void runLibrary(PyrSymbol* selector) {
         }
     } catch (const FatalInterpreterError& er) {
         error("A fatal interpreter error has occured. Reason: %s\n", er.what());
-        std::rethrow_exception(std::current_exception());
+        throw;
     } catch (const std::exception& ex) {
         PyrMethod* meth = g->method;
         if (meth) {
