@@ -466,7 +466,7 @@ FunctionDef {
 	// When you use a FunctionDef in your code it gets pushed on the stack
 	// as an instance of Function
 
-	filename { ^filenameSymbol !? (_.asString) }
+	filename { ^filenameSymbol !? {filenameSymbol.asString} }
 
 	dumpByteCodes {
 		_DumpByteCodes
