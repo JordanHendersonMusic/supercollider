@@ -1,6 +1,4 @@
 ServerOptions {
-	classvar <defaultValues;
-
 	var <numAudioBusChannels;
 	var <>numControlBusChannels;
 	var <numInputBusChannels;
@@ -58,50 +56,52 @@ ServerOptions {
 
 	var <>safetyClipThreshold;
 
-	*new {
-		^super.newCopyArgs(
-			numAudioBusChannels: 1024, // see corresponding setter method below
-			numControlBusChannels: 16384,
-			numInputBusChannels: 2, // see corresponding setter method below
-			numOutputBusChannels: 2, // see corresponding setter method below
-			numBuffers: 1024,
-			maxNodes: 8192,
-			maxSynthDefs: 8192,
-			protocol: \udp,
-			blockSize: 64,
-			hardwareBufferSize: nil,
-			memSize: 256000,
-			numRGens: 64,
-			numWireBufs: 512,
-			sampleRate: nil,
-			loadDefs: true,
-			inputStreamsEnabled: nil,
-			outputStreamsEnabled: nil,
-			inDevice: nil,
-			outDevice: nil,
-			verbosity: 0,
-			zeroConf: false,
-			restrictedPath: nil,
-			ugenPluginsPath: nil,
-			initialNodeID: 1000,
-			remoteControlVolume: false,
-			memoryLocking: false,
-			threads: nil,
-			threadPinning: nil, // default value chosen by Supernova
-			useSystemClock: true,
-			numPrivateAudioBusChannels: 1020, // see corresponding setter method below
-			reservedNumAudioBusChannels: 0,
-			reservedNumControlBusChannels: 0,
-			reservedNumBuffers: 0,
-			pingsBeforeConsideredDead: 5,
-			maxLogins: 1,
-			recHeaderFormat: "wav",
-			recSampleFormat: "float",
-			recChannels: 2,
-			recBufSize: nil,
-			bindAddress: "127.0.0.1",
-			safetyClipThreshold: 1.26 // ca. 2 dB
-		);
+	*new { |...args, kwargs|
+		if(args.size != 0) { Error("ServerOptions only accepts keyword arguments").throw };
+
+		^this.superPerformArgs(\newCopyArgs, [], [
+			\numAudioBusChannels, 1024, // see corresponding setter method below
+			\numControlBusChannels, 16384,
+			\numInputBusChannels, 2, // see corresponding setter method below
+			\numOutputBusChannels, 2, // see corresponding setter method below
+			\numBuffers, 1024,
+			\maxNodes, 8192,
+			\maxSynthDefs, 8192,
+			\protocol, \udp,
+			\blockSize, 64,
+			\hardwareBufferSize, nil,
+			\memSize, 256000,
+			\numRGens, 64,
+			\numWireBufs, 512,
+			\sampleRate, nil,
+			\loadDefs, true,
+			\inputStreamsEnabled, nil,
+			\outputStreamsEnabled, nil,
+			\inDevice, nil,
+			\outDevice, nil,
+			\verbosity, 0,
+			\zeroConf, false,
+			\restrictedPath, nil,
+			\ugenPluginsPath, nil,
+			\initialNodeID, 1000,
+			\remoteControlVolume, false,
+			\memoryLocking, false,
+			\threads, nil,
+			\threadPinning, nil, // default value chosen by Supernova
+			\useSystemClock, true,
+			\numPrivateAudioBusChannels, 1020, // see corresponding setter method below
+			\reservedNumAudioBusChannels, 0,
+			\reservedNumControlBusChannels, 0,
+			\reservedNumBuffers, 0,
+			\pingsBeforeConsideredDead, 5,
+			\maxLogins, 1,
+			\recHeaderFormat, "wav",
+			\recSampleFormat, "float",
+			\recChannels, 2,
+			\recBufSize, nil,
+			\bindAddress, "127.0.0.1",
+			\safetyClipThreshold, 1.26 // ca. 2 dB
+		] ++ kwargs);
 	}
 
 	device {

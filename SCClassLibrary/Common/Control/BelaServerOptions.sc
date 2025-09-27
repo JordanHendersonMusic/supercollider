@@ -1,7 +1,4 @@
 BelaServerOptions : ServerOptions {
-
-	classvar defaultValues;
-
 	var <>numAnalogInChannels;
 	var <>numAnalogOutChannels;
 	var <>numDigitalChannels;
@@ -15,8 +12,8 @@ BelaServerOptions : ServerOptions {
 	var <>belaPRU;
 	var <>belaMaxScopeChannels;
 
-	*initClass {
-		defaultValues = super.defaultValues.copy.putAll((
+	*new {
+		^super.new(
 			numAnalogInChannels: 2,
 			numAnalogOutChannels: 2,
 			numDigitalChannels: 16,
@@ -29,11 +26,7 @@ BelaServerOptions : ServerOptions {
 			numMultiplexChannels: 0,
 			belaPRU: 1,
 			belaMaxScopeChannels: 0
-		));
-	}
-
-	init {
-		defaultValues.keysValuesDo { |key, val| this.instVarPut(key, val) };
+		)
 	}
 
 	asOptionsString { | port = 57110 |
