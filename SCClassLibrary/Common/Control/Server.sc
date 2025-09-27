@@ -1,7 +1,6 @@
 ServerOptions {
 	classvar <defaultValues;
 
-	// order of variables is important here. Only add new instance variables to the end.
 	var <numAudioBusChannels;
 	var <>numControlBusChannels;
 	var <numInputBusChannels;
@@ -59,60 +58,50 @@ ServerOptions {
 
 	var <>safetyClipThreshold;
 
-	*initClass {
-		defaultValues = IdentityDictionary.newFrom(
-			(
-				numAudioBusChannels: 1024, // see corresponding setter method below
-				numControlBusChannels: 16384,
-				numInputBusChannels: 2, // see corresponding setter method below
-				numOutputBusChannels: 2, // see corresponding setter method below
-				numBuffers: 1024,
-				maxNodes: 8192,
-				maxSynthDefs: 8192,
-				protocol: \udp,
-				blockSize: 64,
-				hardwareBufferSize: nil,
-				memSize: 256000,
-				numRGens: 64,
-				numWireBufs: 512,
-				sampleRate: nil,
-				loadDefs: true,
-				inputStreamsEnabled: nil,
-				outputStreamsEnabled: nil,
-				inDevice: nil,
-				outDevice: nil,
-				verbosity: 0,
-				zeroConf: false,
-				restrictedPath: nil,
-				ugenPluginsPath: nil,
-				initialNodeID: 1000,
-				remoteControlVolume: false,
-				memoryLocking: false,
-				threads: nil,
-				threadPinning: nil, // default value chosen by Supernova
-				useSystemClock: true,
-				numPrivateAudioBusChannels: 1020, // see corresponding setter method below
-				reservedNumAudioBusChannels: 0,
-				reservedNumControlBusChannels: 0,
-				reservedNumBuffers: 0,
-				pingsBeforeConsideredDead: 5,
-				maxLogins: 1,
-				recHeaderFormat: "wav",
-				recSampleFormat: "float",
-				recChannels: 2,
-				recBufSize: nil,
-				bindAddress: "127.0.0.1",
-				safetyClipThreshold: 1.26 // ca. 2 dB
-			)
-		)
-	}
-
 	*new {
-		^super.new.init
-	}
-
-	init {
-		defaultValues.keysValuesDo { |key, val| this.instVarPut(key, val) }
+		^super.newCopyArgs(
+			numAudioBusChannels: 1024, // see corresponding setter method below
+			numControlBusChannels: 16384,
+			numInputBusChannels: 2, // see corresponding setter method below
+			numOutputBusChannels: 2, // see corresponding setter method below
+			numBuffers: 1024,
+			maxNodes: 8192,
+			maxSynthDefs: 8192,
+			protocol: \udp,
+			blockSize: 64,
+			hardwareBufferSize: nil,
+			memSize: 256000,
+			numRGens: 64,
+			numWireBufs: 512,
+			sampleRate: nil,
+			loadDefs: true,
+			inputStreamsEnabled: nil,
+			outputStreamsEnabled: nil,
+			inDevice: nil,
+			outDevice: nil,
+			verbosity: 0,
+			zeroConf: false,
+			restrictedPath: nil,
+			ugenPluginsPath: nil,
+			initialNodeID: 1000,
+			remoteControlVolume: false,
+			memoryLocking: false,
+			threads: nil,
+			threadPinning: nil, // default value chosen by Supernova
+			useSystemClock: true,
+			numPrivateAudioBusChannels: 1020, // see corresponding setter method below
+			reservedNumAudioBusChannels: 0,
+			reservedNumControlBusChannels: 0,
+			reservedNumBuffers: 0,
+			pingsBeforeConsideredDead: 5,
+			maxLogins: 1,
+			recHeaderFormat: "wav",
+			recSampleFormat: "float",
+			recChannels: 2,
+			recBufSize: nil,
+			bindAddress: "127.0.0.1",
+			safetyClipThreshold: 1.26 // ca. 2 dB
+		);
 	}
 
 	device {
@@ -129,114 +118,94 @@ ServerOptions {
 
 	asOptionsString { | port = 57110 |
 		var o;
-		o = if(protocol == \tcp, " -t ", " -u ");
+		o = if(protocol == \tcp) { " -t " } { " -u " };
 		o = o ++ port;
 
 		o = o ++ " -a " ++ (numPrivateAudioBusChannels + numInputBusChannels + numOutputBusChannels) ;
 		o = o ++ " -i " ++ numInputBusChannels;
 		o = o ++ " -o " ++ numOutputBusChannels;
 
-		if (bindAddress != defaultValues[\bindAddress], {
-			o = o ++ " -B " ++ bindAddress;
-		});
-		if (numControlBusChannels !== defaultValues[\numControlBusChannels], {
-			numControlBusChannels = numControlBusChannels.asInteger;
-			o = o ++ " -c " ++ numControlBusChannels;
-		});
-		if (numBuffers !== defaultValues[\numBuffers], {
-			numBuffers = numBuffers.asInteger;
-			o = o ++ " -b " ++ numBuffers;
-		});
-		if (maxNodes !== defaultValues[\maxNodes], {
-			maxNodes = maxNodes.asInteger;
-			o = o ++ " -n " ++ maxNodes;
-		});
-		if (maxSynthDefs !== defaultValues[\maxSynthDefs], {
-			maxSynthDefs = maxSynthDefs.asInteger;
-			o = o ++ " -d " ++ maxSynthDefs;
-		});
-		if (blockSize !== defaultValues[\blockSize], {
-			blockSize = blockSize.asInteger;
-			o = o ++ " -z " ++ blockSize;
-		});
+		o = o ++ " -B " ++ bindAddress;
+
+		numControlBusChannels = numControlBusChannels.asInteger;
+		o = o ++ " -c " ++ numControlBusChannels;
+
+		numBuffers = numBuffers.asInteger;
+		o = o ++ " -b " ++ numBuffers;
+
+		maxNodes = maxNodes.asInteger;
+		o = o ++ " -n " ++ maxNodes;
+
+		maxSynthDefs = maxSynthDefs.asInteger;
+		o = o ++ " -d " ++ maxSynthDefs;
+
+		blockSize = blockSize.asInteger;
+		o = o ++ " -z " ++ blockSize;
+
 		if (hardwareBufferSize.notNil, {
 			o = o ++ " -Z " ++ hardwareBufferSize;
 		});
-		if (memSize !== defaultValues[\memSize], {
-			memSize = memSize.asInteger;
-			o = o ++ " -m " ++ memSize;
-		});
-		if (numRGens !== defaultValues[\numRGens], {
-			numRGens = numRGens.asInteger;
-			o = o ++ " -r " ++ numRGens;
-		});
-		if (numWireBufs !== defaultValues[\numWireBufs], {
-			numWireBufs = numWireBufs.asInteger;
-			o = o ++ " -w " ++ numWireBufs;
-		});
-		if (sampleRate.notNil, {
-			o = o ++ " -S " ++ sampleRate;
-		});
-		if (loadDefs.not, {
-			o = o ++ " -D 0";
-		});
-		if (inputStreamsEnabled.notNil, {
-			o = o ++ " -I " ++ inputStreamsEnabled ;
-		});
-		if (outputStreamsEnabled.notNil, {
-			o = o ++ " -O " ++ outputStreamsEnabled ;
-		});
-		if (inDevice == outDevice)
-		{
-			if (inDevice.notNil,
-				{
-					o = o ++ " -H %".format(inDevice.quote);
-			});
-		}
-		{
-			o = o ++ " -H % %".format((inDevice ? "").asString.quote, (outDevice ? "").asString.quote);
+
+		memSize = memSize.asInteger;
+		o = o ++ " -m " ++ memSize;
+
+		numRGens = numRGens.asInteger;
+		o = o ++ " -r " ++ numRGens;
+
+		numWireBufs = numWireBufs.asInteger;
+		o = o ++ " -w " ++ numWireBufs;
+
+		if (sampleRate.notNil) { o = o ++ " -S " ++ sampleRate };
+
+		if (loadDefs.not) { o = o ++ " -D 0" };
+
+		if (inputStreamsEnabled.notNil) { o = o ++ " -I " ++ inputStreamsEnabled };
+
+		if (outputStreamsEnabled.notNil) { o = o ++ " -O " ++ outputStreamsEnabled };
+
+		if (inDevice == outDevice) {
+			if (inDevice.notNil) { o = o ++ " -H %".format(inDevice.quote) }
+		} {
+			o = o ++ " -H % %".format((inDevice ? "").asString.quote, (outDevice ? "").asString.quote)
 		};
-		if (verbosity != defaultValues[\verbosity], {
-			o = o ++ " -V " ++ verbosity;
-		});
-		if (zeroConf.not, {
-			o = o ++ " -R 0";
-		});
-		if (restrictedPath.notNil, {
-			o = o ++ " -P " ++ restrictedPath;
-		});
-		if (ugenPluginsPath.notNil, {
-			if(ugenPluginsPath.isString, {
-				ugenPluginsPath = ugenPluginsPath.bubble;
-			});
-			o = o ++ " -U " ++ ugenPluginsPath.collect{|p|
+
+		o = o ++ " -V " ++ verbosity;
+
+		if (zeroConf.not) { o = o ++ " -R 0" };
+
+		if (restrictedPath.notNil) { o = o ++ " -P " ++ restrictedPath };
+
+		if (ugenPluginsPath.notNil) {
+			if(ugenPluginsPath.isString) { ugenPluginsPath = ugenPluginsPath.bubble };
+			o = o ++ " -U " ++ ugenPluginsPath.collect{ |p|
 				thisProcess.platform.formatPathForCmdLine(p)
 			}.join(Platform.pathDelimiter);
-		});
-		if (memoryLocking, {
-			o = o ++ " -L";
-		});
-		if (threads.notNil, {
+		};
+
+
+		if (memoryLocking) { o = o ++ " -L" };
+		if (threads.notNil) {
 			if (Server.program.asString.contains("supernova")) {
-				o = o ++ " -T " ++ threads;
+				o = o ++ " -T " ++ threads
 			}
-		});
-		if (threadPinning.notNil, {
+		};
+		if (threadPinning.notNil) {
 			if (Server.program.asString.contains("supernova")) {
-				o = o ++ " -y " ++ threadPinning.asBoolean.asInteger;
+				o = o ++ " -y " ++ threadPinning.asBoolean.asInteger
 			}
-		});
-		if (useSystemClock, {
+		};
+		if (useSystemClock) {
 			o = o ++ " -C 1"
-		}, {
+		} {
 			o = o ++ " -C 0"
-		});
-		if (maxLogins.notNil, {
-			o = o ++ " -l " ++ maxLogins;
-		});
-		if (thisProcess.platform.name === \osx && safetyClipThreshold.notNil, {
-			o = o ++ " -s " ++ safetyClipThreshold;
-		});
+		};
+
+		if (maxLogins.notNil) { o = o ++ " -l " ++ maxLogins };
+
+		if (thisProcess.platform.name === \osx && safetyClipThreshold.notNil) {
+			o = o ++ " -s " ++ safetyClipThreshold
+		};
+
 		^o
 	}
 
