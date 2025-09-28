@@ -1,108 +1,63 @@
 ServerOptions {
-	var <numAudioBusChannels;
-	var <>numControlBusChannels;
-	var <numInputBusChannels;
-	var <numOutputBusChannels;
-	var <>numBuffers;
+	// DO NOT CHANGE THE OREDER OF THESE INSTANCE VARIABLES
+	// They are used by _BootInProcessServer
+	var <numAudioBusChannels = 1024;
+	var <>numControlBusChannels = 16384;
+	var <numInputBusChannels = 2;
+	var <numOutputBusChannels = 2;
+	var <>numBuffers = 1024;
 
-	var <>maxNodes;
-	var <>maxSynthDefs;
-	var <>protocol;
-	var <>blockSize;
-	var <>hardwareBufferSize;
+	var <>maxNodes = 8192;
+	var <>maxSynthDefs = 8192;
+	var <>protocol = \udp;
+	var <>blockSize = 64;
+	var <>hardwareBufferSize = 0;
 
-	var <>memSize;
-	var <>numRGens;
-	var <>numWireBufs;
+	var <>memSize = 256000;
+	var <>numRGens = 64;
+	var <>numWireBufs = 512;
 
-	var <>sampleRate;
-	var <>loadDefs;
+	var <>sampleRate = 0;
+	var <>loadDefs = true;
 
-	var <>inputStreamsEnabled;
-	var <>outputStreamsEnabled;
+	var <>inputStreamsEnabled = nil;
+	var <>outputStreamsEnabled = nil;
 
-	var <>inDevice;
-	var <>outDevice;
+	var <>inDevice = nil;
+	var <>outDevice = nil;
 
-	var <>verbosity;
-	var <>zeroConf; // Whether server publishes port to Bonjour, etc.
+	var <>verbosity = 0;
+	var <>zeroConf = false; // Whether server publishes port to Bonjour, etc.
 
-	var <>restrictedPath;
-	var <>ugenPluginsPath;
+	var <>restrictedPath = nil;
+	var <>ugenPluginsPath = nil;
 
-	var <>initialNodeID;
-	var <>remoteControlVolume;
+	var <>initialNodeID = 1000;
+	var <>remoteControlVolume = false;
 
-	var <>memoryLocking;
-	var <>threads; // for supernova
-	var <>threadPinning; // for supernova
-	var <>useSystemClock;  // for supernova
+	var <>memoryLocking = false;
+	var <>threads = nil; // for supernova
+	var <>threadPinning = nil; // for supernova
+	var <>useSystemClock = true;  // for supernova
 
-	var <numPrivateAudioBusChannels;
+	var <numPrivateAudioBusChannels = 1020;
 
-	var <>reservedNumAudioBusChannels;
-	var <>reservedNumControlBusChannels;
-	var <>reservedNumBuffers;
-	var <>pingsBeforeConsideredDead;
+	var <>reservedNumAudioBusChannels = 0;
+	var <>reservedNumControlBusChannels = 0;
+	var <>reservedNumBuffers = 0;
+	var <>pingsBeforeConsideredDead = 5;
 
-	var <maxLogins;
+	var <maxLogins = 1;
 
-	var <>recHeaderFormat;
-	var <>recSampleFormat;
-	var <>recChannels;
-	var <>recBufSize;
+	// TODO: None of these are used, why are they here?
+	var <>recHeaderFormat = "wav";
+	var <>recSampleFormat = "float";
+	var <>recChannels = 2;
+	var <>recBufSize = nil;
 
-	var <>bindAddress;
+	var <>bindAddress = "127.0.0.1";
 
-	var <>safetyClipThreshold;
-
-	*new { |...args, kwargs|
-		if(args.size != 0) { Error("ServerOptions only accepts keyword arguments").throw };
-
-		^this.superPerformArgs(\newCopyArgs, [], [
-			\numAudioBusChannels, 1024, // see corresponding setter method below
-			\numControlBusChannels, 16384,
-			\numInputBusChannels, 2, // see corresponding setter method below
-			\numOutputBusChannels, 2, // see corresponding setter method below
-			\numBuffers, 1024,
-			\maxNodes, 8192,
-			\maxSynthDefs, 8192,
-			\protocol, \udp,
-			\blockSize, 64,
-			\hardwareBufferSize, nil,
-			\memSize, 256000,
-			\numRGens, 64,
-			\numWireBufs, 512,
-			\sampleRate, nil,
-			\loadDefs, true,
-			\inputStreamsEnabled, nil,
-			\outputStreamsEnabled, nil,
-			\inDevice, nil,
-			\outDevice, nil,
-			\verbosity, 0,
-			\zeroConf, false,
-			\restrictedPath, nil,
-			\ugenPluginsPath, nil,
-			\initialNodeID, 1000,
-			\remoteControlVolume, false,
-			\memoryLocking, false,
-			\threads, nil,
-			\threadPinning, nil, // default value chosen by Supernova
-			\useSystemClock, true,
-			\numPrivateAudioBusChannels, 1020, // see corresponding setter method below
-			\reservedNumAudioBusChannels, 0,
-			\reservedNumControlBusChannels, 0,
-			\reservedNumBuffers, 0,
-			\pingsBeforeConsideredDead, 5,
-			\maxLogins, 1,
-			\recHeaderFormat, "wav",
-			\recSampleFormat, "float",
-			\recChannels, 2,
-			\recBufSize, nil,
-			\bindAddress, "127.0.0.1",
-			\safetyClipThreshold, 1.26 // ca. 2 dB
-		] ++ kwargs);
-	}
+	var <>safetyClipThreshold = 1.26;
 
 	device {
 		^if(inDevice == outDevice) {
@@ -117,91 +72,61 @@ ServerOptions {
 	}
 
 	asOptionsString { | port = 57110 |
-		var o;
-		o = if(protocol == \tcp) { " -t " } { " -u " };
-		o = o ++ port;
+		var o = if(protocol == \tcp) { " -t " } { " -u " } ++ port;
 
-		o = o ++ " -a " ++ (numPrivateAudioBusChannels + numInputBusChannels + numOutputBusChannels) ;
-		o = o ++ " -i " ++ numInputBusChannels;
-		o = o ++ " -o " ++ numOutputBusChannels;
+		o = o ++ " -a " ++ (numPrivateAudioBusChannels + numInputBusChannels + numOutputBusChannels).asInteger;
+		o = o ++ " -i " ++ numInputBusChannels.asInteger;
+		o = o ++ " -o " ++ numOutputBusChannels.asInteger;
+		o = o ++ " -B " ++ bindAddress.asString;
+		o = o ++ " -c " ++ numControlBusChannels.asInteger;
+		o = o ++ " -b " ++ numBuffers.asInteger;
+		o = o ++ " -n " ++ maxNodes.asInteger;
+		o = o ++ " -d " ++ maxSynthDefs.asInteger;
+		o = o ++ " -z " ++ blockSize.asInteger;
+		o = o ++ " -Z " ++ hardwareBufferSize.asInteger;
+		o = o ++ " -m " ++ memSize.asInteger;
+		o = o ++ " -r " ++ numRGens.asInteger;
+		o = o ++ " -w " ++ numWireBufs.asInteger;
+		o = o ++ " -S " ++ sampleRate.asInteger;
+		o = o ++ " -V " ++ verbosity.asInteger;
+		o = o ++ " -l " ++ maxLogins.asInteger;
+		o = o ++ if (loadDefs) { " -D 1" } { " -D 0" };
+		o = o ++ if (zeroConf) { " -R 1" } { " -R 0" };
+		o = o ++ if (useSystemClock) { " -C 1" } { " -C 0" };
 
-		o = o ++ " -B " ++ bindAddress;
+		// No way to explicitly specify false.
+		if (memoryLocking) { o = o ++ " -L" };
 
-		numControlBusChannels = numControlBusChannels.asInteger;
-		o = o ++ " -c " ++ numControlBusChannels;
-
-		numBuffers = numBuffers.asInteger;
-		o = o ++ " -b " ++ numBuffers;
-
-		maxNodes = maxNodes.asInteger;
-		o = o ++ " -n " ++ maxNodes;
-
-		maxSynthDefs = maxSynthDefs.asInteger;
-		o = o ++ " -d " ++ maxSynthDefs;
-
-		blockSize = blockSize.asInteger;
-		o = o ++ " -z " ++ blockSize;
-
-		if (hardwareBufferSize.notNil, {
-			o = o ++ " -Z " ++ hardwareBufferSize;
-		});
-
-		memSize = memSize.asInteger;
-		o = o ++ " -m " ++ memSize;
-
-		numRGens = numRGens.asInteger;
-		o = o ++ " -r " ++ numRGens;
-
-		numWireBufs = numWireBufs.asInteger;
-		o = o ++ " -w " ++ numWireBufs;
-
-		if (sampleRate.notNil) { o = o ++ " -S " ++ sampleRate };
-
-		if (loadDefs.not) { o = o ++ " -D 0" };
-
+		// Server defaults to a nullptr for some string values and doesn't let you state a 'default' value, so nil check is required.
 		if (inputStreamsEnabled.notNil) { o = o ++ " -I " ++ inputStreamsEnabled };
-
 		if (outputStreamsEnabled.notNil) { o = o ++ " -O " ++ outputStreamsEnabled };
+		if (restrictedPath.notNil) { o = o ++ " -P " ++ restrictedPath };
 
 		if (inDevice == outDevice) {
-			if (inDevice.notNil) { o = o ++ " -H %".format(inDevice.quote) }
+			if (inDevice.notNil) {
+				o = o ++ " -H %".format(inDevice.quote)
+			} {
+				// default value impossible to specify
+			}
 		} {
 			o = o ++ " -H % %".format((inDevice ? "").asString.quote, (outDevice ? "").asString.quote)
 		};
 
-		o = o ++ " -V " ++ verbosity;
-
-		if (zeroConf.not) { o = o ++ " -R 0" };
-
-		if (restrictedPath.notNil) { o = o ++ " -P " ++ restrictedPath };
-
 		if (ugenPluginsPath.notNil) {
-			if(ugenPluginsPath.isString) { ugenPluginsPath = ugenPluginsPath.bubble };
-			o = o ++ " -U " ++ ugenPluginsPath.collect{ |p|
+			if(ugenPluginsPath.isString) {
+				ugenPluginsPath = ugenPluginsPath.bubble
+			};
+			o = o ++ " -U " ++ ugenPluginsPath.collect { |p|
 				thisProcess.platform.formatPathForCmdLine(p)
 			}.join(Platform.pathDelimiter);
 		};
 
-
-		if (memoryLocking) { o = o ++ " -L" };
-		if (threads.notNil) {
-			if (Server.program.asString.contains("supernova")) {
-				o = o ++ " -T " ++ threads
-			}
-		};
-		if (threadPinning.notNil) {
-			if (Server.program.asString.contains("supernova")) {
-				o = o ++ " -y " ++ threadPinning.asBoolean.asInteger
-			}
-		};
-		if (useSystemClock) {
-			o = o ++ " -C 1"
-		} {
-			o = o ++ " -C 0"
+		if (Server.program.asString.contains("supernova")) {
+			if (threads.notNil) { o = o ++ " -T " ++ threads.asInteger };
+			if (threadPinning.notNil) { o = o ++ " -y " ++ threadPinning.asBoolean.asInteger };
 		};
 
-		if (maxLogins.notNil) { o = o ++ " -l " ++ maxLogins };
-
+		// TODO: what if the server is on a different machine with a different platform?
 		if (thisProcess.platform.name === \osx && safetyClipThreshold.notNil) {
 			o = o ++ " -s " ++ safetyClipThreshold
 		};
@@ -1320,7 +1245,7 @@ Server {
 
 		if(this.warnIfNotRunning(thisMethod)) { ^this };
 
-		resp = OSCFunc({ |msg| 
+		resp = OSCFunc({ |msg|
 			done = true;
 			if (action.notNil) { action.value(*msg.drop(1)) } {
 				freeKb = msg[1] / 1024;
