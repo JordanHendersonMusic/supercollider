@@ -3635,7 +3635,6 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
     PyrSlot* reciever = g->sp - allArgsPushed + 1;
 
     if (def->keyArgs && numKeyArgsPushed) {
-        // TODO: This could crash if more args are pushed than expected.
         g->numpop = allArgsPushed - 1;
         int err;
         try {
@@ -3692,6 +3691,9 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
             }
             // increment stack pointer
             // TODO: write check to make sure this doesn't overflow.
+            if (maybeReallocStack(g, needed)) {
+                reciever = g->sp - allArgsPushed + 1;
+            }
             g->sp += needed;
             numArgsOnStack = numNeededArgs;
         }
