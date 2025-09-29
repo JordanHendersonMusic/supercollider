@@ -22,18 +22,15 @@
 #include "PyrObject.h"
 #include "PyrPrimitive.h"
 #include "PyrPrimitiveProto.h"
-#include "PyrSignal.h"
 #include "PyrSignalPrim.h"
 #include "PyrMathPrim.h"
 #include "PyrListPrim.h"
-#include "Opcodes.h"
-#include "SC_InlineBinaryOp.h"
+#include "PyrSlot.h"
 #include "PyrMessage.h"
 #include "PyrParseNode.h"
 #include "PyrLexer.h"
 #include "PyrKernelProto.h"
 #include "PyrInterpreter.h"
-#include "PyrArchiverT.h"
 #include "PyrDeepCopier.h"
 #include "PyrDeepFreezer.h"
 #include "InitAlloc.h"
@@ -41,6 +38,7 @@
 #include "SC_LanguageConfig.hpp"
 #include "SC_Filesystem.hpp"
 
+#include <iterator>
 #include <map>
 #include <cstdlib>
 #include <cstring>
@@ -74,24 +72,8 @@ PyrSymbol* s_recvmsg;
 
 void initPatternPrimitives();
 
-typedef struct {
-    PrimitiveHandler func;
-    PyrSymbol* name;
-    unsigned short base;
-    unsigned char numArgs;
-    unsigned char varArgs;
-    unsigned char keyArgs;
-} PrimitiveDef;
 
-typedef struct {
-    int size, maxsize;
-    PrimitiveDef* table;
-} PrimitiveTable;
-
-extern PrimitiveTable gPrimitiveTable;
-
-
-int getPrimitiveNumArgs(int index) { return gPrimitiveTable.table[index].numArgs; }
+int getPrimitiveNumArgs(int index) { return gPrimitiveTable.table[index].numNormalArguments; }
 
 PyrSymbol* getPrimitiveName(int index) { return gPrimitiveTable.table[index].name; }
 
@@ -422,7 +404,7 @@ int prObjectString(struct VMGlobals* g, int numArgsPushed) {
     PyrString* string;
     char str[256];
 
-    a = g->sp;
+    a = g->sp - 1;
     if (IsSym(a)) {
         string = newPyrString(g->gc, slotRawSymbol(a)->name, 0, true);
         SetObject(a, string);
@@ -965,7 +947,7 @@ HOT std::tuple<PyrFrame*, PyrBlock*> buildFrameForBlockPrims(VMGlobals* g, PyrSl
         // setup frame
         auto context = slotRawFrame(&closure->context);
         frame->classptr = class_frame;
-        frame->size = FRAMESIZE + methraw->numtemps;
+        frame->size = FRAMESIZE + methraw->numSlots;
         SetObject(&frame->method, block);
         slotCopy(&frame->homeContext, &context->homeContext);
         slotCopy(&frame->context, &closure->context);
@@ -1153,6 +1135,9 @@ int objectPerformArgs(struct VMGlobals* g, int numArgsPushed) {
 }
 
 int objectPerform(struct VMGlobals* g, int numArgsPushed) {
+    if (numArgsPushed < 2)
+        return errFailed;
+
     PyrSlot *recvrSlot, *selSlot, *listSlot;
     PyrSlot *pslot, *qslot;
     PyrSymbol* selector;
@@ -1230,6 +1215,8 @@ int objectPerform(struct VMGlobals* g, int numArgsPushed) {
 
 int objectPerformWithKeys(VMGlobals* g, int numArgsPushed, int numKeyArgsPushed);
 int objectPerformWithKeys(VMGlobals* g, int numArgsPushed, int numKeyArgsPushed) {
+    if (numArgsPushed < 2)
+        return errFailed;
     PyrSlot *recvrSlot, *selSlot, *listSlot;
     PyrSlot *pslot, *qslot;
     PyrSymbol* selector;
@@ -1293,6 +1280,8 @@ int objectPerformWithKeys(VMGlobals* g, int numArgsPushed, int numKeyArgsPushed)
 
 
 int objectSuperPerform(struct VMGlobals* g, int numArgsPushed) {
+    if (numArgsPushed < 2)
+        return errFailed;
     PyrSlot *recvrSlot, *selSlot, *listSlot;
     PyrSlot *pslot, *qslot;
     PyrSymbol* selector;
@@ -1363,6 +1352,8 @@ int objectSuperPerform(struct VMGlobals* g, int numArgsPushed) {
 
 int objectSuperPerformWithKeys(VMGlobals* g, int numArgsPushed, int numKeyArgsPushed);
 int objectSuperPerformWithKeys(VMGlobals* g, int numArgsPushed, int numKeyArgsPushed) {
+    if (numArgsPushed < 2)
+        return errFailed;
     PyrSlot *recvrSlot, *selSlot, *listSlot;
     PyrSlot *pslot, *qslot;
     PyrSymbol* selector;
@@ -1529,6 +1520,8 @@ int performListTemplate(struct VMGlobals* g, int numArgsPushed, int numKeyArgsPu
 }
 
 int objectPerformListWithKeys(struct VMGlobals* g, int numArgsPushed, int numKeyArgsPushed) {
+    if (numArgsPushed < 2)
+        return errFailed;
     return performListTemplate(
         g, numArgsPushed, numKeyArgsPushed,
         [](struct VMGlobals* g, int numArgs, int numKeyArgs) -> int {
@@ -1542,6 +1535,8 @@ int objectPerformListWithKeys(struct VMGlobals* g, int numArgsPushed, int numKey
 int objectPerformList(struct VMGlobals* g, int numArgsPushed) { return objectPerformListWithKeys(g, numArgsPushed, 0); }
 
 int objectSuperPerformListWithKeys(struct VMGlobals* g, int numArgsPushed, int numKeyArgs) {
+    if (numArgsPushed < 2)
+        return errFailed;
     return performListTemplate(
         g, numArgsPushed, numKeyArgs,
         [](struct VMGlobals* g, int numArgs, int numKeyArgs) -> int {
@@ -1814,8 +1809,8 @@ private:
         SetObject(debugFrameObj->slots + 0, meth);
         SetPtr(debugFrameObj->slots + 5, meth);
 
-        const int numargs = methraw->numargs;
-        const int numvars = methraw->numvars;
+        const int numargs = methraw->numNormalArguments;
+        const int numvars = methraw->numVariables;
         if (numargs) {
             PyrObject* argArray = (PyrObject*)newPyrArray(g->gc, numargs, 0, false);
             SetObject(debugFrameObj->slots + 1, argArray);
@@ -2156,7 +2151,7 @@ int prFunDef_NumArgs(struct VMGlobals* g, int numArgsPushed) {
 
     a = g->sp;
     methraw = METHRAW(slotRawBlock(a));
-    SetInt(a, methraw->numargs);
+    SetInt(a, methraw->numNormalArguments);
     return errNone;
 }
 
@@ -2167,7 +2162,7 @@ int prFunDef_NumVars(struct VMGlobals* g, int numArgsPushed) {
 
     a = g->sp;
     methraw = METHRAW(slotRawBlock(a));
-    SetInt(a, methraw->numvars);
+    SetInt(a, methraw->numVariables);
     return errNone;
 }
 
@@ -2178,7 +2173,7 @@ int prFunDef_VarArgs(struct VMGlobals* g, int numArgsPushed) {
 
     a = g->sp;
     methraw = METHRAW(slotRawBlock(a));
-    if (methraw->varargs) {
+    if (methraw->numVariableArguments) {
         SetTrue(a);
     } else {
         SetFalse(a);
@@ -2189,7 +2184,7 @@ int prFunDef_VarArgs(struct VMGlobals* g, int numArgsPushed) {
 int prFunDef_VarArgsValue(struct VMGlobals* g, int numArgsPushed) {
     auto a = g->sp;
     auto methodRaw = METHRAW(slotRawBlock(a));
-    SetInt(a, methodRaw->varargs);
+    SetInt(a, methodRaw->numVariableArguments);
     return errNone;
 }
 
@@ -3438,9 +3433,9 @@ void initPrimitiveTable() {
         gPrimitiveTable.table[i].func = undefinedPrimitive;
         gPrimitiveTable.table[i].name = s_none;
         gPrimitiveTable.table[i].base = 0;
-        gPrimitiveTable.table[i].numArgs = 0;
-        gPrimitiveTable.table[i].varArgs = 0;
-        gPrimitiveTable.table[i].keyArgs = 0;
+        gPrimitiveTable.table[i].numNormalArguments = 0;
+        gPrimitiveTable.table[i].hasVariablePositionalArguments = false;
+        gPrimitiveTable.table[i].hasVariableKeywordArguments = false;
     }
 }
 
@@ -3460,14 +3455,15 @@ void growPrimitiveTable(int newsize) {
         gPrimitiveTable.table[i].func = undefinedPrimitive;
         gPrimitiveTable.table[i].name = s_none;
         gPrimitiveTable.table[i].base = 0;
-        gPrimitiveTable.table[i].numArgs = 0;
-        gPrimitiveTable.table[i].varArgs = 0;
-        gPrimitiveTable.table[i].keyArgs = 0;
+        gPrimitiveTable.table[i].numNormalArguments = 0;
+        gPrimitiveTable.table[i].hasVariablePositionalArguments = false;
+        gPrimitiveTable.table[i].hasVariableKeywordArguments = false;
     }
     pyr_pool_runtime->Free(oldtable);
 }
 
 int definePrimitive(int base, int index, const char* name, PrimitiveHandler handler, int numArgs, int varArgs) {
+    assert(numArgs);
     int tableIndex;
     PyrSymbol* sym;
 
@@ -3494,17 +3490,17 @@ int definePrimitive(int base, int index, const char* name, PrimitiveHandler hand
     gPrimitiveTable.table[tableIndex].func = handler;
     gPrimitiveTable.table[tableIndex].name = sym;
     gPrimitiveTable.table[tableIndex].base = base;
-    gPrimitiveTable.table[tableIndex].numArgs = numArgs;
-    gPrimitiveTable.table[tableIndex].varArgs = varArgs;
-    gPrimitiveTable.table[tableIndex].keyArgs = 0;
+    gPrimitiveTable.table[tableIndex].numNormalArguments = numArgs;
+    gPrimitiveTable.table[tableIndex].hasVariablePositionalArguments = varArgs;
+    gPrimitiveTable.table[tableIndex].hasVariableKeywordArguments = 0;
     if (tableIndex > gPrimitiveTable.size)
         gPrimitiveTable.size = tableIndex;
     sym->u.index = tableIndex;
     return tableIndex;
 }
 
-int definePrimitiveWithKeys(int base, int index, const char* name, PrimitiveHandler handler,
-                            PrimitiveWithKeysHandler keyhandler, int numArgs, int varArgs) {
+int definePrimitiveWithVariableKeys(int base, int index, const char* name, PrimitiveHandler handler,
+                                    PrimitiveWithKeysHandler keyhandler, int numArgs) {
     int tableIndex;
     PyrSymbol* sym;
 
@@ -3531,18 +3527,18 @@ int definePrimitiveWithKeys(int base, int index, const char* name, PrimitiveHand
     gPrimitiveTable.table[tableIndex].func = handler;
     gPrimitiveTable.table[tableIndex].name = sym;
     gPrimitiveTable.table[tableIndex].base = base;
-    gPrimitiveTable.table[tableIndex].numArgs = numArgs;
-    gPrimitiveTable.table[tableIndex].varArgs = varArgs;
-    gPrimitiveTable.table[tableIndex].keyArgs = 1;
+    gPrimitiveTable.table[tableIndex].numNormalArguments = numArgs;
+    gPrimitiveTable.table[tableIndex].hasVariablePositionalArguments = true;
+    gPrimitiveTable.table[tableIndex].hasVariableKeywordArguments = true;
     sym->u.index = tableIndex;
 
     tableIndex++;
     gPrimitiveTable.table[tableIndex].func = (PrimitiveHandler)keyhandler;
     gPrimitiveTable.table[tableIndex].name = sym;
     gPrimitiveTable.table[tableIndex].base = base;
-    gPrimitiveTable.table[tableIndex].numArgs = numArgs;
-    gPrimitiveTable.table[tableIndex].varArgs = varArgs;
-    gPrimitiveTable.table[tableIndex].keyArgs = 1;
+    gPrimitiveTable.table[tableIndex].numNormalArguments = numArgs;
+    gPrimitiveTable.table[tableIndex].hasVariablePositionalArguments = true;
+    gPrimitiveTable.table[tableIndex].hasVariableKeywordArguments = true;
     if (tableIndex > gPrimitiveTable.size)
         gPrimitiveTable.size = tableIndex;
     return tableIndex;
@@ -3563,7 +3559,7 @@ void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
     int primIndex = methraw->specialIndex;
 
     PrimitiveDef* def = gPrimitiveTable.table + primIndex;
-    int numArgsNeeded = def->numArgs;
+    int numArgsNeeded = def->numNormalArguments;
     int diff = numArgsNeeded - numArgsPushed;
 
     if (diff != 0) { // incorrect num of args
@@ -3574,7 +3570,7 @@ void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
                 slotCopy(++pslot, ++qslot);
 
             g->sp += diff;
-        } else if (def->varArgs) { // has var args
+        } else if (def->hasVariablePositionalArguments) { // has var args
             numArgsNeeded = numArgsPushed;
         } else {
             g->sp += diff; // remove excess args
@@ -3620,29 +3616,106 @@ void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
 }
 
 void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int numKeyArgsPushed) {
-    int i, j, m, diff, err;
-    PyrSlot *pslot, *qslot;
-    int numArgsNeeded, numArgsPushed;
-
+    const auto maybe_gc_sanitycheck = [&]() {
 #ifdef GC_SANITYCHECK
-    g->gc->SanityCheck();
+        g->gc->SanityCheck();
 #endif
-    // post("doPrimitive %s:%s\n", slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name,
-    // slotRawSymbol(&meth->name)->name); printf("doPrimitive %s:%s\n",
-    // slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
+    };
+
+    maybe_gc_sanitycheck();
+
+    const int numNormalArgsGiven = allArgsPushed - (numKeyArgsPushed * 2);
 
     PyrMethodRaw* methraw = METHRAW(meth);
-    int primIndex = methraw->specialIndex;
+    const int primIndex = methraw->specialIndex;
     PrimitiveDef* def = gPrimitiveTable.table + primIndex;
     g->primitiveIndex = primIndex - def->base;
     g->primitiveMethod = meth;
 
-    if (def->keyArgs && numKeyArgsPushed) {
-        g->numpop = allArgsPushed - 1;
+    PyrSlot* reciever = g->sp - allArgsPushed + 1;
 
+    // Remove kwargs from stack to temporary stack.
+    if (numKeyArgsPushed > 0) {
+        PyrSlot* first_kwarg = g->sp - (numKeyArgsPushed * 2) + 1;
+        for (size_t i { 0 }; i < numKeyArgsPushed * 2; i += 2) {
+            temporaryKeywordStack[i] = first_kwarg[i];
+            assert(first_kwarg[i].isSymbol());
+            temporaryKeywordStack[i + 1] = first_kwarg[i + 1];
+        }
+        g->sp -= numKeyArgsPushed * 2;
+    }
+
+    // If needed, put any defaults arguments onto the stack.
+
+    const int numNeededArgs = def->numNormalArguments;
+    bool usedNormalVarArgs = false;
+    int numArgsOnStack = numNormalArgsGiven;
+
+    if (numNeededArgs != numNormalArgsGiven) {
+        if (numNormalArgsGiven > numNeededArgs) {
+            if (!def->hasVariablePositionalArguments) {
+                const unsigned int dif = numNormalArgsGiven - numNeededArgs;
+                g->sp -= dif;
+                numArgsOnStack = numNeededArgs;
+            } else {
+                usedNormalVarArgs = true;
+                numArgsOnStack = numNormalArgsGiven;
+            }
+        } else {
+            const unsigned int needed = numNeededArgs - numNormalArgsGiven;
+            const auto disFromSPToReciever = std::distance(g->sp, reciever);
+            if (maybeReallocStack(g, needed)) {
+                reciever = g->sp + disFromSPToReciever;
+            }
+            PyrSlot* from = slotRawObject(&meth->prototypeFrame)->slots + numNormalArgsGiven - 1;
+            PyrSlot* to = g->sp;
+            for (size_t i { 0 }; i < needed; ++i) {
+                to[i + 1] = from[i];
+            }
+            g->sp += needed;
+            numArgsOnStack = numNeededArgs;
+        }
+    }
+
+    int num_variable_kwargs = 0;
+    // Put keywords back on the stack, overriding what was already there on the stack.
+    if (numKeyArgsPushed && methraw->totalNumberArguments) {
+        PyrSymbol** argNames = slotRawSymbolArray(&meth->argNames)->symbols;
+
+        for (size_t keyword { 0 }; keyword < numKeyArgsPushed * 2; keyword += 2) {
+            PyrSymbol* key = slotRawSymbol(&temporaryKeywordStack[keyword]);
+
+            // We start at one here because you can't override 'this'.
+            for (size_t argN { 1 }; argN < methraw->numNormalArguments; ++argN) {
+                if (key == argNames[argN]) {
+                    reciever[argN] = temporaryKeywordStack[keyword + 1];
+                    goto found;
+                }
+            }
+
+            if (methraw->numVariableArguments != 2) {
+                if (gKeywordError) {
+                    post("WARNING: keyword arg '%s' not found in call to %s:%s\n", key->name,
+                         slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
+                }
+            } else {
+                num_variable_kwargs += 1;
+                g->sp += 1;
+                g->sp[0] = temporaryKeywordStack[keyword];
+                g->sp += 1;
+                g->sp[0] = temporaryKeywordStack[keyword + 1];
+                numArgsOnStack += 2;
+            }
+        found:;
+        }
+    }
+
+    if (num_variable_kwargs) {
+        g->numpop = numArgsOnStack - 1;
         g->gc->enterDelayedCollectionContext();
+        int err;
         try {
-            err = ((PrimitiveWithKeysHandler)def[1].func)(g, allArgsPushed, numKeyArgsPushed);
+            err = ((PrimitiveWithKeysHandler)def[1].func)(g, numArgsOnStack, num_variable_kwargs);
         } catch (std::exception& ex) {
             g->lastExceptions[g->thread] = std::make_pair(std::current_exception(), meth);
             err = errException;
@@ -3655,80 +3728,25 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         if (err <= errNone)
             g->sp -= g->numpop;
         else {
-            // post("primerr %d\n", err);
             SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
             SetInt(&g->thread->primitiveError, err);
             setupForMethod(g, meth, allArgsPushed, numKeyArgsPushed);
         }
-#ifdef GC_SANITYCHECK
-        g->gc->SanityCheck();
-#endif
-        return;
-    }
-    numArgsNeeded = def->numArgs;
-    numArgsPushed = allArgsPushed - (numKeyArgsPushed * 2);
+    } else {
+        g->numpop = numArgsOnStack - 1;
 
-    if (numKeyArgsPushed) {
-        // evacuate keyword args to separate area
-        pslot = temporaryKeywordStack + (numKeyArgsPushed << 1);
-        qslot = g->sp + 1;
-        for (m = 0; m < numKeyArgsPushed; ++m) {
-            slotCopy(--pslot, --qslot);
-            slotCopy(--pslot, --qslot);
+        g->gc->enterDelayedCollectionContext();
+        int err;
+        try {
+            err = (*def->func)(g, numArgsOnStack);
+        } catch (std::exception& ex) {
+            g->lastExceptions[g->thread] = std::make_pair(std::current_exception(), meth);
+            err = errException;
+        } catch (...) {
+            g->lastExceptions[g->thread] = std::make_pair(nullptr, meth);
+            err = errException;
         }
-    }
-
-    diff = numArgsNeeded - numArgsPushed;
-    if (diff != 0) { // incorrect num of args
-        if (diff > 0) { // not enough args
-            g->sp += numArgsNeeded - allArgsPushed; // expand stack to correct size
-            pslot = g->sp - diff;
-            qslot = slotRawObject(&meth->prototypeFrame)->slots + numArgsPushed - 1;
-            for (m = 0; m < diff; ++m)
-                slotCopy(++pslot, ++qslot);
-        } else if (def->varArgs) { // has var args
-            numArgsNeeded = numArgsPushed;
-            g->sp += numArgsNeeded - allArgsPushed; // expand stack to correct size
-        } else {
-            g->sp += numArgsNeeded - allArgsPushed; // remove excess args
-        }
-    }
-
-    // do keyword lookup:
-    if (numKeyArgsPushed && methraw->posargs) {
-        PyrSymbol **name0, **name;
-        PyrSlot *key, *vars;
-        name0 = slotRawSymbolArray(&meth->argNames)->symbols + 1;
-        key = temporaryKeywordStack;
-        vars = g->sp - numArgsNeeded + 1;
-        for (i = 0; i < numKeyArgsPushed; ++i, key += 2) {
-            name = name0;
-            for (j = 1; j < methraw->posargs; ++j, ++name) {
-                if (*name == slotRawSymbol(key)) {
-                    slotCopy(&vars[j], &key[1]);
-                    goto found;
-                }
-            }
-            if (gKeywordError) {
-                post("WARNING: keyword arg '%s' not found in call to %s:%s\n", slotRawSymbol(key)->name,
-                     slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
-            }
-        found:;
-        }
-    }
-    g->numpop = numArgsNeeded - 1;
-
-    g->gc->enterDelayedCollectionContext();
-    try {
-        err = (*def->func)(g, numArgsNeeded);
-    } catch (std::exception& ex) {
-        g->lastExceptions[g->thread] = std::make_pair(std::current_exception(), meth);
-        err = errException;
-    } catch (...) {
-        g->lastExceptions[g->thread] = std::make_pair(nullptr, meth);
-        err = errException;
-    }
-    g->gc->exitDelayedCollectionContext();
+        g->gc->exitDelayedCollectionContext();
 
     if (err <= errNone)
         g->sp -= g->numpop;
@@ -3736,7 +3754,7 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         // post("primerr %d\n", err);
         SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
         SetInt(&g->thread->primitiveError, err);
-        setupForMethod(g, meth, numArgsNeeded, 0);
+        setupForMethod(g, meth, numArgsOnStack, 0);
     }
 #ifdef GC_SANITYCHECK
     g->gc->SanityCheck();
@@ -3814,9 +3832,9 @@ void initPrimitives() {
 
     // binary operators
     base = nextPrimitiveIndex();
-    definePrimitive(base, opAdd, "_Add", prAddNum, 2, 0);
-    definePrimitive(base, opSub, "_Sub", prSubNum, 2, 0);
-    definePrimitive(base, opMul, "_Mul", prMulNum, 2, 0);
+    definePrimitive(base, opAdd, "_Add", prAddNum, 3, 0);
+    definePrimitive(base, opSub, "_Sub", prSubNum, 3, 0);
+    definePrimitive(base, opMul, "_Mul", prMulNum, 3, 0);
 
     definePrimitive(base, opIDiv, "_IDiv", prSpecialBinaryArithMsg, 3, 0);
     definePrimitive(base, opFDiv, "_FDiv", prSpecialBinaryArithMsg, 3, 0);
@@ -3871,6 +3889,15 @@ void initPrimitives() {
     // general primitives
     base = nextPrimitiveIndex();
     index = 0;
+
+    // tests
+    definePrimitive(base, index++, "_PrimitiveTestNoKwargsNoVarArg", primitiveTests::noKwNoVarArgs, 4, 0);
+    definePrimitive(base, index++, "_PrimitiveTestNoKwargsWithVarArgs", primitiveTests::noKwWithVarArgs, 4, 1);
+    definePrimitiveWithVariableKeys(base, index, "_PrimitiveTestWithKwargs", primitiveTests::kwWithVarArgsSansKw,
+                                    primitiveTests::kwWithVarArgs, 4);
+    index += 2;
+
+
     definePrimitive(base, index++, "_Halt", haltInterpreter, 1, 0);
     definePrimitive(base, index++, "_InstVarAt", instVarAt, 2, 0);
     definePrimitive(base, index++, "_InstVarPut", instVarPut, 3, 0);
@@ -3879,15 +3906,15 @@ void initPrimitives() {
     definePrimitive(base, index++, "_ObjectClass", objectClass, 1, 0);
     definePrimitive(base, index++, "_BasicNew", basicNew, 2, 0);
     definePrimitive(base, index++, "_BasicNewClear", basicNewClear, 2, 0);
-    definePrimitiveWithKeys(base, index, "_BasicNewCopyArgsToInstVars", basicNewCopyArgsToInstanceVars,
-                            basicNewCopyArgsToInstanceVarsWithKeys, 1, 1);
+    definePrimitiveWithVariableKeys(base, index, "_BasicNewCopyArgsToInstVars", basicNewCopyArgsToInstanceVars,
+                                    basicNewCopyArgsToInstanceVarsWithKeys, 1);
     index += 2;
 
     // definePrimitive(base, index++, "_BasicNewCopyArgsByName", basicNewCopyArgsByName, 1, 1);
 
-    definePrimitiveWithKeys(base, index, "_FunctionValue", blockValue, blockValueWithKeys, 1, 1);
+    definePrimitiveWithVariableKeys(base, index, "_FunctionValue", blockValue, blockValueWithKeys, 1);
     index += 2;
-    definePrimitiveWithKeys(base, index, "_FunctionValueEnvir", blockValueEnvir, blockValueEnvirWithKeys, 1, 1);
+    definePrimitiveWithVariableKeys(base, index, "_FunctionValueEnvir", blockValueEnvir, blockValueEnvirWithKeys, 1);
     index += 2;
 
     definePrimitive(base, index++, "_FunctionValueArray", blockValueArray, 1, 1);
@@ -3915,22 +3942,22 @@ void initPrimitives() {
 
     definePrimitive(base, index++, "_Identical", objectIdentical, 2, 0);
     definePrimitive(base, index++, "_NotIdentical", objectNotIdentical, 2, 0);
-    definePrimitiveWithKeys(base, index, "_ObjectPerform", objectPerform, objectPerformWithKeys, 2, 1);
+    definePrimitiveWithVariableKeys(base, index, "_ObjectPerform", objectPerform, objectPerformWithKeys, 2);
     index += 2;
     definePrimitive(base, index++, "_ObjectPerformArgs", objectPerformArgs, 4, 0);
     definePrimitive(base, index++, "_ObjectSuperPerformArgs", objectSuperPerformArgs, 4, 0);
 
-    definePrimitiveWithKeys(base, index, "_ObjectPerformList", objectPerformList, objectPerformListWithKeys, 2, 1);
+    definePrimitiveWithVariableKeys(base, index, "_ObjectPerformList", objectPerformList, objectPerformListWithKeys, 1);
     index += 2;
 
-    definePrimitiveWithKeys(base, index, "_SuperPerform", objectSuperPerform, objectSuperPerformWithKeys, 2, 1);
+    definePrimitiveWithVariableKeys(base, index, "_SuperPerform", objectSuperPerform, objectSuperPerformWithKeys, 1);
     index += 2;
-    definePrimitiveWithKeys(base, index++, "_SuperPerformList", objectSuperPerformList, objectSuperPerformListWithKeys,
-                            2, 1);
+    definePrimitiveWithVariableKeys(base, index++, "_SuperPerformList", objectSuperPerformList,
+                                    objectSuperPerformListWithKeys, 1);
     index += 2;
     definePrimitive(base, index++, "_ObjectPerformMsg", objectPerformSelList, 2, 0);
     // definePrimitive(base, index++, "_ArrayPerformMsg", arrayPerformMsg, 1, 1);
-    definePrimitive(base, index++, "_ObjectString", prObjectString, 1, 0);
+    definePrimitive(base, index++, "_ObjectString", prObjectString, 2, 0);
     definePrimitive(base, index++, "_Float_AsStringPrec", prFloat_AsStringPrec, 2, 0);
     definePrimitive(base, index++, "_ObjectCompileString", prAsCompileString, 1, 0);
     definePrimitive(base, index++, "_ClassString", prClassString, 1, 0);

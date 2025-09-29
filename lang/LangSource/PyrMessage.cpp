@@ -136,9 +136,9 @@ lookup_again:
 
     const auto pushDefaultArgsIfNotEnoughSupplied = [&]() {
         auto defaultArgs = slotRawObject(&method->prototypeFrame)->slots;
-        std::copy(defaultArgs + numArgsPushed, defaultArgs + methodRaw->numargs, g->sp + 1);
-        g->sp += methodRaw->numargs - numArgsPushed; // fix stack pointer to point to last arg pushed.
-        numArgsPushed = methodRaw->numargs;
+        std::copy(defaultArgs + numArgsPushed, defaultArgs + methodRaw->numNormalArguments, g->sp + 1);
+        g->sp += methodRaw->numNormalArguments - numArgsPushed; // fix stack pointer to point to last arg pushed.
+        numArgsPushed = methodRaw->numNormalArguments;
     };
 
     const auto applyKeywords = [&]() {
@@ -219,7 +219,7 @@ lookup_again:
     }
 
     case methRedirect: { // Send a different selector to this, e.g. this.subclassResponsibility.
-        if (numArgsPushed < methodRaw->numargs)
+        if (numArgsPushed < methodRaw->numNormalArguments)
             pushDefaultArgsIfNotEnoughSupplied();
         if (numKeyArgsPushed > 0)
             applyKeywords();
@@ -228,7 +228,7 @@ lookup_again:
     }
 
     case methRedirectSuper: { // Send a different selector to super, e.g. super.subclassResponsibility.
-        if (numArgsPushed < methodRaw->numargs)
+        if (numArgsPushed < methodRaw->numNormalArguments)
             pushDefaultArgsIfNotEnoughSupplied();
         if (numKeyArgsPushed > 0)
             applyKeywords();
@@ -240,7 +240,7 @@ lookup_again:
     case methForwardInstVar: { // Forward to an object instance variable, e.g., ^foo.bar.
         if (numKeyArgsPushed > 0)
             applyKeywords();
-        else if (numArgsPushed < methodRaw->numargs)
+        else if (numArgsPushed < methodRaw->numNormalArguments)
             pushDefaultArgsIfNotEnoughSupplied();
         selector = slotRawSymbol(&method->selectors);
         slotCopy(recvrSlot, &slotRawObject(recvrSlot)->slots[methodRaw->specialIndex]);
@@ -251,7 +251,7 @@ lookup_again:
     case methForwardClassVar: { // Forward to a class variable, e.g., ^Class.foo.bar.
         if (numKeyArgsPushed > 0)
             applyKeywords();
-        else if (numArgsPushed < methodRaw->numargs)
+        else if (numArgsPushed < methodRaw->numNormalArguments)
             pushDefaultArgsIfNotEnoughSupplied();
         selector = slotRawSymbol(&method->selectors);
         slotCopy(recvrSlot, &g->classvars->slots[methodRaw->specialIndex]);
@@ -380,12 +380,12 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
     PyrObject* proto = slotRawObject(&block->prototypeFrame);
 
     const PyrMethodRaw* methodRaw = METHRAW(block);
-    const auto methNumActualArgs = methodRaw->posargs;
+    const auto methNumActualArgs = methodRaw->totalNumberArguments;
     const auto numNormalSuppliedArgs = totalSuppliedArgs - (numKwArgsSupplied * 2);
-    const bool methHasVarArg = methodRaw->varargs > 0;
-    const bool methHasKwArg = methodRaw->varargs > 1;
-    const auto methNumNormArgs = methodRaw->numargs;
-    const auto methNumVariables = methodRaw->numvars;
+    const bool methHasVarArg = methodRaw->numVariableArguments > 0;
+    const bool methHasKwArg = methodRaw->numVariableArguments > 1;
+    const auto methNumNormArgs = methodRaw->numNormalArguments;
+    const auto methNumVariables = methodRaw->numVariables;
     const auto methArgNames = slotRawSymbolArray(&block->argNames)->symbols;
 
     PyrSlot* outCallFrameStack = callFrame->vars;
@@ -756,7 +756,7 @@ int keywordFixStack(VMGlobals* g, PyrMethod* meth, PyrMethodRaw* methraw, std::i
     PyrSlot* vars = g->sp - allArgsPushed + 1;
 
     numArgsPushed = allArgsPushed - (numKeyArgsPushed << 1);
-    numArgsNeeded = methraw->numargs;
+    numArgsNeeded = methraw->numNormalArguments;
     diff = numArgsNeeded - numArgsPushed;
     if (diff > 0) { // not enough args
         pslot = vars + numArgsPushed - 1;
@@ -767,12 +767,12 @@ int keywordFixStack(VMGlobals* g, PyrMethod* meth, PyrMethodRaw* methraw, std::i
     }
 
     // do keyword lookup:
-    if (numKeyArgsPushed && methraw->posargs) {
+    if (numKeyArgsPushed && methraw->totalNumberArguments) {
         PyrSymbol** name0 = slotRawSymbolArray(&meth->argNames)->symbols + 1;
         PyrSlot* key = temporaryKeywordStack;
         for (i = 0; i < numKeyArgsPushed; ++i, key += 2) {
             PyrSymbol** name = name0;
-            for (j = 1; j < methraw->posargs; ++j, ++name) {
+            for (j = 1; j < methraw->totalNumberArguments; ++j, ++name) {
                 if (*name == slotRawSymbol(key)) {
                     slotCopy(&vars[j], &key[1]);
                     goto found;

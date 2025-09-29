@@ -1375,7 +1375,7 @@ HOT void Interpret(VMGlobals* g) {
 
             InterpretOpcode(PushAllArgsAndSendMsg) {
                 const auto [selectorIndex] = PushAllArgsAndSendMsg.pullOperandsFromInstructions(ip);
-                numArgsPushed = METHRAW(g->block)->numargs;
+                numArgsPushed = METHRAW(g->block)->numNormalArguments;
                 PyrSlot* pslot = g->frame->vars - 1;
                 for (int m = 0; m < numArgsPushed; ++m)
                     *++sp = *++pslot;
@@ -1387,7 +1387,7 @@ HOT void Interpret(VMGlobals* g) {
 
             InterpretOpcode(PushAllButFirstArgAndSendMsg) {
                 const auto [selectorIndex] = PushAllButFirstArgAndSendMsg.pullOperandsFromInstructions(ip);
-                numArgsPushed = METHRAW(g->block)->numargs;
+                numArgsPushed = METHRAW(g->block)->numNormalArguments;
                 PyrSlot* pslot = g->frame->vars;
                 for (int m = 0; m < numArgsPushed - 1; ++m)
                     *++sp = *++pslot;
@@ -1399,7 +1399,7 @@ HOT void Interpret(VMGlobals* g) {
 
             InterpretOpcode(PushAllArgsAndSendSpecialMsg) {
                 const auto [selectorIndex] = PushAllArgsAndSendSpecialMsg.pullOperandsFromInstructions(ip);
-                numArgsPushed = METHRAW(g->block)->numargs;
+                numArgsPushed = METHRAW(g->block)->numNormalArguments;
                 PyrSlot* pslot = g->frame->vars - 1;
                 for (int m = 0; m < numArgsPushed; ++m)
                     *++sp = *++pslot;
@@ -1411,7 +1411,7 @@ HOT void Interpret(VMGlobals* g) {
 
             InterpretOpcode(PushAllButFirstArgAndSendSpecialMsg) {
                 const auto [specialIndex] = PushAllButFirstArgAndSendSpecialMsg.pullOperandsFromInstructions(ip);
-                numArgsPushed = METHRAW(g->block)->numargs;
+                numArgsPushed = METHRAW(g->block)->numNormalArguments;
                 PyrSlot* pslot = g->frame->vars;
                 for (int m = 0; m < numArgsPushed - 1; ++m)
                     *++sp = *++pslot;
@@ -1423,7 +1423,7 @@ HOT void Interpret(VMGlobals* g) {
 
             InterpretOpcode(PushAllButFirstTwoArgsAndSendMsg) {
                 const auto [index] = PushAllButFirstTwoArgsAndSendMsg.pullOperandsFromInstructions(ip);
-                numArgsPushed = METHRAW(g->block)->numargs + 1;
+                numArgsPushed = METHRAW(g->block)->numNormalArguments + 1;
                 PyrSlot* pslot = g->frame->vars;
                 for (int m = 0; m < numArgsPushed - 2; ++m)
                     *++sp = *++pslot;
@@ -1435,7 +1435,7 @@ HOT void Interpret(VMGlobals* g) {
 
             InterpretOpcode(PushAllButFirstTwoArgsAndSendSpecialMsg) {
                 const auto [index] = PushAllButFirstTwoArgsAndSendSpecialMsg.pullOperandsFromInstructions(ip);
-                numArgsPushed = METHRAW(g->block)->numargs + 1;
+                numArgsPushed = METHRAW(g->block)->numNormalArguments + 1;
                 PyrSlot* pslot = g->frame->vars;
                 for (int m = 0; m < numArgsPushed - 2; ++m)
                     *++sp = *++pslot;
@@ -2246,17 +2246,17 @@ HOT void Interpret(VMGlobals* g) {
 
             PyrMethodRaw* methraw = METHRAW(meth);
             const auto pushDefaultArgsAndChopUnused = [&]() {
-                if (numArgsPushed < methraw->numargs) {
+                if (numArgsPushed < methraw->numNormalArguments) {
                     // Not enough args pushed.
                     PyrSlot* qslot = slotRawObject(&meth->prototypeFrame)->slots + numArgsPushed - 1;
-                    for (int m = 0, mmax = methraw->numargs - numArgsPushed; m < mmax; ++m)
+                    for (int m = 0, mmax = methraw->numNormalArguments - numArgsPushed; m < mmax; ++m)
                         slotCopy(++sp, ++qslot);
-                    numArgsPushed = methraw->numargs;
-                } else if (methraw->varargs == 0 && numArgsPushed > methraw->numargs) {
+                    numArgsPushed = methraw->numNormalArguments;
+                } else if (methraw->numVariableArguments == 0 && numArgsPushed > methraw->numNormalArguments) {
                     // Too many args.
-                    const auto num_slots_to_chop = numArgsPushed - methraw->numargs;
+                    const auto num_slots_to_chop = numArgsPushed - methraw->numNormalArguments;
                     sp -= num_slots_to_chop;
-                    numArgsPushed = methraw->numargs;
+                    numArgsPushed = methraw->numNormalArguments;
                 }
             };
 

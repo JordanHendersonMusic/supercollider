@@ -43,6 +43,7 @@
 #include "SC_Codecvt.hpp"
 #include "SpecialSelectorsOperatorsAndClasses.h"
 #include "text_location.hpp"
+#include "PyrPrimitive.h"
 
 namespace fs = std::filesystem;
 
@@ -645,11 +646,11 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     methraw = METHRAW(method);
                     methraw->unused1 = 0;
                     methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
+                    methraw->numNormalArguments = 1;
+                    methraw->numVariables = 0;
+                    methraw->totalNumberArguments = 1;
+                    methraw->numVariableArguments = 0;
+                    methraw->numSlots = 1;
                     methraw->popSize = 0;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
@@ -676,11 +677,11 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     methraw = METHRAW(method);
                     methraw->unused1 = 0;
                     methraw->unused2 = 0;
-                    methraw->numargs = 2;
-                    methraw->numvars = 0;
-                    methraw->posargs = 2;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 2;
+                    methraw->numNormalArguments = 2;
+                    methraw->numVariables = 0;
+                    methraw->totalNumberArguments = 2;
+                    methraw->numVariableArguments = 0;
+                    methraw->numSlots = 2;
                     methraw->popSize = 1;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
@@ -713,11 +714,11 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     methraw = METHRAW(method);
                     methraw->unused1 = 0;
                     methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
+                    methraw->numNormalArguments = 1;
+                    methraw->numVariables = 0;
+                    methraw->totalNumberArguments = 1;
+                    methraw->numVariableArguments = 0;
+                    methraw->numSlots = 1;
                     methraw->popSize = 0;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
@@ -744,11 +745,11 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     // create setter method
                     method = newPyrMethod();
                     methraw = METHRAW(method);
-                    methraw->numargs = 2;
-                    methraw->numvars = 0;
-                    methraw->posargs = 2;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 2;
+                    methraw->numNormalArguments = 2;
+                    methraw->numVariables = 0;
+                    methraw->totalNumberArguments = 2;
+                    methraw->numVariableArguments = 0;
+                    methraw->numSlots = 2;
                     methraw->popSize = 1;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
@@ -782,11 +783,11 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     methraw = METHRAW(method);
                     methraw->unused1 = 0;
                     methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
+                    methraw->numNormalArguments = 1;
+                    methraw->numVariables = 0;
+                    methraw->totalNumberArguments = 1;
+                    methraw->numVariableArguments = 0;
+                    methraw->numSlots = 1;
                     methraw->popSize = 0;
                     SetNil(&method->contextDef);
                     SetNil(&method->varNames);
@@ -1318,13 +1319,13 @@ void PyrMethodNode::compile(PyrSlot* result) {
 
     methraw->needsHeapContext = 0;
 
-    methraw->varargs = 0;
+    methraw->numVariableArguments = 0;
     if (mArglist) {
         if (mArglist->mRest) {
-            methraw->varargs += 1;
+            methraw->numVariableArguments += 1;
             numVariableArgs = 1;
             if (mArglist->mKeywordArgs) {
-                methraw->varargs += 1;
+                methraw->numVariableArguments += 1;
                 numKwArgs = 1;
             }
         }
@@ -1335,14 +1336,14 @@ void PyrMethodNode::compile(PyrSlot* result) {
     numSlots = numArgs + numVariableArgs + numKwArgs + numVars;
     methraw->frameSize = (numSlots + FRAMESIZE) * sizeof(PyrSlot);
 
-    methraw->numargs = numArgs;
-    methraw->numvars = numVars;
-    methraw->posargs = numArgs + numVariableArgs + numKwArgs;
-    methraw->numtemps = numSlots;
+    methraw->numNormalArguments = numArgs;
+    methraw->numVariables = numVars;
+    methraw->totalNumberArguments = numArgs + numVariableArgs + numKwArgs;
+    methraw->numSlots = numSlots;
     methraw->popSize = numSlots - 1;
     firstKeyIndex = numArgs + numVariableArgs + numKwArgs;
 
-    numArgNames = methraw->posargs;
+    numArgNames = methraw->totalNumberArguments;
 
     if (numSlots == 1) {
         slotCopy(&method->argNames, &o_argnamethis);
@@ -1545,7 +1546,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                     } else {
                         if (funcFindArg((PyrBlock*)method, slotRawSymbol(rslot), &index)) { // return arg ?
                             // eliminate the case where its an ellipsis or keyword argument
-                            if (index < methraw->numargs) {
+                            if (index < methraw->numNormalArguments) {
                                 methType = methReturnArg;
                                 methraw->specialIndex = index; // when you change sp to sp - 1
                                 // methraw->specialIndex = index - 1;
@@ -1600,6 +1601,39 @@ void PyrMethodNode::compile(PyrSlot* result) {
     methraw->methType = methType;
     // set primitive
     // optimize common cases
+
+
+    if (mPrimitiveName) {
+        auto prim = gPrimitiveTable.table[methraw->specialIndex];
+        if (prim.func == undefinedPrimitive) {
+            error("Method %s:%s has an undefined primitive.\n",
+                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
+            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
+            compileErrors++;
+        }
+
+        if (prim.numNormalArguments != numArgs) {
+            error("Method %s:%s's number of arguments does not match the primitive.\n",
+                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
+            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
+            compileErrors++;
+        }
+
+        if (prim.hasVariablePositionalArguments && methraw->numVariableArguments < 1) {
+            error("Primitive has variable arguments but method %s:%s does not.\n",
+                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
+            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
+            compileErrors++;
+        }
+
+        if (prim.hasVariableKeywordArguments && methraw->numVariableArguments < 2) {
+            error("Primitive has variable keyword arguments but method %s:%s does not.\n",
+                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
+            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
+            compileErrors++;
+        }
+    }
+
 
     if (methType == methNormal || methType == methPrimitive) {
         // compile body
@@ -1841,7 +1875,7 @@ void PyrCallNodeBase::compilePartialApplication(int numCurryArgs, PyrSlot* resul
 
     SetObject(&block->contextDef, prevBlock);
     ////
-    methraw->varargs = 0;
+    methraw->numVariableArguments = 0;
 
     methraw->frameSize = (numCurryArgs + FRAMESIZE) * sizeof(PyrSlot);
     PyrObject* proto = newPyrArray(compileGC(), numCurryArgs, flags, false);
@@ -1854,10 +1888,10 @@ void PyrCallNodeBase::compilePartialApplication(int numCurryArgs, PyrSlot* resul
 
     SetNil(&block->varNames);
 
-    methraw->numargs = numCurryArgs;
-    methraw->numvars = 0;
-    methraw->posargs = numCurryArgs;
-    methraw->numtemps = numCurryArgs;
+    methraw->numNormalArguments = numCurryArgs;
+    methraw->numVariables = 0;
+    methraw->totalNumberArguments = numCurryArgs;
+    methraw->numSlots = numCurryArgs;
     methraw->popSize = numCurryArgs;
     methraw->methType = methBlock;
 
@@ -1931,7 +1965,7 @@ void PyrCallNode::compileCall(PyrSlot* result) {
     int numArgs = nodeListLength(argnode);
     int numKeyArgs = nodeListLength(keynode);
     int isSuper = isSuperObjNode(argnode);
-    int numBlockArgs = METHRAW(gCompilingBlock)->numargs;
+    int numBlockArgs = METHRAW(gCompilingBlock)->numNormalArguments;
 
     slotRawSymbol(&mSelector->mSlot)->flags |= sym_Called;
     int selType;
@@ -3928,40 +3962,41 @@ PyrBlockNode* newPyrBlockNode(sc::lex::SourceCodeRange loc, PyrArgListNode* argl
 }
 
 void PyrBlockNode::compile(PyrSlot* slotResult) {
-    PyrBlock *block, *prevBlock;
-    PyrMethodRaw* methraw;
-    int i, j, numArgs, numVars;
+    int i, j, numArgs;
     int numVariableArgs = 0;
     int numKwArgs = 0;
-    int numSlots, numArgNames, flags;
+    int numSlots, numArgNames;
     PyrVarDefNode* vardef;
     PyrObject* proto;
-    PyrSymbolArray *argNames, *varNames;
     PyrSlot dummy;
     bool hasVarExprs = false;
 
     // create a new block object
 
-    flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
-    block = newPyrBlock(flags);
-    SetObject(slotResult, block);
+    const auto flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
 
     int prevFunctionHighestExternalRef = gFunctionHighestExternalRef;
     bool prevFunctionCantBeClosed = gFunctionCantBeClosed;
     gFunctionHighestExternalRef = 0;
     gFunctionCantBeClosed = false;
 
-    prevBlock = gCompilingBlock;
-    PyrClass* prevClass = gCompilingClass;
+    // This functionDef is what we actually produce here.
+    auto block = newPyrBlock(flags);
+    SetObject(slotResult, block);
 
+    // More global state.
+    auto* prevBlock = gCompilingBlock;
     gCompilingBlock = block;
-    PyrBlock* prevPartiallyAppliedFunction = gPartiallyAppliedFunction;
+
+    auto* prevClass = gCompilingClass;
+
+    auto* prevPartiallyAppliedFunction = gPartiallyAppliedFunction;
     gPartiallyAppliedFunction = nullptr;
 
-    methraw = METHRAW(block);
-    methraw->unused1 = 0;
-    methraw->unused2 = 0;
 
+
+    // PyrMethodRaw holds meta data about the function def in a smaller format.
+    auto* methraw = METHRAW(block);
     methraw->needsHeapContext = 0;
     if (mIsTopLevel) {
         gCompilingClass = class_interpreter;
@@ -3970,21 +4005,30 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         SetObject(&block->contextDef, prevBlock);
     }
 
-    methraw->varargs = 0;
+    methraw->unused1 = 0;
+    methraw->unused2 = 0;
+    methraw->needsHeapContext = 0;
+    methraw->numVariableArguments = 0;
+    methraw->methType = methBlock;
     if (mArglist) {
         if (mArglist->mRest) {
-            methraw->varargs += 1;
-            numVariableArgs = 1;
+            methraw->numVariableArguments += 1;
             if (mArglist->mKeywordArgs) {
-                methraw->varargs += 1;
-                numKwArgs = 1;
+                methraw->numVariableArguments += 1;
             }
+        } else {
+            // We don't support variable keywords without variable arguments.
+            assert(mArglist->mKeywordArgs == nullptr);
         }
     }
-    numArgs = mArglist ? nodeListLength((PyrParseNode*)mArglist->mVarDefs) : 0;
-    numVars = mVarlist ? nodeListLength((PyrParseNode*)mVarlist->mVarDefs) : 0;
 
-    if (numArgs > 255) {
+    // Argument counts, there are a few different types.
+    const uint32 numVariableArguments = methraw->numVariableArguments;
+    const uint32 numNormalArguments = mArglist ? nodeListLength(mArglist->mVarDefs) : 0;
+    const uint32 numVars = mVarlist ? nodeListLength(mVarlist->mVarDefs) : 0;
+    const uint32 numArgsTotal = numNormalArguments + numVariableArguments;
+
+    if (numNormalArguments > 255) {
         error("Too many arguments in function definition (> 255)\n");
         nodePostErrorLine((PyrParseNode*)mArglist->mVarDefs);
         compileErrors++;
@@ -3996,185 +4040,155 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         compileErrors++;
     }
 
-    numSlots = numArgs + numVariableArgs + numKwArgs + numVars;
-    methraw->frameSize = (numSlots + FRAMESIZE) * sizeof(PyrSlot);
-    if (numSlots) {
-        proto = newPyrArray(compileGC(), numSlots, flags, false);
-        proto->size = numSlots;
+    const uint32 numSlotsForProtoFrame = numArgsTotal + numVars;
+    methraw->frameSize = (numSlotsForProtoFrame + FRAMESIZE) * sizeof(PyrSlot);
+    if (numSlotsForProtoFrame) {
+        auto proto = newPyrArray(compileGC(), numSlotsForProtoFrame, flags, false);
+        proto->size = numSlotsForProtoFrame;
         SetObject(&block->prototypeFrame, proto);
     } else {
         SetNil(&block->prototypeFrame);
     }
 
-    methraw->numargs = numArgs;
-    methraw->numvars = numVars;
-    methraw->posargs = numArgs + numVariableArgs + numKwArgs;
-    methraw->numtemps = numSlots;
-    methraw->popSize = numSlots;
+    methraw->numNormalArguments = numNormalArguments;
+    methraw->numVariables = numVars;
+    methraw->totalNumberArguments = numArgsTotal;
+    methraw->numSlots = numSlotsForProtoFrame;
+    methraw->popSize = numSlotsForProtoFrame;
 
-    numArgNames = methraw->posargs;
-
-    if (numArgNames) {
-        argNames = newPyrSymbolArray(compileGC(), numArgNames, flags, false);
-        argNames->size = numArgNames;
-        SetObject(&block->argNames, argNames);
+    // Build argname and varname array
+    auto* argNames = numArgsTotal > 0 ? newPyrSymbolArray(compileGC(), numArgsTotal, flags, false) : nullptr;
+    if (numArgsTotal) {
+        argNames->size = numArgsTotal;
+        block->argNames = PyrSlot::make(argNames);
     } else {
-        SetNil(&block->argNames);
+        block->argNames = PyrSlot::make(PyrNil {});
     }
 
-    if (numVars) {
-        varNames = newPyrSymbolArray(compileGC(), numVars, flags, false);
+    auto* varNames = numVars > 0 ? newPyrSymbolArray(compileGC(), numVars, flags, false) : nullptr;
+    if (numVars > 0) {
         varNames->size = numVars;
-        SetObject(&block->varNames, varNames);
+        block->varNames = PyrSlot::make(varNames);
     } else {
-        SetNil(&block->varNames);
+        block->varNames = PyrSlot::make(PyrNil {});
     }
 
-    // declare args
-    if (numArgs) {
-        PyrSymbol** blockargs;
-        blockargs = slotRawSymbolArray(&block->argNames)->symbols;
-        vardef = mArglist->mVarDefs;
-        for (i = 0; i < numArgs; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
-            PyrSlot* varslot;
-            varslot = &vardef->mVarName->mSlot;
-            // already declared as arg?
-            for (j = 0; j < i; ++j) {
-                if (blockargs[j] == slotRawSymbol(varslot)) {
-                    error("Function argument '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
-                          slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
-                    compileErrors++;
-                }
-            }
-            // put it in mArglist
-            blockargs[i] = slotRawSymbol(varslot);
+
+    // Ensure no variable or argument in this scope collides.
+    std::vector<PyrSymbol*> encounteredNames {};
+    encounteredNames.reserve(numSlotsForProtoFrame);
+    const auto compilerErrorIfDuplicate = [&](PyrSymbol* sym, PyrParseNode* where) {
+        if (const auto fnd = std::find(encounteredNames.begin(), encounteredNames.end(), sym);
+            fnd != encounteredNames.end()) {
+            error("Duplicate name in function: %s\n", (*fnd)->name);
+            nodePostErrorLine(where);
+            compileErrors++;
+        }
+        encounteredNames.push_back(sym);
+    };
+
+    // put normal argument names into argNames array.
+    if (mArglist) {
+        auto* argIt = mArglist->mVarDefs;
+        for (size_t i { 0 }; i < numNormalArguments; ++i, argIt = reinterpret_cast<PyrVarDefNode*>(argIt->mNext)) {
+            auto* sym = argIt->mVarName->mSlot.getSymbol();
+            assert(sym);
+            compilerErrorIfDuplicate(sym, argIt);
+            argNames->symbols[i] = sym;
+        }
+    } else {
+        assert(numNormalArguments == 0);
+    }
+    // put variable postiional and keyword argument names into argNames array.
+    if (numVariableArguments >= 1) {
+        assert(mArglist);
+        assert(mArglist->mRest);
+        auto* variableArgNameSym = mArglist->mRest->mSlot.getSymbol();
+        assert(variableArgNameSym);
+        compilerErrorIfDuplicate(variableArgNameSym, mArglist->mRest);
+        argNames->symbols[numNormalArguments] = variableArgNameSym;
+        if (numVariableArguments == 2) {
+            // put variable keyword arguments into argNames array.
+            auto* variableKeywordArgNameSym = mArglist->mKeywordArgs->mSlot.getSymbol();
+            assert(variableKeywordArgNameSym);
+            compilerErrorIfDuplicate(variableKeywordArgNameSym, mArglist->mKeywordArgs);
+            argNames->symbols[numNormalArguments + 1] = variableKeywordArgNameSym;
         }
     }
 
-    if (numVariableArgs > 0) {
-        PyrSlot* varslot;
-        PyrSymbol** blockargs;
-        blockargs = slotRawSymbolArray(&block->argNames)->symbols;
-        varslot = &mArglist->mRest->mSlot;
-        // already declared as arg?
-        for (j = 0; j < numArgs; ++j) {
-            if (blockargs[j] == slotRawSymbol(varslot)) {
-                error("Function argument '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
-                      slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
-            }
-        }
-        // put it in mArglist
-        blockargs[numArgs] = slotRawSymbol(varslot);
-
-        if (numKwArgs > 0) {
-            PyrSlot* kwvarslot;
-            kwvarslot = &mArglist->mKeywordArgs->mSlot;
-            // already declared as arg?
-            // Add one here to numArgs to include the name of the variableArgument slot
-            for (j = 0; j < numArgs + 1; ++j) {
-                if (blockargs[j] == slotRawSymbol(kwvarslot)) {
-                    error("Argument '%s' already declared in %s:%s\n", slotRawSymbol(kwvarslot)->name,
-                          slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)kwvarslot);
-                    compileErrors++;
-                }
-            }
-            blockargs[numArgs + 1] = slotRawSymbol(kwvarslot);
-        }
-    }
-
-    // declare vars
-    if (numVars) {
-        PyrSymbol **blockargs, **blockvars;
-        blockargs = block->argNames.isObjectHdr() ? slotRawSymbolArray(&block->argNames)->symbols : nullptr;
-        blockvars = slotRawSymbolArray(&block->varNames)->symbols;
-        vardef = mVarlist->mVarDefs;
-        for (i = 0; i < numVars; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
-            PyrSlot* varslot;
-            varslot = &vardef->mVarName->mSlot;
-            const PyrSymbol* name = slotRawSymbol(varslot);
+    // put variable names into varNames array.
+    if (mVarlist) {
+        auto* varIt = mVarlist->mVarDefs;
+        for (size_t i { 0 }; i < numVars; ++i, varIt = reinterpret_cast<PyrVarDefNode*>(varIt->mNext)) {
+            auto* name = varIt->mVarName->mSlot.getSymbol();
+            assert(name);
+            compilerErrorIfDuplicate(name, varIt);
             if (name == s_this) {
                 error("Cannot redefine 'this'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                nodePostErrorLine(varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curProcess) {
                 error("Cannot redefine 'thisProcess'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                nodePostErrorLine(varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curMethod) {
                 error("Cannot redefine 'thisMethod'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                nodePostErrorLine(varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curBlock) {
                 error("Cannot redefine 'thisFunctionDef'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                nodePostErrorLine(varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curClosure) {
                 error("Cannot redefine 'thisFunction'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                nodePostErrorLine(varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curThread) {
                 error("Cannot redefine 'thisThread'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                nodePostErrorLine(varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_super) {
                 error("Cannot redefine 'super'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                nodePostErrorLine(varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             }
 
-            // already declared as arg?
-            for (j = 0; j < numArgNames; ++j) {
-                if (blockargs[j] == slotRawSymbol(varslot)) {
-                    error("Function variable '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
-                          slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
-                    compileErrors++;
-                }
-            }
-            // already declared as var?
-            for (j = 0; j < i; ++j) {
-                if (blockvars[j] == slotRawSymbol(varslot)) {
-                    error("Function variable '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
-                          slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
-                    compileErrors++;
-                }
-            }
-            // put it in varlist
-            blockvars[i] = slotRawSymbol(varslot);
+            varNames->symbols[i] = name;
+        }
+    } else {
+        assert(numVars == 0);
+    }
+
+    // fill prototype frame
+    auto* prototypeFrame = block->prototypeFrame.getPyrObjType<PyrObject>();
+    assert(numSlotsForProtoFrame > 0 ? prototypeFrame != nullptr : true);
+    bool hasNonLiteralDefaultInitialisers = false; // Will require compiling the assignments if true.
+
+    // Put argument defaults into proto if literals.
+    if (mArglist) {
+        auto* argIt = mArglist->mVarDefs;
+        for (size_t i = 0; i < numNormalArguments; ++i, argIt = (PyrVarDefNode*)argIt->mNext) {
+            PyrSlot litval;
+            if (argIt->hasExpr(&litval))
+                hasNonLiteralDefaultInitialisers = true;
+            prototypeFrame->slots[i] = litval;
         }
     }
 
-    if (numArgs) {
-        vardef = mArglist->mVarDefs;
-        for (i = 0; i < numArgs; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
-            PyrSlot *slot, litval;
-            slot = slotRawObject(&block->prototypeFrame)->slots + i;
-            if (vardef->hasExpr(&litval))
-                hasVarExprs = true;
-            *slot = litval;
-        }
+    // put variable argument and variable keyword arguments default into proto, always the empty array.
+    for (size_t i = numNormalArguments; i < numArgsTotal; ++i) {
+        prototypeFrame->slots[i] = o_emptyarray;
     }
 
-    if (numVariableArgs > 0) {
-        slotCopy(&slotRawObject(&block->prototypeFrame)->slots[numArgs], &o_emptyarray);
-        if (numKwArgs > 0) {
-            slotCopy(&slotRawObject(&block->prototypeFrame)->slots[numArgs + 1], &o_emptyarray);
-        }
-    }
-
-    if (numVars) {
-        vardef = mVarlist->mVarDefs;
-        for (i = 0; i < numVars; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
-            PyrSlot *slot, litval;
-            slot = slotRawObject(&block->prototypeFrame)->slots + i + numArgs + numVariableArgs;
-            if (vardef->hasExpr(&litval))
-                hasVarExprs = true;
-            *slot = litval;
+    // put variable defaults into proto if literals.
+    if (mVarlist) {
+        auto* varIt = mVarlist->mVarDefs;
+        for (size_t i = numArgsTotal, j = 0; i < numArgsTotal + numVars;
+             ++i, ++j, varIt = reinterpret_cast<PyrVarDefNode*>(varIt->mNext)) {
+            PyrSlot litval;
+            if (varIt->hasExpr(&litval))
+                hasNonLiteralDefaultInitialisers = true;
+            prototypeFrame->slots[i] = litval;
         }
     }
     methraw->methType = methBlock;
@@ -4182,20 +4196,23 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     // compile body
     initByteCodes();
     {
+        PyrSlot dummy;
+
         SetTailBranch branch(true);
         SetTailIsMethodReturn mr(false);
-        if (hasVarExprs) {
+
+        // Compile the arguments if not literals (or nil).
+        if (hasNonLiteralDefaultInitialisers) {
+            // Only compiles the node if they aren't literals.
             if (mArglist) {
-                vardef = mArglist->mVarDefs;
-                for (i = 0; i < numArgs; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
+                auto* vardef = mArglist->mVarDefs;
+                for (size_t i = 0; i < numNormalArguments; ++i, vardef = (PyrVarDefNode*)vardef->mNext)
                     vardef->compileArg(&dummy);
-                }
             }
             if (mVarlist) {
-                vardef = mVarlist->mVarDefs;
-                for (i = 0; i < numVars; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
+                auto* vardef = mVarlist->mVarDefs;
+                for (size_t i = 0; i < numVars; ++i, vardef = (PyrVarDefNode*)vardef->mNext)
                     vardef->compile(&dummy);
-                }
             }
         }
         if (mBody->mClassno == pn_BlockReturnNode) {
@@ -4460,7 +4477,7 @@ bool findVarName(PyrBlock* func, PyrClass** classobj, PyrSymbol* name, int* varT
     j = 0;
     while (func != nullptr) {
         methraw = METHRAW(func);
-        numargs = methraw->posargs;
+        numargs = methraw->totalNumberArguments;
         for (i = 0; i < numargs; ++i) {
             argname = slotRawSymbolArray(&func->argNames)->symbols[i];
             // postfl("    %d %d arg '%s' '%s'\n", j, i, argname->name, name->name);
@@ -4475,7 +4492,7 @@ bool findVarName(PyrBlock* func, PyrClass** classobj, PyrSymbol* name, int* varT
                 return true;
             }
         }
-        for (i = 0, k = numargs; i < methraw->numvars; ++i, ++k) {
+        for (i = 0, k = numargs; i < methraw->numVariables; ++i, ++k) {
             varname = slotRawSymbolArray(&func->varNames)->symbols[i];
             // postfl("    %d %d %d var '%s' '%s'\n", j, i, k, varname->name, name->name);
             if (varname == name) {

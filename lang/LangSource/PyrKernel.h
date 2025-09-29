@@ -135,13 +135,14 @@ struct PyrMethodRaw {
 #endif
 
     unsigned char unused2;
-    unsigned char numargs;
-    unsigned char varargs;
-    unsigned char numvars;
-    unsigned char numtemps;
+    unsigned char numNormalArguments; // Does not include variable arguments (...args, kwargs)
+    unsigned char numVariableArguments; // 0, 1, or 2, for no variable arguments, positional variable arguments, and
+                                        // positional and keyword.
+    unsigned char numVariables;
+    unsigned char numSlots; // sum of totalNumberArguments and numVariables
     unsigned char needsHeapContext;
-    unsigned char popSize;
-    unsigned char posargs;
+    unsigned char popSize; // Sometime different to the numSlots as this isn't always popped.
+    unsigned char totalNumberArguments; // Sum of numNormalArguments and numVariableArguments.
 };
 
 

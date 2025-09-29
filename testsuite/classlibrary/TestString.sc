@@ -287,4 +287,8 @@ TestString : UnitTest {
 		var expected = json.parseJSON;
 		this.assertEquals(result, expected);
 	}
+
+	test_asStringLimit {
+		this.assert((0..1024).asString(32).size < (0..1024).asString, "asString should pass on the limit argument and make the string shorter.");
+	}
 }
