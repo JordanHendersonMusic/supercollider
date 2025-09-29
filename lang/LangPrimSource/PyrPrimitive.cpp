@@ -3616,16 +3616,15 @@ void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
 }
 
 void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int numKeyArgsPushed) {
-    int i, j, m, diff, err;
-    PyrSlot *pslot, *qslot;
-    int numArgsNeeded, numArgsPushed;
-
+    const auto maybe_gc_sanitycheck = [&]() {
 #ifdef GC_SANITYCHECK
-    g->gc->SanityCheck();
+        g->gc->SanityCheck();
 #endif
-    // post("doPrimitive %s:%s\n", slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name,
-    // slotRawSymbol(&meth->name)->name); printf("doPrimitive %s:%s\n",
-    // slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
+    };
+
+    maybe_gc_sanitycheck();
+
+    const int numNormalArgs = allArgsPushed - (numKeyArgsPushed * 2);
 
     PyrMethodRaw* methraw = METHRAW(meth);
     int primIndex = methraw->specialIndex;
@@ -3633,8 +3632,12 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
     g->primitiveIndex = primIndex - def->base;
     g->primitiveMethod = meth;
 
+    PyrSlot* reciever = g->sp - allArgsPushed + 1;
+
     if (def->keyArgs && numKeyArgsPushed) {
+        // TODO: This could crash if more args are pushed than expected.
         g->numpop = allArgsPushed - 1;
+        int err;
         try {
             err = ((PrimitiveWithKeysHandler)def[1].func)(g, allArgsPushed, numKeyArgsPushed);
         } catch (std::exception& ex) {
@@ -3647,72 +3650,80 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         if (err <= errNone)
             g->sp -= g->numpop;
         else {
-            // post("primerr %d\n", err);
             SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
             SetInt(&g->thread->primitiveError, err);
             executeMethod(g, meth, allArgsPushed, numKeyArgsPushed);
         }
-#ifdef GC_SANITYCHECK
-        g->gc->SanityCheck();
-#endif
+        maybe_gc_sanitycheck();
         return;
     }
-    numArgsNeeded = def->numArgs;
-    numArgsPushed = allArgsPushed - (numKeyArgsPushed * 2);
 
-    if (numKeyArgsPushed) {
-        // evacuate keyword args to separate area
-        pslot = temporaryKeywordStack + (numKeyArgsPushed << 1);
-        qslot = g->sp + 1;
-        for (m = 0; m < numKeyArgsPushed; ++m) {
-            slotCopy(--pslot, --qslot);
-            slotCopy(--pslot, --qslot);
+    // Remove kwargs from stack to temporary stack.
+    if (numKeyArgsPushed > 0) {
+        PyrSlot* first_kwarg = g->sp - (numKeyArgsPushed * 2) + 1;
+        for (size_t i { 0 }; i < numKeyArgsPushed * 2; ++i) {
+            temporaryKeywordStack[i] = first_kwarg[i];
         }
+        g->sp -= numKeyArgsPushed * 2;
     }
 
-    diff = numArgsNeeded - numArgsPushed;
-    if (diff != 0) { // incorrect num of args
-        if (diff > 0) { // not enough args
-            g->sp += numArgsNeeded - allArgsPushed; // expand stack to correct size
-            pslot = g->sp - diff;
-            qslot = slotRawObject(&meth->prototypeFrame)->slots + numArgsPushed - 1;
-            for (m = 0; m < diff; ++m)
-                slotCopy(++pslot, ++qslot);
-        } else if (def->varArgs) { // has var args
-            numArgsNeeded = numArgsPushed;
-            g->sp += numArgsNeeded - allArgsPushed; // expand stack to correct size
+    // If needed, put any defaults arguments onto the stack.
+
+    const int numNeededArgs = def->numArgs;
+    bool usedNormalVarArgs = false;
+    int numArgsOnStack = numNormalArgs;
+
+    if (numNeededArgs != numNormalArgs) {
+        if (numNormalArgs > numNeededArgs) {
+            if (def->varArgs != 1) {
+                const unsigned int dif = numNormalArgs - numNeededArgs;
+                g->sp -= dif;
+                numArgsOnStack = numNeededArgs;
+            } else {
+                usedNormalVarArgs = true;
+                numArgsOnStack = numNormalArgs;
+            }
         } else {
-            g->sp += numArgsNeeded - allArgsPushed; // remove excess args
+            const unsigned int needed = numNeededArgs - numNormalArgs;
+            PyrSlot* from = slotRawObject(&meth->prototypeFrame)->slots + numNormalArgs - 1;
+            PyrSlot* to = g->sp;
+            for (size_t i { 0 }; i < needed; ++i) {
+                to[i + 1] = from[i];
+            }
+            // increment stack pointer
+            // TODO: write check to make sure this doesn't overflow.
+            g->sp += needed;
+            numArgsOnStack = numNeededArgs;
         }
     }
 
-    // do keyword lookup:
+    // Put keywords back on the stack, overriding what was already there on the stack.
     if (numKeyArgsPushed && methraw->posargs) {
-        PyrSymbol **name0, **name;
-        PyrSlot *key, *vars;
-        name0 = slotRawSymbolArray(&meth->argNames)->symbols + 1;
-        key = temporaryKeywordStack;
-        vars = g->sp - numArgsNeeded + 1;
-        for (i = 0; i < numKeyArgsPushed; ++i, key += 2) {
-            name = name0;
-            for (j = 1; j < methraw->posargs; ++j, ++name) {
-                if (*name == slotRawSymbol(key)) {
-                    slotCopy(&vars[j], &key[1]);
+        PyrSymbol** argNames = slotRawSymbolArray(&meth->argNames)->symbols;
+
+        for (size_t keyword { 0 }; keyword < numKeyArgsPushed * 2; keyword += 2) {
+            PyrSymbol* key = slotRawSymbol(&temporaryKeywordStack[keyword]);
+
+            for (size_t argN { 1 }; argN < methraw->posargs; ++argN) {
+                if (key == argNames[argN]) {
+                    reciever[argN] = temporaryKeywordStack[keyword + 1];
                     goto found;
                 }
             }
             if (gKeywordError) {
-                post("WARNING: keyword arg '%s' not found in call to %s:%s\n", slotRawSymbol(key)->name,
+                post("WARNING: keyword arg '%s' not found in call to %s:%s\n", key->name,
                      slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
             }
         found:;
         }
     }
-    g->numpop = numArgsNeeded - 1;
+
+    g->numpop = numArgsOnStack - 1;
 
     g->gc->enterDelayedCollectionContext();
+    int err;
     try {
-        err = (*def->func)(g, numArgsNeeded);
+        err = (*def->func)(g, numArgsOnStack);
     } catch (std::exception& ex) {
         g->lastExceptions[g->thread] = std::make_pair(std::current_exception(), meth);
         err = errException;
@@ -3725,10 +3736,9 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
     if (err <= errNone)
         g->sp -= g->numpop;
     else {
-        // post("primerr %d\n", err);
         SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
         SetInt(&g->thread->primitiveError, err);
-        executeMethod(g, meth, numArgsNeeded, 0);
+        executeMethod(g, meth, numArgsOnStack, 0);
     }
 #ifdef GC_SANITYCHECK
     g->gc->SanityCheck();
