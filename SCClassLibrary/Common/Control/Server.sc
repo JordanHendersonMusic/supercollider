@@ -49,7 +49,7 @@ ServerOptions {
 
 	var <maxLogins = 1;
 
-	// TODO: None of these are used, why are they here?
+	// These are stored locally by the Server class, they are not used as a part of the server cli command.
 	var <>recHeaderFormat = "wav";
 	var <>recSampleFormat = "float";
 	var <>recChannels = 2;
@@ -126,7 +126,6 @@ ServerOptions {
 			if (threadPinning.notNil) { o = o ++ " -y " ++ threadPinning.asBoolean.asInteger };
 		};
 
-		// TODO: what if the server is on a different machine with a different platform?
 		if (thisProcess.platform.name === \osx && safetyClipThreshold.notNil) {
 			o = o ++ " -s " ++ safetyClipThreshold
 		};
