@@ -135,10 +135,10 @@ union sc_gluon_data_v1 {
 
 struct sc_gluon_param_v1_t {
     union sc_gluon_data_v1 data;
+    uint32_t size; // For non-array parameters, this is ignored, but set to '1' as a good practice.
     enum sc_gluon_param_tag_v1 tag;
     bool owns_data; // Indicates that the param owns some heap allocated data, and will be deallocated when the lifetime
                     // of the parameter ends.
-    uint32_t size; // For non-array parameters, this is ignored, but set to '1' as a good practice.
 };
 
 union sc_gluon_out_param_or_maybe_diagnostic_v1 {

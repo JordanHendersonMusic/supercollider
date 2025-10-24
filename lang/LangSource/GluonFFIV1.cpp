@@ -57,53 +57,134 @@ void sc_gluon_release_callback_object_v1(void* callback_data) {
 }
 
 
+// Because MSVC doesn't support designated initializers, unions are annoying to initialise.
+// Here are a bunch of helpers.
+
+namespace sc_gluon::v1 {
+using param = sc_gluon_param_v1_t;
+using data = sc_gluon_data_v1;
+
+param priv_basic(sc_gluon_data_v1 data, sc_gluon_param_tag_v1 tag) { return { data, 1, tag, false }; }
+param priv_array(sc_gluon_data_v1 data, sc_gluon_param_tag_v1 tag, uint32_t size, bool owns_data) {
+    return { data, size, tag, owns_data };
+}
+
+param nil_() {
+    data d;
+    d.nil_ = {};
+    return priv_basic(d, sc_gluon_nil);
+}
+
+param i32(int32_t i) {
+    data d;
+    d.i32 = i;
+    return priv_basic(d, sc_gluon_i32);
+}
+
+param f64(double f) {
+    data d;
+    d.f64 = f;
+    return priv_basic(d, sc_gluon_f64);
+}
+
+param character(char c) {
+    data d;
+    d.character = c;
+    return priv_basic(d, sc_gluon_char);
+}
+
+param boolean(bool b) {
+    data d;
+    d.boolean = b;
+    return priv_basic(d, sc_gluon_bool);
+}
+
+param raw_pointer(void* p) {
+    data d;
+    d.raw_pointer = p;
+    return priv_basic(d, sc_gluon_raw_pointer);
+}
+
+param symbol_value(intptr_t s) {
+    data d;
+    d.symbol_value = s;
+    return priv_basic(d, sc_gluon_symbol_value);
+}
+
+param u8_array(uint8_t* a, uint32_t size, bool owns_data) {
+    data d;
+    d.u8_array = a;
+    return priv_array(d, sc_gluon_u8_array, size, owns_data);
+}
+
+param f64_array(double* a, uint32_t size, bool owns_data) {
+    data d;
+    d.f64_array = a;
+    return priv_array(d, sc_gluon_f64_array, size, owns_data);
+}
+
+param f32_array(float* a, uint32_t size, bool owns_data) {
+    data d;
+    d.f32_array = a;
+    return priv_array(d, sc_gluon_f32_array, size, owns_data);
+}
+
+param character_array(char* a, uint32_t size, bool owns_data) {
+    data d;
+    d.character_array = a;
+    return priv_array(d, sc_gluon_char_array, size, owns_data);
+}
+
+param symbol_value_array(intptr_t* a, uint32_t size, bool owns_data) {
+    data d;
+    d.symbol_value_array = a;
+    return priv_array(d, sc_gluon_symbol_value_array, size, owns_data);
+}
+
+param param_array(param* a, uint32_t size, bool owns_data) {
+    data d;
+    d.param_array = a;
+    return priv_array(d, sc_gluon_param_array, size, owns_data);
+}
+}
+
+
 sc_gluon_param_v1_t slot_to_param(PyrSlot slot) {
     if (IsNil(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .nil_ = 0 }, sc_gluon_nil, false, 1 };
+        return v1::nil_();
     } else if (IsInt(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .i32 = slotRawInt(&slot) }, sc_gluon_i32, false, 1 };
+        return v1::i32(slotRawInt(&slot));
     } else if (IsFloat(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .f64 = slotRawFloat(&slot) }, sc_gluon_f64, false, 1 };
+        return v1::f64(slotRawFloat(&slot));
     } else if (IsChar(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .character = static_cast<char>(slotRawChar(&slot)) },
-                                     sc_gluon_char, false, 1 };
+        return v1::character(static_cast<char>(slotRawChar(&slot)));
     } else if (IsPtr(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .raw_pointer = slotRawPtr(&slot) }, sc_gluon_raw_pointer, false,
-                                     1 };
+        return v1::raw_pointer(slotRawPtr(&slot));
     } else if (IsTrue(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .boolean = true }, sc_gluon_bool, false, 1 };
+        return v1::boolean(true);
     } else if (IsFalse(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .boolean = false }, sc_gluon_bool, false, 1 };
+        return v1::boolean(false);
     } else if (IsSym(&slot)) {
-        return sc_gluon_param_v1_t { sc_gluon_data_v1 { .symbol_value =
-                                                            reinterpret_cast<intptr_t>(slotRawSymbol(&slot)) },
-                                     sc_gluon_symbol_value, false, 1 };
+        return v1::symbol_value(reinterpret_cast<intptr_t>(slotRawSymbol(&slot)));
     } else if (IsObj(&slot)) {
         PyrObject* obj { slotRawObject(&slot) };
         if (obj->classptr == class_string) {
             auto* str = reinterpret_cast<PyrString*>(obj);
-            return sc_gluon_param_v1_t { sc_gluon_data_v1 { .character_array = str->s }, sc_gluon_char_array, false,
-                                         (uint32_t)str->size };
+            return v1::character_array(str->s, static_cast<uint32_t>(str->size), false);
+
         } else if (obj->classptr == class_int8array) {
             auto* u8array = reinterpret_cast<PyrInt8Array*>(obj);
-            return sc_gluon_param_v1_t {
-                sc_gluon_data_v1 { .u8_array = u8array->b },
-                sc_gluon_u8_array,
-                false,
-                (uint32_t)u8array->size,
-            };
+            return v1::u8_array(u8array->b, static_cast<uint32_t>(u8array->size), false);
         } else if (obj->classptr == class_doublearray) {
             auto* f64array = reinterpret_cast<PyrDoubleArray*>(obj);
-            return sc_gluon_param_v1_t { sc_gluon_data_v1 { .f64_array = f64array->d }, sc_gluon_f64_array, false,
-                                         (uint32_t)f64array->size };
+            return v1::f64_array(f64array->d, static_cast<uint32_t>(f64array->size), false);
         } else if (obj->classptr == class_floatarray) {
             auto* f32array = reinterpret_cast<PyrFloatArray*>(obj);
-            return sc_gluon_param_v1_t { sc_gluon_data_v1 { .f32_array = f32array->f }, sc_gluon_f32_array, false,
-                                         (uint32_t)f32array->size };
+            return v1::f32_array(f32array->f, static_cast<uint32_t>(f32array->size), false);
         } else if (obj->classptr == class_symbolarray) {
             auto* symarray = reinterpret_cast<PyrSymbolArray*>(obj);
-            return sc_gluon_param_v1_t { sc_gluon_data_v1 { .symbol_value_array = (intptr_t*)symarray->symbols },
-                                         sc_gluon_symbol_value_array, false, (uint32_t)symarray->size };
+            return v1::symbol_value_array(reinterpret_cast<intptr_t*>(symarray->symbols),
+                                          static_cast<uint32_t>(symarray->size), false);
         } else if (obj->classptr == class_array) {
             sc_gluon_param_v1_t* param_array = (sc_gluon_param_v1_t*)malloc(sizeof(sc_gluon_param_v1_t) * obj->size);
             if (param_array == nullptr)
@@ -118,8 +199,7 @@ sc_gluon_param_v1_t slot_to_param(PyrSlot slot) {
                 throw;
             }
 
-            return sc_gluon_param_v1_t { sc_gluon_data_v1 { .param_array = param_array }, sc_gluon_param_array, true,
-                                         (uint32_t)obj->size };
+            return v1::param_array(param_array, static_cast<uint32_t>(obj->size), true);
         } else {
             throw std::runtime_error { "Cannot convert slot to sc_gluon_param_v1_t" };
         }
