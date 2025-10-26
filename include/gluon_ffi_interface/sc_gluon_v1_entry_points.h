@@ -5,7 +5,7 @@
 #    define SC_GLUON_EXTERN extern "C"
 #endif
 
-#define SC_GLUON_EXPORT SC_GLUON_EXTERN __attribute__((__visibility__("hidden")))
+#define SC_GLUON_EXPORT SC_GLUON_EXTERN __attribute__((__visibility__("default")))
 
 // Required
 SC_GLUON_EXPORT uint32_t sc_gluon_version();
