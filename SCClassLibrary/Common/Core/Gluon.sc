@@ -39,9 +39,8 @@ Gluon {
 	}
 
 	*with { |pathToLibrary, func|
-	 	var l;
+		var l = Gluon.open(pathToLibrary);
 		protect {
-			l = Gluon.open(pathToLibrary);
 			func.(l);
 		} {
 			Gluon.close(l);
