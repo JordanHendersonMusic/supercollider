@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-
+#include <cstring>
 /*
 
 SuperCollider foreign function interface.
