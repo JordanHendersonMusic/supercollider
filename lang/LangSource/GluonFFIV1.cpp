@@ -105,7 +105,7 @@ param raw_pointer(void* p) {
     return priv_basic(d, sc_gluon_raw_pointer);
 }
 
-param symbol_value(intptr_t s) {
+param symbol_value(uint64_t s) {
     data d;
     d.symbol_value = s;
     return priv_basic(d, sc_gluon_symbol_value);
@@ -135,11 +135,6 @@ param character_array(char* a, uint32_t size, bool owns_data) {
     return priv_array(d, sc_gluon_char_array, size, owns_data);
 }
 
-param symbol_value_array(intptr_t* a, uint32_t size, bool owns_data) {
-    data d;
-    d.symbol_value_array = a;
-    return priv_array(d, sc_gluon_symbol_value_array, size, owns_data);
-}
 
 param param_array(param* a, uint32_t size, bool owns_data) {
     data d;
@@ -165,13 +160,20 @@ sc_gluon_param_v1_t slot_to_param(PyrSlot slot) {
     } else if (IsFalse(&slot)) {
         return v1::boolean(false);
     } else if (IsSym(&slot)) {
-        return v1::symbol_value(reinterpret_cast<intptr_t>(slotRawSymbol(&slot)));
+        const auto i = reinterpret_cast<intptr_t>(slotRawSymbol(&slot));
+        return v1::symbol_value(static_cast<uint64_t>(i));
     } else if (IsObj(&slot)) {
         PyrObject* obj { slotRawObject(&slot) };
         if (obj->classptr == class_string) {
-            auto* str = reinterpret_cast<PyrString*>(obj);
-            return v1::character_array(str->s, static_cast<uint32_t>(str->size), false);
-
+            if (obj->IsImmutable()) {
+                auto* str = reinterpret_cast<PyrString*>(obj);
+                return v1::character_array(str->s, static_cast<uint32_t>(str->size), false);
+            } else {
+                auto* str = reinterpret_cast<PyrString*>(obj);
+                char* ptr = (char*)malloc(str->size * sizeof(char));
+                std::memcpy(ptr, str->s, str->size * sizeof(char));
+                return v1::character_array(ptr, static_cast<uint32_t>(str->size), true);
+            }
         } else if (obj->classptr == class_int8array) {
             auto* u8array = reinterpret_cast<PyrInt8Array*>(obj);
             return v1::u8_array(u8array->b, static_cast<uint32_t>(u8array->size), false);
@@ -181,10 +183,6 @@ sc_gluon_param_v1_t slot_to_param(PyrSlot slot) {
         } else if (obj->classptr == class_floatarray) {
             auto* f32array = reinterpret_cast<PyrFloatArray*>(obj);
             return v1::f32_array(f32array->f, static_cast<uint32_t>(f32array->size), false);
-        } else if (obj->classptr == class_symbolarray) {
-            auto* symarray = reinterpret_cast<PyrSymbolArray*>(obj);
-            return v1::symbol_value_array(reinterpret_cast<intptr_t*>(symarray->symbols),
-                                          static_cast<uint32_t>(symarray->size), false);
         } else if (obj->classptr == class_array) {
             sc_gluon_param_v1_t* param_array = (sc_gluon_param_v1_t*)malloc(sizeof(sc_gluon_param_v1_t) * obj->size);
             if (param_array == nullptr)
@@ -203,7 +201,6 @@ sc_gluon_param_v1_t slot_to_param(PyrSlot slot) {
         } else {
             throw std::runtime_error { "Cannot convert slot to sc_gluon_param_v1_t" };
         }
-        //
     } else {
         throw std::runtime_error { "Cannot convert slot to sc_gluon_param_v1_t" };
     }
@@ -240,7 +237,8 @@ PyrSlot move_param_to_slot(sc_gluon_param_v1_t&& param, VMGlobals* g) noexcept {
         break;
     }
     case sc_gluon_symbol_value: {
-        SetSymbol(&out, (PyrSymbol*)param.data.symbol_value);
+        const auto v = static_cast<intptr_t>(param.data.symbol_value);
+        SetSymbol(&out, reinterpret_cast<PyrSymbol*>(v));
         break;
     }
     case sc_gluon_u8_array: {
@@ -272,14 +270,6 @@ PyrSlot move_param_to_slot(sc_gluon_param_v1_t&& param, VMGlobals* g) noexcept {
         auto new_array = newPyrString(g->gc, param.data.character_array, 0, false);
         if (param.owns_data)
             free(param.data.character_array);
-        SetObject(&out, new_array);
-        break;
-    }
-    case sc_gluon_symbol_value_array: {
-        auto new_array = newPyrSymbolArray(g->gc, param.size, 0, false);
-        std::memcpy(new_array->symbols, (PyrSymbol*)param.data.symbol_value_array, param.size * sizeof(PyrSymbol*));
-        if (param.owns_data)
-            free(param.data.symbol_value_array);
         SetObject(&out, new_array);
         break;
     }

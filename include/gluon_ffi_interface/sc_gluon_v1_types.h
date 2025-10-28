@@ -111,8 +111,7 @@ enum sc_gluon_param_tag_v1 {
     sc_gluon_u8_array,
     sc_gluon_f64_array,
     sc_gluon_f32_array,
-    sc_gluon_char_array,
-    sc_gluon_symbol_value_array,
+    sc_gluon_char_array, // Note, this is not a null terminated string, but an array with a size.
     //
     sc_gluon_param_array,
 };
@@ -124,12 +123,11 @@ union sc_gluon_data_v1 {
     char character;
     bool boolean;
     void* raw_pointer;
-    intptr_t symbol_value;
+    uint64_t symbol_value;
     uint8_t* u8_array;
     double* f64_array;
     float* f32_array;
     char* character_array;
-    intptr_t* symbol_value_array;
     struct sc_gluon_param_v1_t* param_array;
 };
 
@@ -173,10 +171,6 @@ inline void sc_gluon_free_param_v1(struct sc_gluon_param_v1_t param) {
             }
             case sc_gluon_char_array: {
                 free(param.data.character_array);
-                break;
-            }
-            case sc_gluon_symbol_value_array: {
-                free(param.data.symbol_value_array);
                 break;
             }
             default:
