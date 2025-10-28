@@ -179,3 +179,44 @@ inline void sc_gluon_free_param_v1(struct sc_gluon_param_v1_t param) {
         }
     }
 }
+
+inline struct sc_gluon_param_v1_t sc_gluon_copy_param_data_v1(struct sc_gluon_param_v1_t param) {
+    switch (param.tag) {
+    case sc_gluon_param_array: {
+        // Recursive case.
+        sc_gluon_data_v1 d {};
+        d.param_array = (sc_gluon_param_v1_t*)malloc(param.size * sizeof(sc_gluon_param_v1_t));
+        for (uint32_t i = 0; i < param.size; ++i)
+            d.param_array[i] = sc_gluon_copy_param_data_v1(param.data.param_array[i]);
+
+        return { d, param.size, sc_gluon_param_array, true };
+    }
+    case sc_gluon_u8_array: {
+        sc_gluon_data_v1 d {};
+        d.u8_array = (uint8_t*)malloc(param.size * sizeof(uint8_t));
+        memcpy(d.u8_array, param.data.u8_array, param.size * sizeof(uint8_t));
+        return { d, param.size, sc_gluon_u8_array, true };
+    }
+    case sc_gluon_f64_array: {
+        sc_gluon_data_v1 d {};
+        d.f64_array = (double*)malloc(param.size * sizeof(double));
+        memcpy(d.f64_array, param.data.f64_array, param.size * sizeof(double));
+        return { d, param.size, sc_gluon_f64_array, true };
+    }
+    case sc_gluon_f32_array: {
+        sc_gluon_data_v1 d {};
+        d.f32_array = (float*)malloc(param.size * sizeof(float));
+        memcpy(d.f32_array, param.data.f64_array, param.size * sizeof(float));
+        return { d, param.size, sc_gluon_f32_array, true };
+    }
+    case sc_gluon_char_array: {
+        sc_gluon_data_v1 d {};
+        d.character_array = (char*)malloc(param.size * sizeof(char));
+        memcpy(d.character_array, param.data.character_array, param.size * sizeof(char));
+        return { d, param.size, sc_gluon_char_array, true };
+    }
+    default: {
+        return param;
+    }
+    }
+}
