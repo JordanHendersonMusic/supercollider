@@ -2,6 +2,7 @@
 #include <thread>
 #include <chrono>
 #include <filesystem>
+#include <iostream>
 
 #include "GluonFFI.hpp"
 #include "VMGlobals.h"
@@ -32,28 +33,43 @@ void sc_gluon_callback_action_v1(void* callback_data, sc_gluon_param_v1_t* param
         return;
 
     extern bool compiledOK;
-    std::lock_guard lock_guard { gLangMutex };
-    VMGlobals* g { gMainVMGlobals };
-    auto* obj { reinterpret_cast<PyrObject*>(callback_data) };
 
-    if (compiledOK) {
-        ++g->sp;
-        SetObject(g->sp, obj);
-        for (uint32_t i { 0 }; i < num_params; ++i) {
-            PyrSlot slot = move_param_to_slot(std::move(params[i]), g);
+    using namespace std::chrono_literals;
+    const bool locked = gLangMutex.try_lock_for(10s);
+    if (locked) {
+        VMGlobals* g { gMainVMGlobals };
+        auto* obj { reinterpret_cast<PyrObject*>(callback_data) };
+        if (compiledOK) {
             ++g->sp;
-            *g->sp = slot;
+            SetObject(g->sp, obj);
+            for (uint32_t i { 0 }; i < num_params; ++i) {
+                PyrSlot slot = move_param_to_slot(std::move(params[i]), g);
+                ++g->sp;
+                *g->sp = slot;
+            }
+            runInterpreter(g, s_value, 1 + num_params);
         }
-        runInterpreter(g, s_value, 1 + num_params);
+        gLangMutex.unlock();
+    } else {
+        std::cerr << "Gluon ffi library could not establish language lock, ensure callbacks are only triggered on a "
+                     "separate thread to the main callback function.";
     }
 }
 
 void sc_gluon_release_callback_object_v1(void* callback_data) {
     extern bool compiledOK;
-    std::lock_guard lock_guard { gLangMutex };
-    VMGlobals* g { gMainVMGlobals };
-    auto* obj { reinterpret_cast<PyrObject*>(callback_data) };
-    g->gc->RemoveExternalObject(obj);
+
+    using namespace std::chrono_literals;
+    const bool locked = gLangMutex.try_lock_for(10s);
+    if (locked) {
+        VMGlobals* g { gMainVMGlobals };
+        auto* obj { reinterpret_cast<PyrObject*>(callback_data) };
+        g->gc->RemoveExternalObject(obj);
+        gLangMutex.unlock();
+    } else {
+        std::cerr << "Gluon ffi library could not establish language lock, ensure callbacks are only release on a "
+                     "separate thread to the main callback function.";
+    }
 }
 
 
@@ -61,6 +77,7 @@ void sc_gluon_release_callback_object_v1(void* callback_data) {
 // Here are a bunch of helpers.
 
 namespace sc_gluon::v1 {
+
 using param = sc_gluon_param_v1_t;
 using data = sc_gluon_data_v1;
 
