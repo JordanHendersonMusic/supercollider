@@ -5,11 +5,12 @@
 #include <stdexcept>
 
 namespace sc_gluon::v1 {
-using param_t = struct sc_gluon_param_v1_t;
-using data_t = sc_gluon_data_v1;
-using callback_obj_t = sc_gluon_callback_object_v1_t;
+using param_t = ::sc_gluon_param_v1_t;
+using tag_t = ::sc_gluon_param_tag_v1;
+using data_t = ::sc_gluon_data_v1;
+using callback_obj_t = ::sc_gluon_callback_object_v1_t;
 using callback_release_t = sc_gluon_release_callback_object_v1_f;
-using do_callback_t = sc_gluon_do_callback_v1_f;
+using do_callback_t = ::sc_gluon_do_callback_v1_f;
 
 // MSVC doesn't support forward compatible constexpr union initialisation.
 #if (_MSC_VER) && (_MSVC_LANG < 202002L)
@@ -18,11 +19,11 @@ using do_callback_t = sc_gluon_do_callback_v1_f;
 #    define SC_GLUON_CONSTEXPR constexpr
 #endif
 
-[[nodiscard]] inline SC_GLUON_CONSTEXPR param_t priv_basic(sc_gluon_data_v1 data, sc_gluon_param_tag_v1 tag) noexcept {
+[[nodiscard]] inline SC_GLUON_CONSTEXPR param_t priv_basic(data_t data, tag_t tag) noexcept {
     return { data, 1, tag, false };
 }
-[[nodiscard]] inline SC_GLUON_CONSTEXPR param_t priv_array(sc_gluon_data_v1 data, sc_gluon_param_tag_v1 tag,
-                                                           uint32_t size, bool owns_data) noexcept {
+[[nodiscard]] inline SC_GLUON_CONSTEXPR param_t priv_array(data_t data, tag_t tag, uint32_t size,
+                                                           bool owns_data) noexcept {
     return { data, size, tag, owns_data };
 }
 
