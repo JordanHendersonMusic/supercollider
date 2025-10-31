@@ -23,8 +23,8 @@ Gluon {
 		^this.primitiveFailed;
 	}
 
-	*open { |pathToLibrary|
-		var id = Gluon.prOpenGetID(pathToLibrary.asString);
+	*open { |pathToLibrary ...args|
+		var id = Gluon.prOpenGetID(pathToLibrary.asString, *args);
 		var lib = Gluon.prNew(id);
 		openLibraries[lib.id] = lib;
 		^lib
@@ -47,7 +47,7 @@ Gluon {
 		}
 	}
 
-	*prOpenGetID { |pathToLibrary|
+	*prOpenGetID { |pathToLibrary ...args|
 		_OpenGluon
 		^this.primitiveFailed;
 	}

@@ -95,17 +95,20 @@ void sc_gluon::GluonManager::reset_or_prep_for_close() {
 }
 void sc_gluon::GluonManager::create_testing_library() { create_testing_library_v1(); }
 
-LibraryID sc_gluon::GluonManager::register_library(const char* path) noexcept(false) {
+LibraryID sc_gluon::GluonManager::register_library(const char* path, PyrSlot* first_parameter_slot,
+                                                   int num_parameters) noexcept(false) {
 #ifndef _WIN32
     void* library_handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (library_handle == nullptr) {
         throw std::runtime_error { "Could not load library" };
     }
 
+    const auto close_library = [&]() { dlclose(library_handle); };
+
     void* version_f = dlsym(library_handle, "sc_gluon_version");
     const char* error = dlerror();
     if (error != nullptr || version_f == nullptr) {
-        dlclose(library_handle);
+        close_library();
         throw std::runtime_error { std::string { error } };
     }
 
@@ -118,26 +121,23 @@ LibraryID sc_gluon::GluonManager::register_library(const char* path) noexcept(fa
         throw std::runtime_error { "Could not load library" };
     }
 
+    const auto close_library = [&]() { FreeLibrary(library_handle); };
+
     void* version_f = (void*)GetProcAddress(library_handle, "sc_gluon_version");
     if (version_f == nullptr) {
-        FreeLibrary(library_handle);
+        close_library();
         throw std::runtime_error { "Could not load sc_gluon_version from library" };
     }
 
 #endif
 
-
     const sc_gluon_version_f version_func = (sc_gluon_version_f)version_f;
     const uint32_t version_v = version_func();
 
     if (version_v == 1) {
-        return register_library_v1(library_handle);
+        return register_library_v1(library_handle, first_parameter_slot, num_parameters);
     } else {
-#ifndef _WIN32
-        dlclose(library_handle);
-#else
-        FreeLibrary(library_handle);
-#endif
+        close_library();
         throw std::runtime_error { "Received unexpected version number for library." };
     }
 }

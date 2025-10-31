@@ -13,7 +13,7 @@ struct LibraryData {
 };
 
 sc_gluon_out_param_tag_v1 add_f64(sc_gluon_library_data_v1_t library_data,
-                                  sc_gluon_callable_object_v1_t maybe_callback_data, sc_gluon_param_v1_t* in_params,
+                                  sc_gluon_callback_object_v1_t maybe_callback_data, sc_gluon_param_v1_t* in_params,
                                   uint32_t num_in_params, sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     if (num_in_params != 2) {
         out_param->maybe_diagnostic = "wrong number of in params";
@@ -44,7 +44,7 @@ sc_gluon_out_param_tag_v1 add_f64(sc_gluon_library_data_v1_t library_data,
 }
 
 sc_gluon_out_param_tag_v1 add_many_f64(sc_gluon_library_data_v1_t library_data,
-                                       sc_gluon_callable_object_v1_t maybe_callback_data,
+                                       sc_gluon_callback_object_v1_t maybe_callback_data,
                                        sc_gluon_param_v1_t* in_params, uint32_t num_in_params,
                                        sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     double rolling { 0.0 };
@@ -67,7 +67,7 @@ sc_gluon_out_param_tag_v1 add_many_f64(sc_gluon_library_data_v1_t library_data,
 }
 
 sc_gluon_out_param_tag_v1 with_call_back(sc_gluon_library_data_v1_t library_data,
-                                         sc_gluon_callable_object_v1_t maybe_callback_data,
+                                         sc_gluon_callback_object_v1_t maybe_callback_data,
                                          sc_gluon_param_v1_t* in_params, uint32_t num_in_params,
                                          sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     auto* lib = static_cast<LibraryData*>(library_data);
@@ -77,23 +77,23 @@ sc_gluon_out_param_tag_v1 with_call_back(sc_gluon_library_data_v1_t library_data
         return sc_gluon_error_with_non_owned_diagnostic;
     }
 
-    std::thread([=, param_copy = sc_gluon_copy_param_data_v1(in_params[0])]() mutable {
+    std::thread([=, param_copy = sc_gluon_copy_param_v1(in_params[0])]() mutable {
         using namespace std::chrono_literals;
         std::this_thread::sleep_for(1s);
 
         if (maybe_callback_data) {
-            param_t ps[2] = { create_param(), sc_gluon_copy_param_data_v1(param_copy) };
+            param_t ps[2] = { create_param(), sc_gluon_copy_param_v1(param_copy) };
             lib->callback_f(maybe_callback_data, ps, 2);
         }
 
         std::this_thread::sleep_for(1s);
 
         if (maybe_callback_data) {
-            param_t ps[2] = { create_param(), sc_gluon_copy_param_data_v1(param_copy) };
+            param_t ps[2] = { create_param(), sc_gluon_copy_param_v1(param_copy) };
             lib->callback_f(maybe_callback_data, ps, 2);
         }
 
-        sc_gluon_free_param_v1(param_copy);
+        sc_gluon_free_param_if_owned_v1(param_copy);
 
         if (maybe_callback_data)
             lib->release_callback_f(maybe_callback_data);
@@ -109,16 +109,19 @@ sc_gluon_out_param_tag_v1 with_call_back(sc_gluon_library_data_v1_t library_data
 SC_GLUON_EXPORT uint32_t sc_gluon_version() { return 1; }
 
 std::array<sc_gluon_function_declarations_v1_t, 3> decls {
-    sc_gluon_function_declarations_v1_t { "add_f64", add_f64, 2, false },
-    sc_gluon_function_declarations_v1_t { "add_many_f64", add_many_f64, -1, false },
-    sc_gluon_function_declarations_v1_t { "with_call_back", with_call_back, 1, true },
+    sc_gluon_function_declarations_v1_t { "add_f64", add_f64, 2, 0 },
+    sc_gluon_function_declarations_v1_t { "add_many_f64", add_many_f64, -1, 0 },
+    sc_gluon_function_declarations_v1_t { "with_call_back", with_call_back, 1, 1 },
 };
 
 
-SC_GLUON_EXPORT sc_gluon_library_data_v1_t
-sc_gluon_load_library(sc_gluon_do_callback_v1_f callback_f, sc_gluon_release_callback_object_v1_f release_callback_f,
-                      sc_gluon_function_declarations_v1_t** const out_decls, uint32_t* out_size) {
+SC_GLUON_EXPORT uint8_t sc_gluon_load_library(sc_gluon_param_v1_t* in_params, uint32_t num_in_params,
+                                              sc_gluon_do_callback_v1_f do_callback,
+                                              sc_gluon_release_callback_object_v1_f release_callback,
+                                              sc_gluon_function_declarations_v1_t** const out_decls,
+                                              uint32_t* out_decls_size, sc_gluon_library_data_v1_t* out_library_data) {
     *out_decls = decls.data();
-    *out_size = decls.size();
-    return new LibraryData { callback_f, release_callback_f };
+    *out_decls_size = decls.size();
+    *out_library_data = new LibraryData { do_callback, release_callback };
+    return 0;
 }

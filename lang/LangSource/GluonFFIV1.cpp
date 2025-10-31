@@ -15,6 +15,8 @@
 #include "PyrSlot.h"
 #include "PyrSymbolTable.h"
 
+#include "cpp/sc_gluon_v1_util.hpp"
+
 
 #ifdef _WIN32
 #    include "SC_Win32Utils.h"
@@ -24,10 +26,11 @@
 #endif
 
 using namespace sc_gluon;
+
 sc_gluon_param_v1_t slot_to_param(PyrSlot slot);
 PyrSlot move_param_to_slot(sc_gluon_param_v1_t&& param, VMGlobals* g) noexcept;
 
-void sc_gluon_callback_action_v1(void* callback_data, sc_gluon_param_v1_t* params, uint32_t num_params) {
+void do_callback(void* callback_data, sc_gluon_param_v1_t* params, uint32_t num_params) {
     assert(num_params > 0 ? (params != nullptr) : params == nullptr);
     if (callback_data == nullptr)
         return;
@@ -56,7 +59,7 @@ void sc_gluon_callback_action_v1(void* callback_data, sc_gluon_param_v1_t* param
     }
 }
 
-void sc_gluon_release_callback_object_v1(void* callback_data) {
+void release_callback(void* callback_data) {
     extern bool compiledOK;
 
     using namespace std::chrono_literals;
@@ -72,134 +75,45 @@ void sc_gluon_release_callback_object_v1(void* callback_data) {
     }
 }
 
-
-// Because MSVC doesn't support designated initializers, unions are annoying to initialise.
-// Here are a bunch of helpers.
-
-namespace sc_gluon::v1 {
-
-using param = sc_gluon_param_v1_t;
-using data = sc_gluon_data_v1;
-
-param priv_basic(sc_gluon_data_v1 data, sc_gluon_param_tag_v1 tag) { return { data, 1, tag, false }; }
-param priv_array(sc_gluon_data_v1 data, sc_gluon_param_tag_v1 tag, uint32_t size, bool owns_data) {
-    return { data, size, tag, owns_data };
-}
-
-param nil_() {
-    data d;
-    d.nil_ = {};
-    return priv_basic(d, sc_gluon_nil);
-}
-
-param i32(int32_t i) {
-    data d;
-    d.i32 = i;
-    return priv_basic(d, sc_gluon_i32);
-}
-
-param f64(double f) {
-    data d;
-    d.f64 = f;
-    return priv_basic(d, sc_gluon_f64);
-}
-
-param character(char c) {
-    data d;
-    d.character = c;
-    return priv_basic(d, sc_gluon_char);
-}
-
-param boolean(bool b) {
-    data d;
-    d.boolean = b;
-    return priv_basic(d, sc_gluon_bool);
-}
-
-param raw_pointer(void* p) {
-    data d;
-    d.raw_pointer = p;
-    return priv_basic(d, sc_gluon_raw_pointer);
-}
-
-param symbol_value(uint64_t s) {
-    data d;
-    d.symbol_value = s;
-    return priv_basic(d, sc_gluon_symbol_value);
-}
-
-param u8_array(uint8_t* a, uint32_t size, bool owns_data) {
-    data d;
-    d.u8_array = a;
-    return priv_array(d, sc_gluon_u8_array, size, owns_data);
-}
-
-param f64_array(double* a, uint32_t size, bool owns_data) {
-    data d;
-    d.f64_array = a;
-    return priv_array(d, sc_gluon_f64_array, size, owns_data);
-}
-
-param f32_array(float* a, uint32_t size, bool owns_data) {
-    data d;
-    d.f32_array = a;
-    return priv_array(d, sc_gluon_f32_array, size, owns_data);
-}
-
-param character_array(char* a, uint32_t size, bool owns_data) {
-    data d;
-    d.character_array = a;
-    return priv_array(d, sc_gluon_char_array, size, owns_data);
-}
-
-
-param param_array(param* a, uint32_t size, bool owns_data) {
-    data d;
-    d.param_array = a;
-    return priv_array(d, sc_gluon_param_array, size, owns_data);
-}
-}
-
-
 sc_gluon_param_v1_t slot_to_param(PyrSlot slot) {
     if (IsNil(&slot)) {
-        return v1::nil_();
+        return v1::create_param();
     } else if (IsInt(&slot)) {
-        return v1::i32(slotRawInt(&slot));
+        return v1::create_param(slotRawInt(&slot));
     } else if (IsFloat(&slot)) {
-        return v1::f64(slotRawFloat(&slot));
+        return v1::create_param(slotRawFloat(&slot));
     } else if (IsChar(&slot)) {
-        return v1::character(static_cast<char>(slotRawChar(&slot)));
+        return v1::create_param(static_cast<char>(slotRawChar(&slot)));
     } else if (IsPtr(&slot)) {
-        return v1::raw_pointer(slotRawPtr(&slot));
+        return v1::create_param(slotRawPtr(&slot));
     } else if (IsTrue(&slot)) {
-        return v1::boolean(true);
+        return v1::create_param(true);
     } else if (IsFalse(&slot)) {
-        return v1::boolean(false);
+        return v1::create_param(false);
     } else if (IsSym(&slot)) {
         const auto i = reinterpret_cast<intptr_t>(slotRawSymbol(&slot));
-        return v1::symbol_value(static_cast<uint64_t>(i));
+        return v1::create_param(static_cast<uint64_t>(i));
     } else if (IsObj(&slot)) {
         PyrObject* obj { slotRawObject(&slot) };
         if (obj->classptr == class_string) {
             if (obj->IsImmutable()) {
                 auto* str = reinterpret_cast<PyrString*>(obj);
-                return v1::character_array(str->s, static_cast<uint32_t>(str->size), false);
+                return v1::create_param(str->s, static_cast<uint32_t>(str->size), false);
             } else {
                 auto* str = reinterpret_cast<PyrString*>(obj);
                 char* ptr = (char*)malloc(str->size * sizeof(char));
                 std::memcpy(ptr, str->s, str->size * sizeof(char));
-                return v1::character_array(ptr, static_cast<uint32_t>(str->size), true);
+                return v1::create_param(ptr, static_cast<uint32_t>(str->size), true);
             }
         } else if (obj->classptr == class_int8array) {
             auto* u8array = reinterpret_cast<PyrInt8Array*>(obj);
-            return v1::u8_array(u8array->b, static_cast<uint32_t>(u8array->size), false);
+            return v1::create_param(u8array->b, static_cast<uint32_t>(u8array->size), false);
         } else if (obj->classptr == class_doublearray) {
             auto* f64array = reinterpret_cast<PyrDoubleArray*>(obj);
-            return v1::f64_array(f64array->d, static_cast<uint32_t>(f64array->size), false);
+            return v1::create_param(f64array->d, static_cast<uint32_t>(f64array->size), false);
         } else if (obj->classptr == class_floatarray) {
             auto* f32array = reinterpret_cast<PyrFloatArray*>(obj);
-            return v1::f32_array(f32array->f, static_cast<uint32_t>(f32array->size), false);
+            return v1::create_param(f32array->f, static_cast<uint32_t>(f32array->size), false);
         } else if (obj->classptr == class_array) {
             sc_gluon_param_v1_t* param_array = (sc_gluon_param_v1_t*)malloc(sizeof(sc_gluon_param_v1_t) * obj->size);
             if (param_array == nullptr)
@@ -214,7 +128,7 @@ sc_gluon_param_v1_t slot_to_param(PyrSlot slot) {
                 throw;
             }
 
-            return v1::param_array(param_array, static_cast<uint32_t>(obj->size), true);
+            return v1::create_param(param_array, static_cast<uint32_t>(obj->size), true);
         } else {
             throw std::runtime_error { "Cannot convert slot to sc_gluon_param_v1_t" };
         }
@@ -304,7 +218,87 @@ PyrSlot move_param_to_slot(sc_gluon_param_v1_t&& param, VMGlobals* g) noexcept {
     return out;
 }
 
-void free_param(sc_gluon_param_v1_t&& param) noexcept(true) { sc_gluon_free_param_v1(param); }
+LibraryID sc_gluon::GluonManager::register_library_v1(void* library_handle, PyrSlot* first_parameter_slot,
+                                                      int num_parameters) noexcept(false) {
+#ifndef _WIN32
+    const void* loader_f = dlsym(library_handle, "sc_gluon_load_library");
+    const char* load_error = dlerror();
+    if (load_error != nullptr || loader_f == nullptr) {
+        dlclose(library_handle);
+        throw std::runtime_error { std::string { load_error } };
+    }
+
+    const void* unloader_f = dlsym(library_handle, "sc_gluon_unload_library");
+    const void* post_load_p = dlsym(library_handle, "sc_gluon_post_load_library");
+
+    const auto close_library = [=]() { dlclose(library_handle); };
+#else
+    const void* loader_f = (void*)GetProcAddress((HMODULE)library_handle, "sc_gluon_load_library");
+    if (loader_f == nullptr) {
+        FreeLibrary((HMODULE)library_handle);
+        throw std::runtime_error { "Could not load sc_gluon_load_library" };
+    }
+
+    const void* unloader_f = (void*)GetProcAddress((HMODULE)library_handle, "sc_gluon_unload_library");
+    const void* post_load_p = (void*)GetProcAddress((HMODULE)library_handle, "sc_gluon_post_load_library");
+
+    const auto close_library = [=]() { FreeLibrary((HMODULE)library_handle); };
+
+#endif
+    const auto loader = (sc_gluon_load_library_v1_f)loader_f;
+    const sc_gluon_unload_library_v1_f unloader = (sc_gluon_unload_library_v1_f)unloader_f;
+    const sc_gluon_post_load_library_v1_f post_loader = (sc_gluon_post_load_library_v1_f)post_load_p;
+
+    sc_gluon_function_declarations_v1_t* func_decls; // uninitialised
+    uint32_t func_decls_size { 0 };
+
+    std::vector<sc_gluon_param_v1_t> params;
+    params.reserve(num_parameters);
+
+    const auto destroy_params = [](std::vector<sc_gluon_param_v1_t>&& ps) {
+        for (sc_gluon_param_v1_t p : ps)
+            if (p.owns_data)
+                sc_gluon_free_param_if_owned_v1(p);
+    };
+
+    for (uint32_t i { 0 }; i < (num_parameters); ++i) {
+        params.push_back(slot_to_param(*first_parameter_slot));
+        ++first_parameter_slot;
+    }
+
+    sc_gluon_library_data_v1_t library_data;
+    const auto error_code = loader(params.data(), static_cast<uint32_t>(params.size()), do_callback, release_callback,
+                                   &func_decls, &func_decls_size, &library_data);
+
+    destroy_params(std::move(params));
+
+    if (error_code) {
+        close_library();
+        throw std::runtime_error { "Failed to load functions from library" };
+    }
+
+    std::vector<PyrSymbol*> function_names;
+    std::vector<details::FunctionDataV1> function_data;
+
+    for (uint32_t i { 0 }; i < func_decls_size; ++i) {
+        const auto decl = func_decls[i];
+        function_names.push_back(getsym(decl.name));
+        function_data.emplace_back(
+            details::FunctionDataV1 { decl.ptr, decl.num_parms, static_cast<bool>(decl.accepts_callback) });
+    }
+
+    if (post_loader) {
+        post_loader(library_data, func_decls, func_decls_size);
+    }
+
+    const LibraryID library_id = library_counter++;
+    libraries.emplace(library_id,
+                      LibraryVariant { details::LibraryV1 { library_handle, library_data, unloader,
+                                                            std::move(function_names), std::move(function_data) } });
+
+    return library_id;
+}
+
 
 void details::LibraryV1::evaluate(PyrSymbol* function_name, VMGlobals* g, PyrObject* maybe_callback,
                                   PyrSlot* return_slot, PyrSlot* first_argument_slot, int num_args_given) const {
@@ -330,7 +324,7 @@ void details::LibraryV1::evaluate(PyrSymbol* function_name, VMGlobals* g, PyrObj
     const auto destroy_params = [](std::vector<sc_gluon_param_v1_t>&& ps) {
         for (sc_gluon_param_v1_t p : ps)
             if (p.owns_data)
-                free_param(std::move(p));
+                sc_gluon_free_param_if_owned_v1(p);
     };
 
     for (uint32_t i { 0 }; i < (num_args_given); ++i) {
@@ -338,13 +332,11 @@ void details::LibraryV1::evaluate(PyrSymbol* function_name, VMGlobals* g, PyrObj
         ++first_argument_slot;
     }
 
-    bool stored_callback = false;
     if (maybe_callback != nullptr) {
         if (!data.accepts_callback) {
             destroy_params(std::move(params));
             throw std::runtime_error { "A callback was given to an FFI function that doesn't accepts callbacks." };
         }
-        stored_callback = true;
         g->gc->StoreExternalObject(maybe_callback);
     }
 
@@ -363,31 +355,20 @@ void details::LibraryV1::evaluate(PyrSymbol* function_name, VMGlobals* g, PyrObj
         SetNil(return_slot);
         std::string error { result.maybe_diagnostic };
         free((void*)result.maybe_diagnostic);
-
-        if (stored_callback)
-            g->gc->RemoveExternalObject(maybe_callback);
-
         throw std::runtime_error { error };
     }
     case sc_gluon_error_with_non_owned_diagnostic: {
         SetNil(return_slot);
-        if (stored_callback)
-            g->gc->RemoveExternalObject(maybe_callback);
-
         throw std::runtime_error { std::string { result.maybe_diagnostic } };
-    }
-    case sc_gluon_error_without_diagnostic: {
-        SetNil(return_slot);
-        if (stored_callback)
-            g->gc->RemoveExternalObject(maybe_callback);
-
-        throw std::runtime_error { "FFI function did not complete" };
     }
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TESTING
+
 sc_gluon_out_param_tag_v1 test1(sc_gluon_library_data_v1_t library_data,
-                                sc_gluon_callable_object_v1_t maybe_callback_data, sc_gluon_param_v1_t* in_params,
+                                sc_gluon_callback_object_v1_t maybe_callback_data, sc_gluon_param_v1_t* in_params,
                                 uint32_t num_in_params, sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     if (num_in_params != 2) {
         out_param->maybe_diagnostic = "wrong number of in params";
@@ -418,7 +399,7 @@ sc_gluon_out_param_tag_v1 test1(sc_gluon_library_data_v1_t library_data,
 }
 
 sc_gluon_out_param_tag_v1 callback_test(sc_gluon_library_data_v1_t library_data,
-                                        sc_gluon_callable_object_v1_t maybe_callback_data,
+                                        sc_gluon_callback_object_v1_t maybe_callback_data,
                                         sc_gluon_param_v1_t* in_params, uint32_t num_in_params,
                                         sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     if (num_in_params != 1) {
@@ -440,8 +421,8 @@ sc_gluon_out_param_tag_v1 callback_test(sc_gluon_library_data_v1_t library_data,
     std::thread([=]() {
         std::this_thread::sleep_for(std::chrono::duration<double>(wait));
         if (maybe_callback_data) {
-            sc_gluon_callback_action_v1(maybe_callback_data, nullptr, 0);
-            sc_gluon_release_callback_object_v1(maybe_callback_data);
+            do_callback(maybe_callback_data, nullptr, 0);
+            release_callback(maybe_callback_data);
         }
     }).detach();
 
@@ -455,7 +436,7 @@ sc_gluon_out_param_tag_v1 callback_test(sc_gluon_library_data_v1_t library_data,
 }
 
 sc_gluon_out_param_tag_v1 many_callback_test(sc_gluon_library_data_v1_t library_data,
-                                             sc_gluon_callable_object_v1_t maybe_callback_data,
+                                             sc_gluon_callback_object_v1_t maybe_callback_data,
                                              sc_gluon_param_v1_t* in_params, uint32_t num_in_params,
                                              sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     if (num_in_params != 2) {
@@ -486,10 +467,10 @@ sc_gluon_out_param_tag_v1 many_callback_test(sc_gluon_library_data_v1_t library_
         for (size_t i { 0 }; i < iter; ++i) {
             std::this_thread::sleep_for(std::chrono::duration<double>(wait));
             if (maybe_callback_data) {
-                sc_gluon_callback_action_v1(maybe_callback_data, nullptr, 0);
+                do_callback(maybe_callback_data, nullptr, 0);
             }
         }
-        sc_gluon_release_callback_object_v1(maybe_callback_data);
+        release_callback(maybe_callback_data);
     }).detach();
 
 
@@ -503,7 +484,7 @@ sc_gluon_out_param_tag_v1 many_callback_test(sc_gluon_library_data_v1_t library_
 
 
 sc_gluon_out_param_tag_v1 callback_with_args_test(sc_gluon_library_data_v1_t library_data,
-                                                  sc_gluon_callable_object_v1_t maybe_callback_data,
+                                                  sc_gluon_callback_object_v1_t maybe_callback_data,
                                                   sc_gluon_param_v1_t* in_params, uint32_t num_in_params,
                                                   sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     if (num_in_params != 1) {
@@ -535,8 +516,8 @@ sc_gluon_out_param_tag_v1 callback_with_args_test(sc_gluon_library_data_v1_t lib
         ps[1].size = 1;
         ps[1].tag = sc_gluon_bool;
         if (maybe_callback_data) {
-            sc_gluon_callback_action_v1(maybe_callback_data, ps, 2);
-            sc_gluon_release_callback_object_v1(maybe_callback_data);
+            do_callback(maybe_callback_data, ps, 2);
+            release_callback(maybe_callback_data);
         }
     }).detach();
 
@@ -550,7 +531,7 @@ sc_gluon_out_param_tag_v1 callback_with_args_test(sc_gluon_library_data_v1_t lib
 }
 
 sc_gluon_out_param_tag_v1 array_sum(sc_gluon_library_data_v1_t library_data,
-                                    sc_gluon_callable_object_v1_t maybe_callback_data, sc_gluon_param_v1_t* in_params,
+                                    sc_gluon_callback_object_v1_t maybe_callback_data, sc_gluon_param_v1_t* in_params,
                                     uint32_t num_in_params, sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     if (num_in_params != 1) {
         out_param->maybe_diagnostic = "wrong number of in params";
@@ -586,7 +567,7 @@ sc_gluon_out_param_tag_v1 array_sum(sc_gluon_library_data_v1_t library_data,
 }
 
 sc_gluon_out_param_tag_v1 return_array_test(sc_gluon_library_data_v1_t library_data,
-                                            sc_gluon_callable_object_v1_t maybe_callback_data,
+                                            sc_gluon_callback_object_v1_t maybe_callback_data,
                                             sc_gluon_param_v1_t* in_params, uint32_t num_in_params,
                                             sc_gluon_out_param_or_maybe_diagnostic_v1* out_param) {
     out_param->out_param.data.param_array = new sc_gluon_param_v1_t[10] {};
@@ -630,66 +611,4 @@ void sc_gluon::GluonManager::create_testing_library_v1() {
 
     libraries.emplace(test_id, LibraryVariant { std::move(lib) });
     inbuilt_test_to_library_id.emplace(getsym("gluonTestV1"), test_id);
-}
-
-
-LibraryID sc_gluon::GluonManager::register_library_v1(void* library_handle) noexcept(false) {
-#ifndef _WIN32
-    const void* loader_f = dlsym(library_handle, "sc_gluon_load_library");
-    const char* load_error = dlerror();
-    if (load_error != nullptr || loader_f == nullptr) {
-        dlclose(library_handle);
-        throw std::runtime_error { std::string { load_error } };
-    }
-
-    const void* unloader_f = dlsym(library_handle, "sc_gluon_unload_library");
-    const void* post_load_p = dlsym(library_handle, "sc_gluon_post_load_library");
-
-    const auto close_library = [=]() { dlclose(library_handle); };
-#else
-    const void* loader_f = (void*)GetProcAddress((HMODULE)library_handle, "sc_gluon_load_library");
-    if (loader_f == nullptr) {
-        FreeLibrary((HMODULE)library_handle);
-        throw std::runtime_error { "Could not load sc_gluon_load_library" };
-    }
-
-    const void* unloader_f = (void*)GetProcAddress((HMODULE)library_handle, "sc_gluon_unload_library");
-    const void* post_load_p = (void*)GetProcAddress((HMODULE)library_handle, "sc_gluon_post_load_library");
-
-    const auto close_library = [=]() { FreeLibrary((HMODULE)library_handle); };
-
-#endif
-    const auto loader = (sc_gluon_load_library_v1_f)loader_f;
-    const sc_gluon_unload_library_v1_f unloader = (sc_gluon_unload_library_v1_f)unloader_f;
-    const sc_gluon_post_load_library_v1_f post_loader = (sc_gluon_post_load_library_v1_f)post_load_p;
-
-    sc_gluon_function_declarations_v1_t* func_decls; // uninitialised
-    uint32_t func_decls_size { 0 };
-
-    sc_gluon_library_data_v1_t library_data =
-        loader(sc_gluon_callback_action_v1, sc_gluon_release_callback_object_v1, &func_decls, &func_decls_size);
-    if (func_decls_size == 0) {
-        close_library();
-        throw std::runtime_error { "Failed to load functions from library" };
-    }
-
-    std::vector<PyrSymbol*> function_names;
-    std::vector<details::FunctionDataV1> function_data;
-
-    for (uint32_t i { 0 }; i < func_decls_size; ++i) {
-        const auto decl = func_decls[i];
-        function_names.push_back(getsym(decl.name));
-        function_data.emplace_back(details::FunctionDataV1 { decl.ptr, decl.num_parms, decl.accepts_callback });
-    }
-
-    if (post_loader) {
-        post_loader(library_data, func_decls, func_decls_size);
-    }
-
-    const LibraryID library_id = library_counter++;
-    libraries.emplace(library_id,
-                      LibraryVariant { details::LibraryV1 { library_handle, library_data, unloader,
-                                                            std::move(function_names), std::move(function_data) } });
-
-    return library_id;
 }
