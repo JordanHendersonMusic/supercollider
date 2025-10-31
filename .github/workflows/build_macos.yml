@@ -223,4 +223,4 @@ jobs:
       - name: Run CTests
         continue-on-error: true
         if: matrix.ctest
-        run: cmake --build $BUILD_PATH --config Release --target all && cmake --build $BUILD_PATH --config Release --target RUN_TESTS
+        run: cmake --build $BUILD_PATH --config Release --target RUN_TESTS
