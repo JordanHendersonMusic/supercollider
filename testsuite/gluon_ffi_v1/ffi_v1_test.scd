@@ -53,6 +53,9 @@ try {
 	};
 	
 	var lib_path = File.getcwd +/+ library_name; 
+
+
+	"LIBRARY PATH = %".format(lib_path).postln;
 	
 	Gluon.with(lib_path, { |g|
 		all_good = true;

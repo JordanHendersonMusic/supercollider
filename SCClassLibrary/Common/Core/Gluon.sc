@@ -24,10 +24,15 @@ Gluon {
 	}
 
 	*open { |pathToLibrary ...args|
-		var id = Gluon.prOpenGetID(pathToLibrary.asString, *args);
-		var lib = Gluon.prNew(id);
-		openLibraries[lib.id] = lib;
-		^lib
+		var id, lib;
+		if (PathName(pathToLibrary).isFile.not) {
+			Error("Could not find gluon at path: " ++ pathToLibrary).throw
+		} {
+			id = Gluon.prOpenGetID(pathToLibrary.asString, *args);
+			lib = Gluon.prNew(id);
+			openLibraries[lib.id] = lib;
+			^lib
+		}
 	}
 
 	*close { |library|
