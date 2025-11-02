@@ -1677,7 +1677,7 @@ void traverseFullDepTree() {
     initParser(); // sets compiler errors to 0
     gParserResult = -1;
 
-    traverseDepTree(s_object->classdep, 0);
+    traverseDepTree(s_abstract_object->classdep, 0);
     compileDepTree(); // compiles backwards using the order defined in gClassCompileOrder
     compileClassExtensions();
 
@@ -1776,7 +1776,7 @@ void traverseFullDepTree2() {
         gNumClasses = 0;
 
         // now I index them during pass one
-        indexClassTree(class_object, 0);
+        indexClassTree(class_abstract_object, 0);
         setSelectorFlags();
         if (2 * numClassDeps != gNumClasses) {
             error("There is a discrepancy.\n");
@@ -1869,7 +1869,7 @@ bool parseOneClass(PyrSymbol* fileSym) {
                 return false;
             }
         } else if (token == OPENCURLY) {
-            if (className == s_object)
+            if (className == s_abstract_object)
                 superClassName = s_none;
             else
                 superClassName = s_object;
@@ -2138,7 +2138,6 @@ bool passOne_ProcessOneFile(const fs::path& path) {
 
 void schedRun();
 
-void compileSucceeded();
 void compileSucceeded() {
     compiledOK = !(parseFailed || compileErrors);
     if (compiledOK) {

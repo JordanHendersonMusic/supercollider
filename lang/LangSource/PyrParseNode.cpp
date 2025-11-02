@@ -557,9 +557,9 @@ PyrClass* getNodeSuperclass(PyrClassNode* node) {
             compileErrors++;
         }
     } else {
-        if (slotRawSymbol(&node->mClassName->mSlot) != s_object) {
+        if (slotRawSymbol(&node->mClassName->mSlot) != s_abstract_object) {
             superclassobj = class_object;
-        } // else this is object and there is no superclass
+        } // else this is abstract object and there is no superclass
     }
     return superclassobj;
 }

@@ -1,60 +1,33 @@
-Object {
+Object : AbstractObject {
 	classvar <dependantsDictionary, currentEnvironment, topEnvironment, <uniqueMethods;
 
 	const nl = "\n";
 
-	*new { arg maxSize = 0;
-		_BasicNew
-		^this.primitiveFailed
-		// creates a new instance that can hold up to maxSize
-		// indexable slots. the indexed size will be zero.
-		// to actually put things in the object you need to
-		// add them.
-	}
-	*newCopyArgs { | ... args, kwargs |
-		_BasicNewCopyArgsToInstVars
-		^this.primitiveFailed
-	}
-
 	// debugging and diagnostics
-	dump {
-		_ObjectDump
-		^this.primitiveFailed
-	}
+	dump { _ObjectDump ^this.primitiveFailed }
 	post { this.asString.post }
 	postln { this.asString.postln; }
 	postc { this.asString.postc }
 	postcln { this.asString.postcln; }
 	postcs { this.asCompileString.postln }
-	totalFree {
-		_TotalFree
-		^this.primitiveFailed
-	}
-	largestFreeBlock {
-		_LargestFreeBlock
-		^this.primitiveFailed
-	}
-	gcDumpGrey {
-		_GCDumpGrey
-		^this.primitiveFailed
-	}
-	gcDumpSet {
-		arg set;
-		_GCDumpSet
-		^this.primitiveFailed
-	}
-	gcInfo {
-		_GCInfo
-		^this.primitiveFailed
-	}
-	gcSanity {
-		_GCSanity
-		^this.primitiveFailed
-	}
-	canCallOS {
-		_CanCallOS
-		^this.primitiveFailed
-	}
+	totalFree { _TotalFree ^this.primitiveFailed } 
+	largestFreeBlock { _LargestFreeBlock ^this.primitiveFailed }
+	gcDumpGrey { _GCDumpGrey ^this.primitiveFailed }
+	gcDumpSet { |set| _GCDumpSet ^this.primitiveFailed }
+	gcInfo { _GCInfo ^this.primitiveFailed }
+	gcSanity { _GCSanity ^this.primitiveFailed }
+	canCallOS { _CanCallOS ^this.primitiveFailed }
+
+
+	hash { _ObjectHash; ^this.primitiveFailed  }
+	basicHash {  _ObjectHash; ^this.primitiveFailed  }
+
+	// Copying, these are slightly different from AbstractObject!
+	copy { ^this.shallowCopy }
+	contentsCopy { ^this.shallowCopy } // This method has no documentation, what should it do?
+	shallowCopy { _ObjectShallowCopy; ^this.primitiveFailed }
+	copyImmutable { _ObjectCopyImmutable; ^this.primitiveFailed } // If object is immutable then return a shallow copy, else return receiver.
+	deepCopy { _ObjectDeepCopy; ^this.primitiveFailed }
 
 	//accessing
 	size { ^0 }
@@ -67,31 +40,18 @@ Object {
 
 	// class membership
 	class { _ObjectClass; ^this.primitiveFailed }
-	isKindOf { arg aClass; _ObjectIsKindOf; ^this.primitiveFailed }
+	isKindOf {  |aClass| ^this.sc_abstract_object_is_kind_of(aClass) }
 	isMemberOf { arg aClass; _ObjectIsMemberOf; ^this.primitiveFailed }
 	respondsTo { arg aSymbol; _ObjectRespondsTo; ^this.primitiveFailed }
 
-    // args and kwargs should be arrays here, not variable arguments!
-	performArgs { |selector, args, kwargs|
-		_ObjectPerformArgs;
-		^this.primitiveFailed
-	}
-	superPerformArgs { |selector, args, kwargs|
-		_ObjectSuperPerformArgs;
-		^this.primitiveFailed
-	}
-	performMsg { |msg|
-		_ObjectPerformMsg;
-		^this.primitiveFailed
-	}
-	perform { arg selector ... args;
-		_ObjectPerform;
-		^this.primitiveFailed
-	}
-	performList { | ...args, kwargs|
-		_ObjectPerformList;
-		^this.primitiveFailed
-	}
+	// These methods are renamed from AbstractObject, but are copied here to avoid the performance hit.
+	// Ensure they stay in sync!
+	performArgs { |selector, args, kwargs| _ObjectPerformArgs;	^this.primitiveFailed}
+	superPerformArgs { |selector, args, kwargs| _ObjectSuperPerformArgs; ^this.primitiveFailed  }
+	performMsg { |msg| _ObjectPerformMsg; ^this.primitiveFailed }
+	perform { | selector ... args| _ObjectPerform; ^this.primitiveFailed }
+	performList { | ...args, kwargs| _ObjectPerformList; ^this.primitiveFailed }
+
 	functionPerformList { | ...args, kwargs|
 		// perform only if Function. see Function-functionPerformList
 		^this
@@ -146,19 +106,7 @@ Object {
 	}
 
 	// copying
-	copy { ^this.shallowCopy }
-	contentsCopy { ^this.shallowCopy }
-	shallowCopy { _ObjectShallowCopy; ^this.primitiveFailed }
-	copyImmutable {
-		// if object is immutable then return a shallow copy, else return receiver.
-		_ObjectCopyImmutable;
-		^this.primitiveFailed
-	}
 
-	deepCopy {
-		_ObjectDeepCopy
-		^this.primitiveFailed
-	}
 	dup { arg n = 2;
 		var array;
 		if(n.isSequenceableCollection) { ^Array.fillND(n, { this.copy }) };
@@ -220,10 +168,6 @@ Object {
 		};
 		^res
 	}
-
-	basicHash { _ObjectHash; ^this.primitiveFailed }
-	hash { _ObjectHash; ^this.primitiveFailed }
-	identityHash { _ObjectHash; ^this.primitiveFailed }
 
 	// lazy equality: same as == for objects
 	// "composed" for lazy operands (patterns, UGens)
@@ -337,36 +281,23 @@ Object {
 		_Halt
 		^this.primitiveFailed
 	}
-	primitiveFailed {
-		PrimitiveFailedError(this).throw;
-	}
+
 	reportError {
 		error(this.asString);
 		this.dumpBackTrace;
 	}
 
-	subclassResponsibility { arg method;
-		SubclassResponsibilityError(this, method, this.class).throw;
-	}
-	doesNotUnderstand { |selector ...args, kwargs|
-		DoesNotUnderstandError(this, selector, args, kwargs).throw;
-	}
-	shouldNotImplement { arg method;
-		ShouldNotImplementError(this, method, this.class).throw;
-	}
-	outOfContextReturn { arg method, result;
-		OutOfContextReturnError(this, method, result).throw;
-	}
-	immutableError { arg value;
-		ImmutableError(this, value).throw;
-	}
+	// Note, mustBeBoolean must throw as the jump bytecode instructions currently cannot skip the instructions for the true and false blocks.
+	mustBeBoolean { MustBeBooleanError(nil, this).throw }
+	doesNotUnderstand { |selector ...args, kwargs| ^DoesNotUnderstandError(this, selector, args, kwargs).throw }
+	subclassResponsibility { |method| SubclassResponsibilityError(this, method, this.class).throw }
+	shouldNotImplement { |method| ShouldNotImplementError(this, method, this.class).throw }
+	outOfContextReturn { |method, result| OutOfContextReturnError(this, method, result).throw }
+	immutableError { |value| ImmutableError(this, value).throw }
+	deprecated { |method, alternateMethod| DeprecatedError(this, method, alternateMethod, this.class).throw }
+	notYetImplemented { NotYetImplementedError(nil, this).throw }
+	primitiveFailed { PrimitiveFailedError(this).throw	}
 
-	deprecated { arg method, alternateMethod;
-		DeprecatedError(this, method, alternateMethod, this.class).throw;
-	}
-
-	mustBeBoolean { MustBeBooleanError(nil, this).throw; }
-	notYetImplemented { NotYetImplementedError(nil, this).throw; }
 
 	dumpBackTrace {
 		_DumpBackTrace
@@ -390,13 +321,15 @@ Object {
 	species { ^this.class }
 	asCollection { ^[this] }
 	asSymbol { ^this.asString.asSymbol }
-	asString { arg limit = 512;
+
+	asString { |limit = 512|
 		var string;
 		_ObjectString
 		string = String.streamContentsLimit({ arg stream; this.printOn(stream); }, limit);
 		if (string.size >= limit, { ^(string ++ "...etc..."); });
 		^string
 	}
+
 	asCompileString {
 		_ObjectCompileString
 		^String.streamContents({ arg stream; this.storeOn(stream); });
@@ -501,18 +434,9 @@ Object {
 	}
 
 	// coroutine support
-	yield {
-		_RoutineYield
-		^this.primitiveFailed
-	}
-	alwaysYield {
-		_RoutineAlwaysYield
-		^this.primitiveFailed
-	}
-	yieldAndReset { arg reset = true;
-		_RoutineYieldAndReset
-		^this.primitiveFailed
-	}
+	yield { _RoutineYield ^this.primitiveFailed }
+	alwaysYield { _RoutineAlwaysYield ^super.sc_abstract_object_always_yield }
+	yieldAndReset { |reset = true| _RoutineYieldAndReset ^super.sc_abstract_object_yield_and_reset(reset) }
 	idle { arg val;
 		var time = thisThread.beats;
 		while { thisThread.beats - time < val } { this.value.yield }
@@ -683,10 +607,10 @@ Object {
 		if (aSelector === '==', {
 			^false
 		},{
-		if (aSelector === '!=', {
-			^true
-		},{
-			BinaryOpFailureError(this, aSelector, [thing, adverb]).throw;
+			if (aSelector === '!=', {
+				^true
+			},{
+				BinaryOpFailureError(this, aSelector, [thing, adverb]).throw;
 		})});
 	}
 	performBinaryOpOnSimpleNumber { arg aSelector, thing, adverb;
@@ -713,7 +637,7 @@ Object {
 			if (name.isNil or: { name.asString.isEmpty }) { Error("missing SynthDef file name").throw } {
 				name = dir +/+ name ++ ".scsyndef";
 				if(overwrite or: { pathMatch(name).isEmpty })
-					{
+				{
 					file = File(name, "w");
 					protect {
 						AbstractMDPlugin.clearMetadata(name);

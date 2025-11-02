@@ -144,6 +144,9 @@ ShouldNotImplementError : MethodError {
 	}
 }
 
+
+// Please note, that every single method that gets call on 'receiver' in a non-throwing context create an additional requirement on AbstractObject, thereby complicating the interface further.
+// Consider implementing these methods as primitives, that way the code can run without going through sclang and potentially throwing in a no-throw context.
 DoesNotUnderstandError : MethodError {
 	var <>selector, <>args, <>keywordArgumentPairs, suggestion = "";
 	*new { arg receiver, selector, args, keywordArgumentPairs;
