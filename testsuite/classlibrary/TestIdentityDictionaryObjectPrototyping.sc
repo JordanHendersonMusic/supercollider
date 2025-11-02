@@ -74,11 +74,14 @@ TestIdentityDictionaryObjectPrototyping : UnitTest {
 	test_doesNotUnderstand_when_know_is_off {
 		var selector = \qwertyquertz;
 		var errorSelector;
+		var gotAnError = false;
 		try {
 			IdentityDictionary.new(know:false).perform(selector)
 		} { |error|
 			errorSelector = error.selector;
+			gotAnError = true;
 		};
+		this.assert(gotAnError, "When know is false, IdentityDictionary should produce a DoesNotUnderstand error");
 		this.assertEquals(errorSelector, selector, "The selector should be passed to the DoesNotUnderstandError when a message is not understood in an IdentityDictionary for which know is false.");
 	}
 }

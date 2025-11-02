@@ -44,6 +44,7 @@ enum {
     pn_VarListNode,
     pn_VarDefNode,
     pn_DynDictNode,
+    pn_ProtoObjectNode,
     pn_DynListNode,
     pn_LitListNode,
     pn_LitDictNode,
@@ -275,7 +276,16 @@ struct PyrDynDictNode : public PyrCallNodeBase {
 
     struct PyrParseNode* mElems;
 };
+struct PyrProtoObjectNode : public PyrCallNodeBase {
+    PyrProtoObjectNode(): PyrCallNodeBase(pn_ProtoObjectNode) {}
+    virtual ~PyrProtoObjectNode() {}
+    virtual void compileCall(PyrSlot* result);
+    virtual void dump(int level) {};
 
+    virtual int isPartialApplication();
+
+    struct PyrParseNode* mElems;
+};
 
 struct PyrDropNode : public PyrParseNode {
     PyrDropNode(): PyrParseNode(pn_DropNode) {}
@@ -442,6 +452,7 @@ PyrSetterNode* newPyrSetterNode(PyrSlotNode* varName, PyrParseNode* expr1, PyrPa
 PyrMultiAssignNode* newPyrMultiAssignNode(PyrMultiAssignVarListNode* varList, PyrParseNode* expr, int flags);
 PyrPushNameNode* newPyrPushNameNode(PyrSlotNode* slotNode);
 PyrDynDictNode* newPyrDynDictNode(PyrParseNode* elems);
+PyrProtoObjectNode* newPyrProtoObjectNode(PyrParseNode* elems);
 PyrDynListNode* newPyrDynListNode(PyrParseNode* classname, PyrParseNode* elems);
 PyrLitListNode* newPyrLitListNode(PyrParseNode* classname, PyrParseNode* elems);
 PyrLitDictNode* newPyrLitDictNode(PyrParseNode* elems);

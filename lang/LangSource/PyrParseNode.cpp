@@ -3544,7 +3544,29 @@ PyrDynDictNode* newPyrDynDictNode(PyrParseNode* elems) {
     return node;
 }
 
+PyrProtoObjectNode* newPyrProtoObjectNode(PyrParseNode* elems) {
+    PyrProtoObjectNode* node;
+
+    node = ALLOCNODE(PyrProtoObjectNode);
+    node->mElems = elems;
+    return node;
+}
+
 int PyrDynDictNode::isPartialApplication() {
+    int sum = 0;
+    int numItems = nodeListLength(mElems);
+    PyrParseNode* inode = mElems;
+    for (int i = 0; i < numItems; ++i) {
+        if (inode->mClassno == pn_CurryArgNode) {
+            ((PyrCurryArgNode*)inode)->mArgNum = sum;
+            sum++;
+        }
+        inode = (PyrParseNode*)inode->mNext;
+    }
+    return sum;
+}
+
+int PyrProtoObjectNode::isPartialApplication() {
     int sum = 0;
     int numItems = nodeListLength(mElems);
     PyrParseNode* inode = mElems;
@@ -3578,6 +3600,24 @@ void PyrDynDictNode::compileCall(PyrSlot* result) {
         inode = (PyrParseNode*)inode->mNext;
         SendSpecialMsg.emit(3, OpSpecialSelectors::Put);
     }
+}
+void PyrProtoObjectNode::compileCall(PyrSlot* result) {
+    const int numItems = nodeListLength(mElems);
+    compilePushVar((PyrParseNode*)this, s_proto_object);
+
+    int selType;
+    const auto index = conjureSelectorIndex((PyrParseNode*)this, gCompilingBlock, false, s_new, &selType);
+
+    PyrParseNode* inode = mElems;
+    PyrSlot dummy;
+    for (int i = 0; i < numItems; ++i) {
+        COMPILENODE(inode, &dummy, false);
+        inode = (PyrParseNode*)inode->mNext;
+    }
+
+    emitTailCall();
+    SendSpecialMsgX.emit(Operands::ArgumentCount::fromRaw(numItems + 1),
+                         Operands::KwArgumentCount::fromRaw(numItems / 2), Operands::Index::fromRaw(index));
 }
 
 PyrDynListNode* newPyrDynListNode(PyrParseNode* classname, PyrParseNode* elems) {

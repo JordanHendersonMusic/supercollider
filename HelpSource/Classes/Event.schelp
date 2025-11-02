@@ -3,6 +3,11 @@ summary::an environment that represents an action
 related::Classes/Pattern, Classes/Environment, Classes/IdentityDictionary
 categories::Collections>Unordered, Streams-Patterns-Events>Events
 
+
+note::
+Previously it was common to use Event to implement object prototype, now it is recommend to use link::Classes/ProtoObject::, see link::Guides/ObjectPrototyping:: for a guide.
+ ::
+
 DESCRIPTION::
 An Event specifies an action to be taken in response to a link::#-play:: message. Its key/value pairs specify the parameters of that action. Event inherits most of its methods from its superclasses, especially from link::Classes/Dictionary::. Nevertheless Event inherits from link::Classes/IdentityDictionary:: and querying values is done by checking its keys for emphasis::identity::, not emphasis::equality::. For the usage and meaning of the code::parent:: and code::proto:: events, see link::Classes/IdentityDictionary::'s helpfile.
 
