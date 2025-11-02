@@ -98,12 +98,12 @@ MethodError : Error {
 	reportError {
 		this.errorString.postln;
 		"RECEIVER:\n".post;
-		receiver.dump;
+		receiver.asStringForErrorPostln;
 		this.errorPathString.post;
 		if(protectedBacktrace.notNil, { this.postProtectedBacktrace });
 		this.dumpBackTrace;
 		// this.adviceLink.postln;
-		"^^ The preceding error dump is for %\nRECEIVER: %\n\n\n".postf(this.errorString, receiver);
+		"^^ The preceding error dump is for %\nRECEIVER: %\n\n\n".postf(this.errorString, receiver.asStringForError);
 	}
 	adviceLinkPage {
 		^this.class.name
@@ -183,7 +183,7 @@ DoesNotUnderstandError : MethodError {
 				}
 			}
 		} {
-			"DoesNotUnderstandError selector for % was nil".format(receiver).warn;
+			"DoesNotUnderstandError selector for % was nil".format(receiver.asStringForError).warn;
 		}
 	}
 
@@ -201,7 +201,7 @@ DoesNotUnderstandError : MethodError {
 	reportError {
 		this.errorString.postln;
 		"RECEIVER:\n".post;
-		receiver.dump;
+		receiver.asStringForErrorPostln;
 		"ARGS:\n".post;
 		args.dumpAll;
 		keywordArgumentPairs !? {
@@ -212,7 +212,7 @@ DoesNotUnderstandError : MethodError {
 		if(protectedBacktrace.notNil, { this.postProtectedBacktrace });
 		this.dumpBackTrace;
 		// this.adviceLink.postln;
-		"\n^^ %\nRECEIVER: %\n".postf(this.errorString, receiver);
+		"\n^^ %\nRECEIVER: %\n".postf(this.errorString, receiver.asStringForError);
 		this.suggestion.postln;
 		"\n".post;
 	}
@@ -248,7 +248,7 @@ ImmutableError : MethodError {
 		^super.new(nil, receiver).value_(value)
 	}
 	errorString {
-		^"ERROR: Object is immutable: " ++ receiver
+		^"ERROR: Object is immutable: " ++ receiver.asStringForError
 	}
 }
 

@@ -26,8 +26,12 @@
 //          If it doesn't exist, you will (hopefully) get a segfault.
 //          Additionally, this message is REQUIRED to throw an error as the jump byte codes have no way to skip the true and false branches.
 AbstractObject {
+	*prNew { |maxSize = 0| _BasicNew ^this.sc_abstract_object_primitive_failed }
+	*prNewCopyArgs { | ... args, kwargs| _BasicNewCopyArgsToInstVars ^this.sc_abstract_object_primitive_failed }
+
 	*new { |maxSize = 0| _BasicNew; ^this.sc_abstract_object_primitive_failed }
 	*newCopyArgs { | ... args, kwargs | _BasicNewCopyArgsToInstVars; ^this.sc_abstract_object_primitive_failed }
+
 
 	// Hashing, AbstractObject support identity, this is required by the interpreter and cannot actually be overridden.
 	// When you put AbstractObjects into an identity dictionary the interpreter uses its own implementation, this should match or things will get confusing.

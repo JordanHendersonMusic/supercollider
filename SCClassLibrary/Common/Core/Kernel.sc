@@ -717,7 +717,7 @@ Interpreter {
 		res = func.value;
 		thisProcess.nowExecutingPath = nil;
 		codeDump.value(code, res, func, this);
-		("-> " ++ res).postln;
+		("-> " ++ res.asStringForPostWindow).postln;
 	}
 
 	interpret { arg string ... args;
