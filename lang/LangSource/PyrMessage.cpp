@@ -292,7 +292,7 @@ extern PyrClass* class_identdict;
 // Returns false if it isn't a unique method.
 bool tryUniqueMethod(VMGlobals* g, PyrMethod* meth, PyrSlot* receiverSlot, PyrSlot* selectorSlot,
                      std::int64_t numArgsPushed, std::int64_t numKeyArgsPushed) {
-    if (slotRawClass(&meth->ownerclass) != class_abstract_object)
+    if (slotRawClass(&meth->ownerclass) != class_object)
         return false;
     auto uniqueMethodSlot = &g->classvars->slots[cvxUniqueMethods];
     if (!isKindOfSlot(uniqueMethodSlot, class_identdict))
