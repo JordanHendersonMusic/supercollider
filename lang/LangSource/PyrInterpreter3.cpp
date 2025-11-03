@@ -986,6 +986,14 @@ HOT void Interpret(VMGlobals* g) {
             ip = g->ip;
         };
 
+        const auto pushAndPrepForCall = [&](auto selectorIndex, auto&&... args) {
+            static_assert(sizeof...(args) != 0);
+            (slotCopy(++sp, args), ...);
+            numArgsPushed = sizeof...(args);
+            selector = gSpecialSelectors[selectorIndex];
+            slot = sp - (sizeof...(args) - 1);
+        };
+
 
         switch (op1) {
             InterpretOpcode(PushClassX) {
@@ -1207,9 +1215,9 @@ HOT void Interpret(VMGlobals* g) {
                     const auto [i1, i0] = JumpIfTrue.pullOperandsFromInstructions(ip);
                 } else {
                     // Note: we don't increment the instruction pointer in this case!
-                    numArgsPushed = 1;
-                    selector = gSpecialSelectors[opmNonBooleanError];
-                    slot = sp;
+                    PyrSlot nameOfError;
+                    SetSymbol(&nameOfError, getsym("mustBeBoolean"));
+                    pushAndPrepForCall(opmFatalInterpreterError, sp, &nameOfError);
                     goto class_lookup_then_msg_lookup;
                 }
                 --sp;
@@ -1449,13 +1457,7 @@ HOT void Interpret(VMGlobals* g) {
             /// in the expected sequence.
             InterpretOpcode(ExtendedCodes) {
                 // Helpers
-                const auto pushAndPrepForCall = [&](auto selectorIndex, auto&&... args) {
-                    static_assert(sizeof...(args) != 0);
-                    (slotCopy(++sp, args), ...);
-                    numArgsPushed = sizeof...(args);
-                    selector = gSpecialSelectors[selectorIndex];
-                    slot = sp - (sizeof...(args) - 1);
-                };
+
 
                 const auto [extendedCode] = ExtendedCodes.pullOperandsFromInstructions(ip);
                 switch (extendedCode) {
@@ -1899,6 +1901,24 @@ HOT void Interpret(VMGlobals* g) {
                     dispatch_opcode;
                 }
 
+                case Extended::AssertNoRecursion.AssertNoRecursion.code: {
+                    PyrFrame* current_frame = g->frame;
+                    PyrFrame* walking_frame = slotRawFrame(&current_frame->caller);
+                    PyrMethod* current_method = slotRawMethod(&current_frame->method);
+
+                    while (walking_frame) {
+                        PyrMethod* walking_method = slotRawMethod(&walking_frame->method);
+                        if (current_method == walking_method) {
+                            PyrSlot nameOfError;
+                            SetSymbol(&nameOfError, getsym("invalidRecursion"));
+                            pushAndPrepForCall(opmFatalInterpreterError, &current_frame->vars[0], &nameOfError);
+                            goto class_lookup_then_msg_lookup;
+                        }
+                        walking_frame = slotRawFrame(&walking_frame->caller);
+                    }
+                    dispatch_opcode;
+                }
+
                 default:
                     break;
                 }
@@ -2129,9 +2149,9 @@ HOT void Interpret(VMGlobals* g) {
                     const auto [i1, i0] = JumpIfFalse.pullOperandsFromInstructions(ip);
                     --sp;
                 } else {
-                    numArgsPushed = 1;
-                    selector = gSpecialSelectors[opmNonBooleanError];
-                    slot = sp;
+                    PyrSlot nameOfError;
+                    SetSymbol(&nameOfError, getsym("mustBeBoolean"));
+                    pushAndPrepForCall(opmFatalInterpreterError, sp, &nameOfError);
                     goto class_lookup_then_msg_lookup;
                 }
                 dispatch_opcode;
@@ -2146,9 +2166,9 @@ HOT void Interpret(VMGlobals* g) {
                     const auto [i1, i0] = JumpIfFalsePushNil.pullOperandsFromInstructions(ip);
                     --sp;
                 } else {
-                    numArgsPushed = 1;
-                    selector = gSpecialSelectors[opmNonBooleanError];
-                    slot = sp;
+                    PyrSlot nameOfError;
+                    SetSymbol(&nameOfError, getsym("mustBeBoolean"));
+                    pushAndPrepForCall(opmFatalInterpreterError, sp, &nameOfError);
                     goto class_lookup_then_msg_lookup;
                 }
                 dispatch_opcode;
@@ -2162,9 +2182,9 @@ HOT void Interpret(VMGlobals* g) {
                     const auto [i1, i0] = JumpIfFalsePushFalse.pullOperandsFromInstructions(ip);
                     --sp;
                 } else {
-                    numArgsPushed = 1;
-                    selector = gSpecialSelectors[opmNonBooleanError];
-                    slot = sp;
+                    PyrSlot nameOfError;
+                    SetSymbol(&nameOfError, getsym("mustBeBoolean"));
+                    pushAndPrepForCall(opmFatalInterpreterError, sp, &nameOfError);
                     goto class_lookup_then_msg_lookup;
                 }
                 dispatch_opcode;
@@ -2179,9 +2199,9 @@ HOT void Interpret(VMGlobals* g) {
                     ip += i1.asInt(i0);
                     slotCopy(sp, &gSpecialValues.True);
                 } else {
-                    numArgsPushed = 1;
-                    selector = gSpecialSelectors[opmNonBooleanError];
-                    slot = sp;
+                    PyrSlot nameOfError;
+                    SetSymbol(&nameOfError, getsym("mustBeBoolean"));
+                    pushAndPrepForCall(opmFatalInterpreterError, sp, &nameOfError);
                     goto class_lookup_then_msg_lookup;
                 }
                 dispatch_opcode;

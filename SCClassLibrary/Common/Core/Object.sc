@@ -16,6 +16,15 @@ Object {
 		^this.primitiveFailed
 	}
 
+	// This method is REQUIRED to throw (or perform some non-local return) as executing the following instructions in the frame will lead to undefined behaviour.
+	fatalInterpreterError { |nameOfError|
+		switch(nameOfError)
+		{ 'mustBeBoolean' } { MustBeBooleanError(this, nil).throw }
+		{ 'invalidRecursion' } { Error("Invalid recursion was discovered").throw } {
+			Error("Some unknown fatal error has occured: " ++ nameOfError).throw
+		}
+	}
+
 	// debugging and diagnostics
 	dump {
 		_ObjectDump
@@ -365,7 +374,6 @@ Object {
 		DeprecatedError(this, method, alternateMethod, this.class).throw;
 	}
 
-	mustBeBoolean { MustBeBooleanError(nil, this).throw; }
 	notYetImplemented { NotYetImplementedError(nil, this).throw; }
 
 	dumpBackTrace {
@@ -678,6 +686,14 @@ Object {
 	beats_ {  } // for PauseStream
 	clock_ {  } // for Clock
 
+	invertBinaryCallArguments #no_recursion { |aSelector, thing, adverb|
+		^case
+		{ aSelector === '==' } { false }
+		{ aSelector === '!=' } { true } {
+			thing.performList(aSelector, this, adverb)
+		}
+	}
+
 	// catch binary operators failure
 	performBinaryOpOnSomething { arg aSelector, thing, adverb;
 		if (aSelector === '==', {
@@ -686,7 +702,7 @@ Object {
 		if (aSelector === '!=', {
 			^true
 		},{
-			BinaryOpFailureError(this, aSelector, [thing, adverb]).throw;
+			thing.invertBinaryCallArguments(aSelector, this, adverb)
 		})});
 	}
 	performBinaryOpOnSimpleNumber { arg aSelector, thing, adverb;

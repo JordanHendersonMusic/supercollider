@@ -170,6 +170,7 @@ struct PyrMethodNode : public PyrParseNode {
     struct PyrArgListNode* mArglist;
     struct PyrVarListNode* mVarlist;
     struct PyrParseNode* mBody;
+    struct PyrSlotNode* maybeMacro;
     int mIsClassMethod; // is class method?
     bool mExtension;
 };
@@ -423,7 +424,8 @@ PyrClassNode* newPyrClassNode(PyrSlotNode* className, PyrSlotNode* superClassNam
                               PyrMethodNode* methods, PyrSlotNode* indexType);
 PyrClassExtNode* newPyrClassExtNode(PyrSlotNode* className, PyrMethodNode* methods);
 PyrMethodNode* newPyrMethodNode(PyrSlotNode* methodName, PyrSlotNode* primitiveName, PyrArgListNode* arglist,
-                                PyrVarListNode* varlist, PyrParseNode* body, int isClassMethod);
+                                PyrVarListNode* varlist, PyrParseNode* body, int isClassMethod,
+                                PyrSlotNode* maybeMacro);
 PyrArgListNode* newPyrArgListNode(PyrVarDefNode* varDefs, PyrSlotNode* rest, PyrSlotNode* kwArgs);
 PyrVarListNode* newPyrVarListNode(PyrVarDefNode* vardefs, int flags);
 PyrVarDefNode* newPyrVarDefNode(PyrSlotNode* varName, PyrParseNode* defVal, int flags);

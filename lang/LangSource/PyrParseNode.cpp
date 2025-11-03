@@ -985,11 +985,13 @@ void catVarLists(PyrVarListNode* varlist) {
 }
 
 PyrMethodNode* newPyrMethodNode(PyrSlotNode* methodName, PyrSlotNode* primitiveName, PyrArgListNode* arglist,
-                                PyrVarListNode* varlist, PyrParseNode* body, int isClassMethod) {
+                                PyrVarListNode* varlist, PyrParseNode* body, int isClassMethod,
+                                PyrSlotNode* maybeMacro) {
     PyrMethodNode* node = ALLOCNODE(PyrMethodNode);
     node->mMethodName = methodName;
     node->mPrimitiveName = primitiveName;
     node->mArglist = arglist;
+    node->maybeMacro = maybeMacro;
     catVarLists(varlist);
     node->mVarlist = varlist;
     node->mBody = body;
@@ -1427,7 +1429,8 @@ void PyrMethodNode::compile(PyrSlot* result) {
     }
 
     methType = methNormal;
-    if (hasVarExprs) {
+
+    if (hasVarExprs || maybeMacro) {
         methType = methNormal;
     } else if (hasPrimitive) {
         methType = methPrimitive;
@@ -1528,50 +1531,11 @@ void PyrMethodNode::compile(PyrSlot* result) {
     if (methType == methNormal || methType == methPrimitive) {
         // compile body
         initByteCodes();
-
-        if (gCompilingClass == class_int) {
-            const PyrSymbol* name = slotRawSymbol(&method->name);
-            if (name == gSpecialSelectors[opmDo]) {
-                Extended::IntegerDo.emit();
-            } else if (name == gSpecialSelectors[opmReverseDo]) {
-                Extended::IntegerReverseDo.emit();
-            } else if (name == gSpecialSelectors[opmFor]) {
-                Extended::IntegerFor.emit();
-            } else if (name == gSpecialSelectors[opmForBy]) {
-                Extended::IntegerForBy.emit();
-            } else
-                goto compile_body;
-        } else if (gCompilingClass == class_arrayed_collection) {
-            const PyrSymbol* name = slotRawSymbol(&method->name);
-            if (name == gSpecialSelectors[opmDo]) {
-                Extended::ArrayedCollectionDo.emit();
-            } else if (name == gSpecialSelectors[opmReverseDo]) {
-                Extended::ArrayedCollectionReversedDo.emit();
-            } else
-                goto compile_body;
-        } else if (slotRawSymbol(&gCompilingClass->name) == s_dictionary) {
-            const PyrSymbol* name = slotRawSymbol(&method->name);
-            if (name == getsym("keysValuesArrayDo")) {
-                Extended::DictionaryKeyValuesArrayDo.emit();
-            } else
-                goto compile_body;
-        } else if (gCompilingClass == class_number) {
-            const PyrSymbol* name = slotRawSymbol(&method->name);
-            if (name == gSpecialSelectors[opmForSeries]) {
-                Extended::NumberForSeries.emit();
-            } else
-                goto compile_body;
-        } else if (gCompilingClass == class_float) {
-            const PyrSymbol* name = slotRawSymbol(&method->name);
-            if (name == gSpecialSelectors[opmDo]) {
-                Extended::FloatDo.emit();
-            } else if (name == gSpecialSelectors[opmReverseDo]) {
-                Extended::FloatDoReverse.emit();
-            } else
-                goto compile_body;
-        } else {
-        compile_body:
-            SetTailIsMethodReturn mr(false);
+        if (maybeMacro) {
+            // Note there is no tail call recursion here!
+            const auto prevTailCall = gGenerateTailCallByteCodes;
+            gGenerateTailCallByteCodes = false;
+            Extended::AssertNoRecursion.emit({});
             PyrSlot dummy;
             if (mArglist) {
                 vardef = mArglist->mVarDefs;
@@ -1585,7 +1549,68 @@ void PyrMethodNode::compile(PyrSlot* result) {
                     vardef->compile(&dummy);
                 }
             }
+
             COMPILENODE(mBody, &dummy, true);
+            gGenerateTailCallByteCodes = prevTailCall;
+        } else {
+            if (gCompilingClass == class_int) {
+                const PyrSymbol* name = slotRawSymbol(&method->name);
+                if (name == gSpecialSelectors[opmDo]) {
+                    Extended::IntegerDo.emit();
+                } else if (name == gSpecialSelectors[opmReverseDo]) {
+                    Extended::IntegerReverseDo.emit();
+                } else if (name == gSpecialSelectors[opmFor]) {
+                    Extended::IntegerFor.emit();
+                } else if (name == gSpecialSelectors[opmForBy]) {
+                    Extended::IntegerForBy.emit();
+                } else
+                    goto compile_body;
+            } else if (gCompilingClass == class_arrayed_collection) {
+                const PyrSymbol* name = slotRawSymbol(&method->name);
+                if (name == gSpecialSelectors[opmDo]) {
+                    Extended::ArrayedCollectionDo.emit();
+                } else if (name == gSpecialSelectors[opmReverseDo]) {
+                    Extended::ArrayedCollectionReversedDo.emit();
+                } else
+                    goto compile_body;
+            } else if (slotRawSymbol(&gCompilingClass->name) == s_dictionary) {
+                const PyrSymbol* name = slotRawSymbol(&method->name);
+                if (name == getsym("keysValuesArrayDo")) {
+                    Extended::DictionaryKeyValuesArrayDo.emit();
+                } else
+                    goto compile_body;
+            } else if (gCompilingClass == class_number) {
+                const PyrSymbol* name = slotRawSymbol(&method->name);
+                if (name == gSpecialSelectors[opmForSeries]) {
+                    Extended::NumberForSeries.emit();
+                } else
+                    goto compile_body;
+            } else if (gCompilingClass == class_float) {
+                const PyrSymbol* name = slotRawSymbol(&method->name);
+                if (name == gSpecialSelectors[opmDo]) {
+                    Extended::FloatDo.emit();
+                } else if (name == gSpecialSelectors[opmReverseDo]) {
+                    Extended::FloatDoReverse.emit();
+                } else
+                    goto compile_body;
+            } else {
+            compile_body:
+                SetTailIsMethodReturn mr(false);
+                PyrSlot dummy;
+                if (mArglist) {
+                    vardef = mArglist->mVarDefs;
+                    for (i = 1; i < numArgs; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
+                        vardef->compileArg(&dummy);
+                    }
+                }
+                if (mVarlist) {
+                    vardef = mVarlist->mVarDefs;
+                    for (i = 0; i < numVars; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
+                        vardef->compile(&dummy);
+                    }
+                }
+                COMPILENODE(mBody, &dummy, true);
+            }
         }
         installByteCodes((PyrBlock*)method);
     }
@@ -4527,7 +4552,7 @@ void initSpecialSelectors() {
     sel[opmForSeries] = getsym("forSeries");
     sel[opmReverseDo] = getsym("reverseDo");
     sel[opmLoop] = getsym("loop");
-    sel[opmNonBooleanError] = getsym("mustBeBoolean");
+    sel[opmFatalInterpreterError] = getsym("fatalInterpreterError");
 
     sel[opmCopy] = getsym("copy");
     sel[opmPerformList] = getsym("performList");

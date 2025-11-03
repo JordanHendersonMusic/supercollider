@@ -645,6 +645,15 @@ static constexpr struct NumberForSeries {
         DropAndJumpBackToLoop.emit();
     }
 } NumberForSeries;
+
+
+static constexpr struct AssertNoRecursion {
+    details::SimpleOpSpec<0x20> AssertNoRecursion { "AssertNotRecursion" };
+    void emit(decltype(AssertNoRecursion)::Tuple tup) const {
+        emitByte(Prefix);
+        AssertNoRecursion.emit();
+    }
+} AssertNoRecursion;
 }
 
 /// Pop and store the top of the stack in a class variable of the current class.

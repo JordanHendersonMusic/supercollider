@@ -98,18 +98,16 @@ methods		: { $$ = 0; }
 				{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$2); }
 			;
 
-methoddef	: name '{' argdecls funcvardecls primitive methbody '}'
-				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$1, (PyrSlotNode*)$5,
-					(PyrArgListNode*)$3, (PyrVarListNode*)$4, (PyrParseNode*)$6, 0); }
-			| '*' name '{' argdecls funcvardecls primitive methbody '}'
-				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$2, (PyrSlotNode*)$6,
-					(PyrArgListNode*)$4, (PyrVarListNode*)$5, (PyrParseNode*)$7, 1); }
-			| binop '{' argdecls funcvardecls primitive methbody '}'
-				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$1, (PyrSlotNode*)$5,
-					(PyrArgListNode*)$3, (PyrVarListNode*)$4, (PyrParseNode*)$6, 0); }
-			| '*' binop '{' argdecls funcvardecls primitive methbody '}'
-				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$2, (PyrSlotNode*)$6,
-					(PyrArgListNode*)$4, (PyrVarListNode*)$5, (PyrParseNode*)$7, 1); }
+methodMacro : { $$ = 0; } | '#' name { $$ = $2; } ;
+
+methoddef	: name methodMacro '{' argdecls funcvardecls primitive methbody '}'
+				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$1, (PyrSlotNode*)$6, (PyrArgListNode*)$4, (PyrVarListNode*)$5, (PyrParseNode*)$7, 0, (PyrSlotNode*)$2); }
+			| '*' name  methodMacro '{' argdecls funcvardecls primitive methbody '}'
+				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$2, (PyrSlotNode*)$7, (PyrArgListNode*)$5, (PyrVarListNode*)$6, (PyrParseNode*)$8, 1, (PyrSlotNode*)$3); }
+			| binop methodMacro '{' argdecls funcvardecls primitive methbody '}'
+				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$1, (PyrSlotNode*)$6, (PyrArgListNode*)$4, (PyrVarListNode*)$5, (PyrParseNode*)$7, 0, (PyrSlotNode*)$2); }
+			| '*' binop methodMacro '{' argdecls funcvardecls primitive methbody '}'
+				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$2, (PyrSlotNode*)$7, (PyrArgListNode*)$5, (PyrVarListNode*)$6, (PyrParseNode*)$8, 1, (PyrSlotNode*)$3); }
 			;
 
 optsemi		:

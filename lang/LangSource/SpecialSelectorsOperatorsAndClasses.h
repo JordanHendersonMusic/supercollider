@@ -226,7 +226,7 @@ enum {
     opmReverseDo,
     opmLoop,
 
-    opmNonBooleanError,
+    opmFatalInterpreterError,
 
     opmPlusPlus,
     opmLTLT,
