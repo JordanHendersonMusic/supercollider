@@ -30,9 +30,13 @@ Polar : Number {
 	* { arg aNumber;  ^this.asComplex * aNumber  }
 	/ { arg aNumber;  ^this.asComplex / aNumber  }
 
-	== { arg aPolar;
-		^aPolar respondsTo: #[\rho, \theta] and: {
-			rho == aPolar.rho and: { theta == aPolar.theta }
+	== { |aPolar|
+		var r = aPolar.tryPerform(\rho);
+		var t = aPolar.tryPerform(\theta);
+		^if (r.notNil and: { t.notNil }) {
+			rho == r and: { theta == t }
+		} {
+			false
 		}
 	}
 

@@ -102,11 +102,9 @@ CondVar {
 
 	// Precondition checks for `waitFor` timeout. May throw.
 	prConvertTimeoutBeatsToSafeValue { |n|
-		n = case
-			{ n.class === Float or: { n.class === Integer } } { n }
-			{ n.respondsTo(\asInteger) } { n.asInteger }
-			{ n.respondsTo(\asFloat) } { n.asFloat }
-			{ n };
+		n = if ( n.class === Float or: { n.class === Integer } ) { n } {
+			n.tryPerform(\asInteger) ?? { n.tryPerform(\asFloat) ?? { n } }
+		};
 
 		if(n.class !== Float and: { n.class !== Integer }) {
 			Error("Timeout must be a Float or Integer, or convertible to one").throw

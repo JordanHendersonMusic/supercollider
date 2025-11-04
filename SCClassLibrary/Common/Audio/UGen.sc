@@ -390,11 +390,11 @@ UGen : AbstractFunction {
 		CheckBadValues.perform(this.methodSelectorForRate, this, id, post);
 	}
 
-	*methodSelectorForRate { arg rate;
+	*methodSelectorForRate { |rate|
 		if(rate == \audio,{ ^\ar });
 		if(rate == \control, { ^\kr });
 		if(rate == \scalar, {
-			if(this.respondsTo(\ir),{
+			if(this.respondsTo(\ir, postWarning: false),{
 				^\ir
 			},{
 				^\new
@@ -463,11 +463,14 @@ UGen : AbstractFunction {
 		if (rate == \demand, { ^3 });
 		^0 // scalar
 	}
+
+	// TODO: this method should be implemented in subclasses instead.
+	// Using respondsTo like this breaks polymorphism and is bad smalltalk design.
 	methodSelectorForRate {
 		if(rate == \audio,{ ^\ar });
 		if(rate == \control, { ^\kr });
 		if(rate == \scalar, {
-			if(this.class.respondsTo(\ir),{
+			if(this.class.respondsTo(\ir, postWarning: false),{
 				^\ir
 			},{
 				^\new

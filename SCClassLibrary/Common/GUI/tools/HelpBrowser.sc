@@ -136,6 +136,7 @@ HelpBrowser {
 		var winRect;
 		var x, y, w, h;
 		var str;
+		var boxClass;
 
 		homeUrl = aHomeUrl;
 
@@ -183,7 +184,8 @@ HelpBrowser {
 
 		openNewWin = aNewWin;
 		x = x + w + 10;
-		if(GUI.current.respondsTo(\checkBox)) {
+
+		GUI.current.tryPerform(\checkBox) !? {
 			str = "Open links in new window";
 			w = str.bounds.width + 50;
 			CheckBox.new (window, Rect(x, y, w, h) )
@@ -191,7 +193,7 @@ HelpBrowser {
 				.string_(str)
 				.value_(openNewWin)
 				.action_({ |b| openNewWin = b.value; });
-		} {
+		} ?? {
 			str = "Open links in same window";
 			w = str.bounds.width + 5;
 			Button.new( window, Rect(x, y, w, h) )
@@ -200,6 +202,7 @@ HelpBrowser {
 				.value_(openNewWin.asInteger)
 				.action_({ |b| openNewWin = b.value.asBoolean; });
 		};
+
 
 		x = 0;
 		y = marg + h + 5;

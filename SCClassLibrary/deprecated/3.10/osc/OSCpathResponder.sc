@@ -95,8 +95,9 @@ OSCpathResponder : OSCresponder {
 		dispatcher.removeChild(this);
 	}
 
-	== { arg that;
-		^that respondsTo: \path and: { path == that.path }
+	== { |that|
+		var thatPath = that.tryPerform(\path);
+		^thatPath !? { path == thatPath } ?? { false }
 	}
 	hash { ^path.hash }
 }

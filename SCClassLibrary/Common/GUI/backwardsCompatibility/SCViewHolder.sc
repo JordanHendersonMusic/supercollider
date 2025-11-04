@@ -47,13 +47,17 @@ SCViewHolder {
 
 	// delegate to the view
 	doesNotUnderstand { |selector ... args|
-		var	result;
-		view.respondsTo(selector).if({
+		var result;
+		try {
 			result = view.performList(selector, args);
-			^(result === view).if({ this }, { result });
-		}, {
-			DoesNotUnderstandError(this, selector, args).throw;
-		});
+		} { |er|
+			if (er.isKindOf(DoesNotUnderstandError) and: {er.selector === selector}) {
+				DoesNotUnderstandError(this, selector, args).throw;
+			} {
+				er.throw
+			}
+		};
+		^(result === view).if({ this }, { result });
 	}
 }
 

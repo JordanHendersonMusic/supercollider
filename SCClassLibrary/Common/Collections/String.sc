@@ -477,28 +477,28 @@ String[char] : RawArray {
 	}
 
 	// path concatenate
-	+/+ { arg path;
+	+/+ { |path|
 		var sep = thisProcess.platform.pathSeparator;
 		var hasLeftSep, hasRightSep;
 
-		if (path.respondsTo(\fullPath)) {
-			^PathName(this +/+ path.fullPath)
+		var fullPath = path.tryPerform(\fullPath) ?? {
+			// convert to string before concatenation.
+			path = path.asString;
+			hasLeftSep = this.notEmpty and: { this.last.isPathSeparator };
+			hasRightSep = path.notEmpty and: { path.first.isPathSeparator };
+			if(hasLeftSep && hasRightSep) {
+				// prefer using the LHS separator
+				^this ++ path.drop(1)
+			};
+
+			if(hasLeftSep || hasRightSep) {
+				^this ++ path
+			};
+
+			^this ++ sep ++ path
 		};
 
-		// convert to string before concatenation.
-		path = path.asString;
-		hasLeftSep = this.notEmpty and: { this.last.isPathSeparator };
-		hasRightSep = path.notEmpty and: { path.first.isPathSeparator };
-		if(hasLeftSep && hasRightSep) {
-			// prefer using the LHS separator
-			^this ++ path.drop(1)
-		};
-
-		if(hasLeftSep || hasRightSep) {
-			^this ++ path
-		};
-
-		^this ++ sep ++ path
+		^PathName(this +/+ fullPath)
 	}
 
 	asRelativePath { |relativeTo|

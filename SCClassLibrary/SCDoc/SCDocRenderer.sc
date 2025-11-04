@@ -382,8 +382,8 @@ SCDocHTMLRenderer {
 		};
 
 		// FIXME: Remove this when conversion to new help system is done!
-		if(doc.isUndocumentedClass and: {Help.respondsTo('findHelpFile')}) {
-			x = Help.findHelpFile(name);
+		if (doc.isUndocumentedClass) {
+			x = Help.tryPerform('findHelpFile');
 			x !? {
 				stream << ("[ <a href='" ++ baseDir ++ "/OldHelpWrapper.html#"
 				++x++"?"++SCDoc.helpTargetDir +/+ doc.path ++ ".html"

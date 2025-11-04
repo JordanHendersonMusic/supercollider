@@ -17,31 +17,30 @@ Pair : Collection {
 		^this.new(linkDown, linkAcross)
 	}
 
+	size {
+		var i = 0, link = linkAcross;
+		while { link = link.tryPerform('linkAcross'); link.notNil}{
+			i = i + 1
+		};
+		^i
+	}
 
-	size { var i = 0, link;
-		link = linkAcross;
-		while ({ link.respondsTo('linkAcross') },{
-			i = i + 1;
-			link = link.linkAcross;
-		});
+	depth { 
+		var i = 0, link = linkDown;
+		while { link = link.tryPerform('linkDown'); link.notNil} {
+			i = i + 1
+		};
 		^i
 	}
-	depth { var i = 0, link;
-		link = linkDown;
-		while ({ link.respondsTo('linkDown') },{
-			i = i + 1;
-			link = link.linkDown;
-		});
-		^i
-	}
-	do { arg function;
-		var i = 0, link, res;
+
+	do { |function|
+		var i = 0, link, nextLink, res;
 		link = linkAcross;
-		while ({ link.respondsTo('linkAcross') },{
+		while { nextLink = link.tryPerform('linkAcross'); nextLink.notNil} {
 			i = i + 1;
 			res = function.value(link, i);
-			link = link.linkAcross;
-		});
+			link = nextLink;
+		};
 		^res
 	}
 
@@ -52,43 +51,33 @@ Pair : Collection {
 		// the default traversal order
 		^this.depthFirstPreOrderTraversal(function)
 	}
-	depthFirstPreOrderTraversal { arg function;
-		var link;
+
+	depthFirstPreOrderTraversal { |function|
+		var link, nextLinkDown;
 		function.value(this);
-		if ( linkDown.respondsTo('depthFirstPreOrderTraversal'), {
-			linkDown.depthFirstPreOrderTraversal(function);
-		});
+		linkDown.tryPerform('depthFirstPreOrderTraversal', function);
 		// iterate linkAcross to conserve stack depth
 		link = linkAcross;
-		while ({ link.notNil },{
+		while { link.notNil } {
 			function.value(link);
-			if (link.respondsTo(\linkDown) and:
-				{ link.linkDown.respondsTo('depthFirstPreOrderTraversal') }, {
-					link.linkDown.depthFirstPreOrderTraversal(function);
-			});
-			if(link.respondsTo('linkAcross')) {
-				link = link.linkAcross;
-			} { link = nil };
-		});
+			nextLinkDown = link.tryPerform('linkDown');
+			nextLinkDown !? { nextLinkDown.tryPerform('depthFirstPreOrderTraversal', function) };
+			link = link.tryPerform('linkAcross');
+		};
 	}
-	depthFirstPostOrderTraversal { arg function;
-		var link;
-		if ( linkDown.respondsTo('depthFirstPostOrderTraversal'), {
-			linkDown.depthFirstPostOrderTraversal(function);
-		});
+
+	depthFirstPostOrderTraversal { |function|
+		var link, nextLinkDown;
+		linkDown.tryPerform('depthFirstPreOrderTraversal', function);
 		function.value(this);
 		// iterate linkAcross to conserve stack depth
 		link = linkAcross;
-		while ({ link.notNil },{
-			if (link.respondsTo(\linkDown) and:
-				{ link.linkDown.respondsTo('depthFirstPostOrderTraversal') }, {
-				link.linkDown.depthFirstPostOrderTraversal(function);
-			});
+		while { link.notNil } {
+			nextLinkDown = link.tryPerform(\linkDown);
+			nextLinkDown !? { nextLinkDown.tryPerform('depthFirstPostOrderTraversal, function') };
 			function.value(link);
-			if(link.respondsTo('linkAcross')) {
-				link = link.linkAcross;
-			} { link = nil };
-		});
+			link = link.tryPerform('linkAcross');
+		};
 	}
 
 	storeArgs { arg stream;
@@ -98,6 +87,7 @@ Pair : Collection {
 	printOn { arg stream;
 		stream << this.class.name << "(" <<* this.storeArgs << ")"
 	}
+
 	storeOn { arg stream;
 		stream << this.class.name << "(" <<<* this.storeArgs << ")"
 	}

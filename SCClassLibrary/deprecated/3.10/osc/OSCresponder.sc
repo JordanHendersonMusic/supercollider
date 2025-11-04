@@ -85,9 +85,12 @@ OSCresponder {
 	value { arg time, msg, addr;
 		action.value(time, this, msg, addr);
 	}
-	== { arg that;
-		^that respondsTo: #[\cmdName, \addr]
-			and: { cmdName == that.cmdName and: { addr == that.addr }}
+	== { |that|
+		var thatCmdName = that.tryPerform(\cmdName);
+		var thatAddr = that.tryPerform(\addr);
+		^if (thatCmdName.notNil and: {thatAddr.notNil}) {
+			cmdName == thatCmdName and: { addr == thatAddr }
+		} { false }
 	}
 	hash {
 		^addr.hash bitXor: cmdName.hash

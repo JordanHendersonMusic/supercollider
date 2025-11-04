@@ -1046,22 +1046,20 @@ NodeProxy : BusPlug {
 	findFirstSpecFor { |controlName|
 		var spec;
 		this.objects.do { |obj|
-			if (obj.respondsTo(\findSpecFor)) {
-				spec = obj.findSpecFor(controlName);
-				if (spec.notNil) {
-					^spec
-				}
-			}
+			spec = obj.tryPerform(\findSpecFor, controlName);
+			spec !? { ^spec };
 		};
 		^nil
 	}
 
 	specs {
 		var specs = ();
+		var objSpec;
 		this.objects.do {
 			|obj|
-			if (obj.respondsTo(\specs)) {
-				specs = specs.merge(obj.specs, {
+			objSpec = obj.tryPerform(\specs);
+			objSpec !? {
+				specs = specs.merge(objSpec, {
 					|a, b, key|
 					"Duplicate specs for key: % - only one will be used.".format(key).warn;
 					a;

@@ -98,6 +98,13 @@ code::
 
 method::respondsTo
 
+warning:: 
+This method is NOT recommended as it breaks polymorphism and doesn't allow the effects of code::doesNotUnderstand:: to take place.
+Using this method means the code is subtly broken in ways that will be hard to predict!
+It will post a warning when called.
+Instead see code::tryPerform:: which in the vast majority of use cases is the correct approach.
+::
+
 Answer a link::Classes/Boolean:: whether the receiver understands the message selector or array of message selectors.
 
 code::
@@ -110,6 +117,9 @@ code::
 
 argument::aSymbol
 A selector name. Must be a link::Classes/Symbol::.
+
+argument::postWarning
+A boolean, can be used to disable the warning if it is absolutely necessary.
 
 method::isKindOf
 

@@ -101,6 +101,7 @@ SCDocEntry {
 	*newUndocClass {|name|
 		var doc = super.new.init(nil,"Classes/"++name.asString);
 		var f, cats, implements, c;
+		var categories;
 		doc.klass = name.asSymbol.asClass;
 		doc.isClassDoc = true;
 		doc.isUndocumentedClass = true;
@@ -111,6 +112,8 @@ SCDocEntry {
 		doc.undoccmethods = doc.klass.class.methods.collectAs({|m|m.name.asGetter},IdentitySet);
 		doc.undocimethods = doc.klass.methods.collectAs({|m|m.name.asGetter},IdentitySet);
 
+		// TODO: the following doesn't appear to be used in the class library, but fails when you implement *doesNotUnderstand 
+		/*
 		if((implements=doc.klass.tryPerform(\implementsClass)).class===Symbol) {
 			(c = implements.asClass) !? {
 				doc.implements = c;
@@ -119,15 +122,20 @@ SCDocEntry {
 				^doc;
 			};
 		};
+		*/
 		doc.summary = "(Undocumented class)";
 		cats = ["Undocumented classes"];
 		if(SCDoc.classHasArKrIr(doc.klass)) {
 			cats = cats.add("UGens>Undocumented");
 		};
-		if(doc.klass.respondsTo('categories') and: {doc.klass.categories.notNil}) {
-			cats = cats ++ doc.klass.categories;
-		};
+		// TODO: this calls categories on the class object.
+		// That is a huge coupling that should be avoided.
+		// There are currently no instances in the class library that implement this method.
+		/*
+		categories = doc.klass.tryPerform('categories');
+		categories !? { cats = cats ++ categories };
 		doc.categories = cats;
+		*/
 
 		^doc;
 	}
@@ -503,10 +511,7 @@ SCDoc {
 			doc = SCDocEntry.newUndocClass(x);
 			documents[doc.path] = doc;
 		};
-		if(Help.respondsTo('tree')) {
-			this.postMsg("Indexing old helpfiles...");
-			this.indexOldHelp;
-		};
+
 		this.postMsg("Exporting docmap.js...",1);
 		this.exportDocMapJS(this.helpTargetDir +/+ "docmap.js");
 		this.postMsg("Indexed % documents in % seconds".format(documents.size,round(Main.elapsedTime-now,0.01)),0);
@@ -920,9 +925,9 @@ SCDoc {
 		sym = str.asSymbol;
 		if(sym.asClass.notNil) {
 			^pfx ++ (if(this.documents["Classes/"++str].isUndocumentedClass) {
-				(old = if(Help.respondsTo('findHelpFile'),{Help.findHelpFile(str)})) !? {
+				old = Help.tryPerform('findHelpFile') ?? {
 					"/OldHelpWrapper.html#"++old++"?"++SCDoc.helpTargetUrl ++ "/Classes/" ++ str ++ ".html"
-				}
+				};
 			} ?? { "/Classes/" ++ str ++ ".html" });
 		};
 

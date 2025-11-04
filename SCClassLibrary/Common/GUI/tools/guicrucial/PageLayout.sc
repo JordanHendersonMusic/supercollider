@@ -118,18 +118,17 @@ PageLayout  {
 		autoRemoves = autoRemoves.add(dependant);
 	}
 
-	resizeToFit { arg reflow=false,center=false;
-		var fs, b,wb,wbw,wbh;
+	resizeToFit { |reflow=false, center=false|
+		var fs, b, wb, wbw, wbh;
 
 		b = this.view.resizeToFit(reflow);
 		wbw = b.width + 11;
 		wbh = b.height + 15;
 		window.setInnerExtent(wbw,wbh);
 
-		if(center and: {window.respondsTo(\setTopLeftBounds)}) {
-			// this should be a window method
-			fs = GUI.window.screenBounds;
-			wb = window.bounds;
+		if (center) {
+			fs = GUI.window.screenBounds.copy;
+			wb = window.bounds.copy;
 			// bounds are inaccurate until the end of the code cycle/refresh
 			wb.width = wbw;
 			wb.height = wbh;
@@ -142,9 +141,11 @@ PageLayout  {
 			});
 			// center it horizontally
 			wb.left = (fs.width - wbw) / 2;
-			window.setTopLeftBounds(wb);
+
+			window.tryPerform(\setTopLeftBounds, wb);
 		}
 	}
+
 	reflowAll {
 		view.reflowAll;
 	}

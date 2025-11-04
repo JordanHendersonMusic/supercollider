@@ -5,6 +5,8 @@ FileReader : Stream {
 
 	*new { |pathOrFile, skipEmptyLines = false, skipBlanks = false, delimiter|
 		var stream;
+
+		// TODO: this usage of respondsTo seem highly problematic.
 		if(pathOrFile.respondsTo(\getChar) ) {
 			stream = pathOrFile
 		} {

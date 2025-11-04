@@ -83,9 +83,8 @@ BinaryOpPlug : AbstractOpPlug  {
 	rate {
 		// \audio < \control < \scalar
 		// note that function.rate is defined as \stream
-		var arate = \scalar, brate = \scalar;
-		if(a.respondsTo(\rate)) { arate = a.rate };
-		if(b.respondsTo(\rate)) { brate = b.rate };
+		var arate = a.tryPerform(\rate) ?? { \scalar };
+		var brate = b.tryPerform(\rate) ?? { \scalar };
 		^if(arate < brate) { arate } { brate }
 	}
 

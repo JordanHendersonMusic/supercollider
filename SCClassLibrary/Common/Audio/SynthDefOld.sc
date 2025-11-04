@@ -90,10 +90,7 @@ SynthDefOld : SynthDef {
 			}
 		} { // catch
 			arg e;
-			if (file.respondsTo(\close)) {
-				file.close;
-			};
-			Error("SynthDefOld: could not write def: %".format(e.what())).throw;
+			file.tryPerform(\close) ??  { Error("SynthDefOld: could not write def: %".format(e.what())).throw };
 		}
 	}
 

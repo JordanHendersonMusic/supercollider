@@ -193,7 +193,7 @@ EnvironmentRedirect {
 	// networking
 	dispatch_ { arg disp;
 		dispatch = disp;
-		if(disp.respondsTo(\envir_)) { disp.envir_(this) };
+		disp.tryPerform(\envir_, this)
 	}
 	envir_ { arg argEnvir;
 		envir = argEnvir;

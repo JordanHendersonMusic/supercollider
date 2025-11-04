@@ -109,15 +109,16 @@ BusPlug : AbstractFunction {
 	//  math support
 
 	value { | something |
-		var n;
+		var n, r;
 		if(UGen.buildSynthDef.isNil) { ^this }; // only return when in ugen graph.
 		something !? { n = something.numChannels };
-		^if(something.respondsTo(\rate) and: { something.rate == 'audio'} or: { this.rate == \audio }) {
+		r = something.tryPerform(\rate);
+
+		^if (r === \audio or: { this.rate === \audio}) {
 			this.ar(n)
 		} {
 			this.kr(n)
 		}
-
 	}
 
 	composeUnaryOp { | aSelector |

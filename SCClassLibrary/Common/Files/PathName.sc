@@ -158,7 +158,7 @@ PathName {
 
 	/* concatenation */
 	+/+ { | path |
-		var otherFullPath = path.respondsTo(\fullPath).if({ path.fullPath }, { path.asString });
+		var otherFullPath = path.tryPerform(\fullPath) ?? { path.asString };
 		^this.class.new(fullPath +/+ otherFullPath)
 	}
 

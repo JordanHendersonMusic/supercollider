@@ -69,7 +69,16 @@ Object {
 	class { _ObjectClass; ^this.primitiveFailed }
 	isKindOf { arg aClass; _ObjectIsKindOf; ^this.primitiveFailed }
 	isMemberOf { arg aClass; _ObjectIsMemberOf; ^this.primitiveFailed }
-	respondsTo { arg aSymbol; _ObjectRespondsTo; ^this.primitiveFailed }
+	respondsTo { |aSymbol, postWarning=true|
+		if(postWarning) {
+			"respondsTo limits polymorphism, do not use it as it will subtly break in unexpected way! Instead use tryPerform".warn
+		};
+		^this.prBrokenRespondsTo(aSymbol)
+	}
+	prBrokenRespondsTo { |aSymbol|
+		_ObjectRespondsTo;
+		^this.primitiveFailed
+	}
 
     // args and kwargs should be arrays here, not variable arguments!
 	performArgs { |selector, args, kwargs|
@@ -113,10 +122,18 @@ Object {
 		^this.primitiveFailed
 	}
 
-	tryPerform { |  ... args, kwargs|
-		^if(this.respondsTo(args[0]), {
-			this.performArgs(args[0],  args[1..], kwargs)
-		})
+	tryPerform { |...args, kwargs|
+	 	var r;
+		try {
+			r = this.performArgs(args[0], args[1..], kwargs)
+		} { |er|
+			if(er.isKindOf(DoesNotUnderstandError) and: { er.selector === args[0]} ) {
+				r = nil; // Failure. Old interface returned nil. If the method returns nil to, there is no way to tell the difference.
+			} {
+				er.throw;
+			}
+		}
+		^r
 	}
 
 	multiChannelPerform { arg selector ... args;
@@ -183,6 +200,7 @@ Object {
 	=== { arg obj; _Identical; ^this.primitiveFailed }
 	!== { arg obj;_NotIdentical; ^this.primitiveFailed }
 	equals { arg that, properties;
+		"WARNING: this method is inherently broken and cannot be fixed as it uses respondsTo, avoid it.".postln;
 		^that.respondsTo(properties) and: {
 			properties.every { |selector| this.perform(selector) == that.perform(selector) }
 		}

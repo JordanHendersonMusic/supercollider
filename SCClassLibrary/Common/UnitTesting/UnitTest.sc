@@ -324,12 +324,10 @@ UnitTest {
 			("No test class found for " + class).inform;
 			^this
 		};
-		if(testClass.respondsTo(\run).not) {
-			("Attempting to run UnitTests on class that is not a subclass of UnitTest"
-				+ testClass).error;
-			^this
-		};
-		testClass.run(reset,report)
+		testClass.tryPerform(\run, reset, report) ?? { 
+			("Attempting to run UnitTests on class that does not have a 'run' method" + testClass).error;
+			^this;
+		}
 	}
 
 	*findTestClass { | forClass |

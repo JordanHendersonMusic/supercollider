@@ -326,11 +326,8 @@ EnvirGui : JITGui {
 	// if none found, guess an initial spec and remember it.
 	// note: for specs attached to proxies, use JITLibExtensions quark
 	getSpec { |key, value|
-		var spec;
-		if (object.respondsTo(\findFirstSpecFor)) {
-			spec = object.findFirstSpecFor(key);
-			if (spec.notNil) { ^spec };
-		};
+		var spec = object.tryPerform(\findFirstSpecFor, key);
+		spec !? { ^spec };
 
 		spec = specs[key] ?? { key.asSpec };
 		if (spec.isNil) {

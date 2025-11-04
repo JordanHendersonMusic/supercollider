@@ -98,7 +98,10 @@ Char : Magnitude {
 	< { arg aChar;
 		^this.ascii < aChar.ascii
 	}
-	== { arg aChar;  ^aChar respondsTo: \ascii and: { this.ascii == aChar.ascii } }
+	== { |aChar|  
+		var c = aChar.tryPerform(\ascii);
+		^c !? { this.ascii == c } ?? { false };
+	}
 
 	++ { |that| ^this.asString ++ that }
 

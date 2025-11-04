@@ -5,8 +5,9 @@ Association : Magnitude {
 		^super.newCopyArgs(key, value)
 	}
 
-	== { arg anAssociation;
-		^anAssociation respondsTo: \key and: { key == anAssociation.key }
+	== { |other|
+		var otherKey = other.tryPerform(\key); 
+		^otherKey !? { otherKey == key } ?? { false }
 	}
 
 	hash {

@@ -17,9 +17,9 @@ ObjectGui : SCViewHolder {
 		// this is a lazy way to write simple guis for simple objects
 		// where model/gui code separation is not especially important
 		// and where the controller class doesn't need to maintain any state or vars
-		if(model.respondsTo(\guiBody) and: {model.isKindOf(ObjectGui).not},{
-			model.guiBody(layout,bounds,*args)
-		})
+		if (model.isKindOf(ObjectGui).not) {
+			model.tryPerform(\guiBody, layout, bounds, *args)
+		}
 	}
 
 	*new { arg model;

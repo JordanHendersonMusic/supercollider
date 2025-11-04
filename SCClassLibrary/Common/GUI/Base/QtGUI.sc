@@ -136,11 +136,8 @@ QtGUI {
 
 	*selectedText {
 		var view = this.focusView;
-		if( view.notNil ) {
-			if( view.respondsTo(\selectedText) ) { ^view.selectedText };
-			if( view.respondsTo(\selectedString) ) { ^view.selectedString };
-		};
-		^"";
+		if (view.isNil) { ^"" };
+		^view.tryPerform(\selectedText) ?? { view.tryPerform(\selectedString) } ?? { "" }
 	}
 
 	// private ///////////////////////////////////////////////////////////

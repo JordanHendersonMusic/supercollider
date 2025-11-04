@@ -207,8 +207,15 @@ ClassBrowser {
 			} {
 				~state = state;
 			};
-			if(extraValuesDict.respondsTo(\keysValuesDo)) {
+			try {
 				currentEnvironment.putAll(extraValuesDict);
+			} { |er|
+				if (er.isKindOf(DoesNotUnderstandError) and: { er.selector = \keysValuesDo }) {
+					// carry on
+				} {
+					// some unrelated issue
+					er.throw
+				}
 			};
 			~state.envirGet[\init].value;
 			~subclassViewIndex = ~subclassViewIndex.value ? 0;

@@ -579,9 +579,10 @@ View : QObject {
 		this.setEventHandler( QObject.keyDownEvent, \keyDownEvent, true, enabled: handleKeyDown );
 		this.setEventHandler( QObject.keyUpEvent, \keyUpEvent, true, enabled: handleKeyUp );
 
+		// TODO: Why are we calling this.respondsTo... we know what this is!?
 		// mouse events
 		overridesMouseDown = this.overrides( \mouseDown );
-		if( this.respondsTo(\defaultGetDrag) || overridesMouseDown )
+		if( this.respondsTo(\defaultGetDrag, false) || overridesMouseDown )
 		{this.setEventHandler( QObject.mouseDownEvent, \mouseDownEvent, true )};
 		if( overridesMouseDown )
 		{this.setEventHandler( QObject.mouseDblClickEvent, \mouseDownEvent, true )};
@@ -597,7 +598,7 @@ View : QObject {
 		{this.setEventHandler( QObject.mouseWheelEvent, \mouseWheelEvent, true )};
 
 		// DnD events
-		handleDrag = this.respondsTo(\defaultCanReceiveDrag) or: {this.respondsTo(\defaultReceiveDrag)};
+		handleDrag = this.respondsTo(\defaultCanReceiveDrag, false) or: {this.respondsTo(\defaultReceiveDrag, false)};
 		this.setEventHandler( 60, \dragEnterEvent, true, enabled:handleDrag );
 		this.setEventHandler( 61, \dragMoveEvent, true, enabled:handleDrag );
 		this.setEventHandler( 63, \dropEvent, true, enabled:handleDrag );

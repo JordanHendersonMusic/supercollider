@@ -23,9 +23,7 @@ Dictionary : Set {
 		^nil
 	}
 	trueAt { arg key;
-		var val = this.at(key);
-		if(val.respondsTo(\booleanValue).not) { ^false };
-		^val.booleanValue
+		^this.at(key).tryPerform(\booleanValue) ?? {false}
 	}
 	falseAt { arg key;
 		^this.trueAt(key).not
@@ -551,10 +549,7 @@ IdentityDictionary : Dictionary {
 
         if (selector.isSetter) {
             selector = selector.asGetter;
-            if(this.respondsTo(selector)) {
-                warn(selector.asCompileString
-                    + "exists as a method name, so you can't use it as a pseudo-method.")
-            };
+			// Impossible to tell if you can or can't use a method name ahead of time.
             ^this[selector] = args[0];
         };
 

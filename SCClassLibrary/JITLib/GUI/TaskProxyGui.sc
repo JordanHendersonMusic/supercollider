@@ -5,9 +5,7 @@ TaskProxyGui : JITGui {
 
 	*observedClass { ^TaskProxy }
 
-	getObjectKey {
-		^if (object.respondsTo(\key)) { object.key } { 'anon' };
-	}
+	getObjectKey { ^object.tryPerform(\key) ?? { 'anon'} }
 
 	setDefaults { |options|
 		defPos = 10@260;
@@ -268,11 +266,7 @@ TaskProxyAllGui :JITGui {
 	*observedClass { ^TaskProxy }
 	*tpGuiClass { ^TaskProxyGui }
 
-	*observedAll {
-		^if (this.observedClass.respondsTo(\all)) {
-			this.observedClass.all
-		} { nil };
-	}
+	*observedAll { ^this.observedClass.tryPerform(\all) }
 
 	*new { |numItems = 16, parent, bounds, makeSkip = true, options = #[]|
 		^super.new(this.observedAll, numItems, parent, bounds, makeSkip, options );

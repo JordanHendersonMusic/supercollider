@@ -490,19 +490,16 @@ SequenceableCollection : Collection {
 	}
 
 	flatten { arg numLevels=1;
-		var list;
+		var list, itemFlatten;
 
 		if (numLevels <= 0, { ^this });
 		numLevels = numLevels - 1;
 
 		list = this.species.new(this.size);
-		this.do({ arg item;
-			if (item.respondsTo('flatten'), {
-				list = list.addAll(item.flatten(numLevels));
-			},{
-				list = list.add(item);
-			});
-		});
+		this.do{ |item|
+			itemFlatten = item.tryPerform(\flatten);
+			itemFlatten !? { list = list.addAll(itemFlatten) } ?? { list = list.add(item) }
+		};
 		^list
 	}
 
@@ -510,13 +507,7 @@ SequenceableCollection : Collection {
 
 		if (level <=0) { ^this.flat };
 		level = level - 1;
-		^this.collect { |item|
-			if (item.respondsTo(\flatBelow)) {
-				item.flatBelow(level)
-			} {
-				item
-			}
-		}
+		^this.collect { |item| item.tryPerform(\flatBelow) !? { item } }
 	}
 
 	// bidirectional flattening
@@ -531,25 +522,25 @@ SequenceableCollection : Collection {
 	}
 
 	prFlat { |list|
-		this.do({ arg item, i;
-			if (item.respondsTo('prFlat'), {
-				list = item.prFlat(list);
-			},{
-				list = list.add(item);
-			});
-		});
+		var prFlat;
+		this.do{ |item, i|
+			prFlat = item.tryPerform(\prFlat, list) ;
+			prFlat !? { list = prFlat } ?? { list = list.add(item) };
+		};
 		^list
 	}
 
 	flatIf { |func|
 		var list = this.species.new(this.size); // as we don't know the size, just guess
-		this.do({ arg item, i;
-			if (item.respondsTo('flatIf') and: { func.value(item, i) }, {
-				list = list.addAll(item.flatIf(func));
-			},{
-				list = list.add(item);
-			});
-		});
+		var r;
+		this.do { |item, i|
+			if (func.(item, i)) {
+				r = item.tryPerform(\flatIf, func);
+				list = r !? {  list.addAll(r) } ?? { list.add(item) };
+			} {
+				list = list.add(item)
+			}
+		};
 		^list
 	}
 

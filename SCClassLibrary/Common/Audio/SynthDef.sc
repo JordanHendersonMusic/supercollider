@@ -544,7 +544,7 @@ SynthDef {
 			var inputs, ugenName;
 			if (ugen.inputs.notNil) {
 				inputs = ugen.inputs.collect {|in|
-					if (in.respondsTo(\dumpName)) { in.dumpName }{ in };
+					in.tryPerform(\dumpName) ?? { in }
 				};
 			};
 			[ugen.dumpName, ugen.rate, inputs].postln;
