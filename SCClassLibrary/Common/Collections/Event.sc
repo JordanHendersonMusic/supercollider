@@ -194,12 +194,16 @@ Event : Environment {
 					(~degree + ~mtranspose).degreeToKey(
 						~scale,
 						~scale.tryPerform(\stepsPerOctave) ?? {~stepsPerOctave}
-					);
+					)
 				},
 				midinote: #{
-					((~note.value + ~gtranspose + ~root) /
-						(~scale.tryPerform(\stepsPerOctave) ?? {~stepsPerOctave} + ~octave - 5.0) 
-						* (12.0 * (~scale.tryPerform(\octaveRatio) ?? { ~octaveRatio }).log2) + 60.0);
+					(
+						(~note.value + ~gtranspose + ~root) 
+						/ (~scale.tryPerform(\stepsPerOctave) ?? {~stepsPerOctave})
+						+ ~octave - 5.0
+					) 
+					* (12.0 * (~scale.tryPerform(\octaveRatio) ?? { ~octaveRatio }).log2) 
+					+ 60.0
 				},
 				detunedFreq: #{
 					~freq.value + ~detune

@@ -240,12 +240,12 @@ TestEvent : UnitTest {
 
 		msg1 = prevMsg[0];
 		i = msg1.indexOf(\freq);
-		this.assert(msg1[i+1].cpsmidi == 73, "note 0 octave 6 ctranspose 1 equals midinote 73");
-		this.assert(msg1[4] == 1, "synth created in root node");
+		this.assertEquals(msg1[i+1].cpsmidi, 73, "note 0 octave 6 ctranspose 1 equals midinote 73");
+		this.assertEquals(msg1[4], 1, "synth created in root node");
 		this.assert(msg1.includes(\zzzz), "SynthDesc provides parameters to send in message");
 		this.assert(event[\hasGate] == true, "Event detects gate in SynthDesc");
 		this.assert(finishTest, "Event evaluates finish action");
-		this.assert(prevLatency == 0,
+		this.assertEquals(prevLatency, 0,
 			"latency specified in the event should override server latency");
 		this.cleanUpMessages;
 	}
