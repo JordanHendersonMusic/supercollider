@@ -497,7 +497,7 @@ SequenceableCollection : Collection {
 
 		list = this.species.new(this.size);
 		this.do{ |item|
-			itemFlatten = item.tryPerform(\flatten);
+			itemFlatten = item.tryPerform(\flatten, numLevels);
 			itemFlatten !? { list = list.addAll(itemFlatten) } ?? { list = list.add(item) }
 		};
 		^list
