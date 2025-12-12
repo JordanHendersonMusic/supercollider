@@ -45,6 +45,20 @@ If you see someone who is making an extra effort to ensure our community is welc
 * Avoid using the community as a platform to advertise commercial products that lack direct connections to the software.
 * Self-promotion postings should be in courteous volumes and preferably include good descriptions.
 
+### Usage of AI tools
+* AI slop and AI based low effort contributions are not tolerated and will be judged by moderators discretion on a case by case basis.
+
+* Using LLMs for debate or discussion is not acceptable! Do not post a generated response as–if it was your own thought. 
+
+* Since almost all LLM providers also train on their input data it is not allowed to paste other users content or code into LLMs without their consent.
+
+* AI tools such as translators or even LLMs may be used at your discretion to help with participation or contribution to the community, 
+but should be used in moderation, or as a last resort.
+“Imperfection” and “your own words” is preferred over AI-generated or polished content. 
+The SC community appreciates the error over generic content. 
+
+* If AI tools are used, community expects complete transparency about it.
+
 ## Unacceptable Behavior
 
 Unacceptable behaviors include: intimidating, harassing, abusive, culturally appropriative, discriminatory, derogatory or demeaning speech or actions by any participant in our community online, at all related events and in one-on-one communications carried out in the context of community business. Community event venues may be shared with members of the public; please be respectful to all patrons of these locations.
