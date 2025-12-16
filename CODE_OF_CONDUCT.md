@@ -52,7 +52,7 @@ If you see someone who is making an extra effort to ensure our community is welc
 * Do not paste other user's content or code into LLMs without their consent.
 * AI tools, such as translators, may be used to help one participate and contribute to the community, 
 but they should be used in moderation, or as a last resort. 
-The community would rather engage with human imperfect than a sterile machine.  
+The community would rather engage with human imperfection than a sterile machine.  
 
 ## Unacceptable Behavior
 
