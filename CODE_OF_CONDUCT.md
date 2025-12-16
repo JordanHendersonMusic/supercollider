@@ -47,14 +47,13 @@ If you see someone who is making an extra effort to ensure our community is welc
 
 ### Usage of AI tools
 
+* The community values the thoughts and ideas of others, using an AI to *develop* one's thoughts is acceptable, but posting the output of an AI 'as if' it came from a human is not.
 * AI slop and AI based low effort contributions are not tolerated and will be judged by moderators discretion on a case by case basis.
-* Using LLMs for debate or discussion is not acceptable! Do not post a generated response as–if it was your own thought. 
-* Since almost all LLM providers also train on their input data it is not allowed to paste other users content or code into LLMs without their consent.
-* AI tools such as translators or even LLMs may be used at your discretion to help with participation or contribution to the community, 
-but should be used in moderation, or as a last resort.
-“Imperfection” and “your own words” is preferred over AI-generated or polished content. 
-The SC community appreciates the error over generic content. 
-* If AI tools are used, community expects complete transparency about it.
+* Ensure all AI‑generated text or code has been carefully reviewed and edited by yourself.
+* Do not paste other user's content or code into LLMs without their consent.
+* AI tools, such as translators, may be used to help one participate and contribute to the community, 
+but they should be used in moderation, or as a last resort. 
+The community would rather engage with human imperfect than a sterile machine.  
 
 ## Unacceptable Behavior
 
