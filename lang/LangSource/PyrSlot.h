@@ -44,10 +44,8 @@ A PyrSlot is an 8-byte value which is either a double precision float or a
 #else // MSVC doesn't define __SIZEOF_POINTER__
 #    ifdef _WIN32
 #        define SIZEOF_POINTER 4
-#    elif defined _WIN64
-#        define SIZEOF_POINTER 8
 #    else
-#        error "Windows is neither 32 nor 64 bit!?"
+#        define SIZEOF_POINTER 8
 #    endif
 #endif
 
