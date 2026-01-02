@@ -34,6 +34,8 @@ BOOST_AUTO_TEST_CASE(slot_test) {
         int* ap = &a;
         PyrSlot s_p = PyrSlot::make(ap);
         BOOST_TEST_REQUIRE(s_p.isPtr());
+        BOOST_TEST_REQUIRE(!s_p.isDouble());
+        BOOST_TEST_REQUIRE(!s_p.isSymbol());
         BOOST_TEST_REQUIRE(!s_p.isObjectHdr());
         BOOST_TEST_REQUIRE(!s_p.isInt());
         BOOST_TEST_REQUIRE(!s_p.isChar());

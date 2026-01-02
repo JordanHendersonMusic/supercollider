@@ -39,17 +39,14 @@ A PyrSlot is an 8-byte value which is either a double precision float or a
 #include "Hash.h"
 #include "PyrSymbol.h"
 
-#if (__SIZEOF_POINTER__ == 8) || defined(__x86_64__) || defined(_M_X64) || defined(__LP64__) || defined(_WIN64)
+#if (__SIZEOF_POINTER__ == 8)
 #    define POINTER_NEEDS_PADDING 0
-
 namespace details {
 static constexpr bool pointerNeedsPadding = false;
 }
 
-#elif (__SIZEOF_POINTER__ == 4) || defined(__i386__) || defined(_M_IX86) || defined(__ILP32__) || defined(_WIN32)      \
-    || defined(__ppc__) || defined(__arm__)
+#elif (__SIZEOF_POINTER__ == 4)
 #    define POINTER_NEEDS_PADDING 1
-
 namespace details {
 static constexpr bool pointerNeedsPadding = true;
 }
@@ -117,14 +114,29 @@ inline void unreachable() {}
 
 namespace details {
 static constexpr uint64_t safeNaN = 0x7FF8000000000001;
+
+// cpp reference
+template <class To, class From>
+std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From> && std::is_trivially_copyable_v<To>,
+                 To> inline bit_cast(const From& src) noexcept {
+    static_assert(std::is_trivially_constructible_v<To>,
+                  "This implementation additionally requires "
+                  "destination type to be trivially constructible");
+    To dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return dst;
+}
 }
 
 // This is used as a non-type template parameter to check for nans when creating slots of doubles.
 enum struct AssertDouble { Okay, CouldBeBadNan };
 
-[[nodiscard]] constexpr double removeBadNans(double d) noexcept { return std::isnan(d) ? details::safeNaN : d; }
-[[nodiscard]] constexpr float removeBadNans(float d) noexcept {
-    return std::isnan(d) ? static_cast<float>(details::safeNaN) : d;
+
+[[nodiscard]] inline double removeBadNans(double d) noexcept {
+    return std::isnan(d) ? details::bit_cast<double>(details::safeNaN) : d;
+}
+[[nodiscard]] inline float removeBadNans(float d) noexcept {
+    return std::isnan(d) ? static_cast<float>(details::bit_cast<double>(details::safeNaN)) : d;
 }
 
 namespace details {
@@ -193,11 +205,7 @@ template <typename T> struct MaybePadPointerTo64Bits {
             return ptr;
         } else {
             const auto r = reinterpret_cast<uintptr_t>(ptr);
-            if (r & (1ULL << 47)) {
-                return reinterpret_cast<T>(r | (~Masks::pointer));
-            } else {
-                return reinterpret_cast<T>(r & Masks::pointer);
-            }
+            return reinterpret_cast<T>(r & Masks::pointer);
         }
     }
 };
@@ -205,20 +213,6 @@ template <typename T> struct MaybePadPointerTo64Bits {
 
 // On 64 and 32 bit systems this should *always* be true.
 static_assert(sizeof(MaybePadPointerTo64Bits<void*>) == sizeof(double));
-
-// cpp reference
-template <class To, class From>
-std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From> && std::is_trivially_copyable_v<To>,
-                 To>
-bit_cast(const From& src) noexcept {
-    static_assert(std::is_trivially_constructible_v<To>,
-                  "This implementation additionally requires "
-                  "destination type to be trivially constructible");
-    To dst;
-    std::memcpy(&dst, &src, sizeof(To));
-    return dst;
-}
-
 }
 
 // This is the old tag and their values are assumed and used as indices elsewhere in the code, do not change them!
