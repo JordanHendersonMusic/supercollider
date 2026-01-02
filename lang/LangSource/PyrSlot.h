@@ -39,13 +39,25 @@ A PyrSlot is an 8-byte value which is either a double precision float or a
 #include "Hash.h"
 #include "PyrSymbol.h"
 
-#if (__SIZEOF_POINTER__ == 8)
+#ifdef __SIZEOF_POINTER__
+#    define SIZEOF_POINTER __SIZEOF_POINTER__
+#else // MSVC doesn't define __SIZEOF_POINTER__
+#    ifdef _WIN32
+#        define SIZEOF_POINTER 4
+#    elif defined _WIN64
+#        define SIZEOF_POINTER 8
+#    else
+#        error "Windows is neither 32 nor 64 bit!?"
+#    endif
+#endif
+
+#if (SIZEOF_POINTER == 8)
 #    define POINTER_NEEDS_PADDING 0
 namespace details {
 static constexpr bool pointerNeedsPadding = false;
 }
 
-#elif (__SIZEOF_POINTER__ == 4)
+#elif (SIZEOF_POINTER == 4)
 #    define POINTER_NEEDS_PADDING 1
 namespace details {
 static constexpr bool pointerNeedsPadding = true;
