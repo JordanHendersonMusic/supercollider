@@ -5,6 +5,10 @@
 #include "PyrObject.h"
 #include "PyrKernel.h"
 
+// msvc will try to evaluate 'a/b' at compile time, which it can't.
+// calling this stops that.
+double divide_for_msvc(double a, double b) { return a / b; }
+
 BOOST_AUTO_TEST_CASE(slot_test) {
     {
         PyrSlot i = PyrSlot::make(static_cast<int32_t>(32));
@@ -82,23 +86,23 @@ BOOST_AUTO_TEST_CASE(slot_test) {
         BOOST_TEST_REQUIRE(s.getObjectHdr() == nullptr);
     }
     {
-        const auto r = PyrSlot::make(1.0 / 0.0);
+        const auto r = PyrSlot::make(divide_for_msvc(1.0, 0.0));
         BOOST_TEST_REQUIRE(r.isDouble());
         BOOST_TEST_REQUIRE(r.getDouble() == 1.0 / 0.0);
     }
     {
-        const auto r = PyrSlot::make(-1.0 / 0.0);
+        const auto r = PyrSlot::make(divide_for_msvc(-1.0, 0.0));
         BOOST_TEST_REQUIRE(r.isDouble());
         BOOST_TEST_REQUIRE(r.getDouble() == -1.0 / 0.0);
     }
     {
-        const auto r = PyrSlot::make(-0.0 / 0.0);
+        const auto r = PyrSlot::make(divide_for_msvc(-0.0, 0.0));
         BOOST_TEST_REQUIRE(r.isDouble());
         const auto d = r.getDouble();
         BOOST_TEST_REQUIRE(std::isnan(r.getDouble()));
     }
     {
-        const auto r = PyrSlot::make(0.0 / 0.0);
+        const auto r = PyrSlot::make(divide_for_msvc(0.0, 0.0));
         BOOST_TEST_REQUIRE(r.isDouble());
         BOOST_TEST_REQUIRE(std::isnan(r.getDouble()));
     }
