@@ -1,5 +1,6 @@
 #include <boost/test/unit_test.hpp>
 #include <cstdint>
+#include <sys/types.h>
 
 #include "PyrSlot.h"
 #include "PyrObject.h"
@@ -106,47 +107,40 @@ BOOST_TEST_REQUIRE(i.getInt() == 32);
 }
 
 BOOST_AUTO_TEST_CASE(nan_tests) {
-    const auto safe_nan_double = details::bit_cast<double>(details::safeNaN);
-    BOOST_TEST(std::isnan(safe_nan_double));
+    // const auto safe_nan_double = details::bit_cast<double>(details::safeNaN);
+    // BOOST_TEST(std::isnan(safe_nan_double));
 
     BOOST_TEST(removeBadNans(1.0) == 1.0);
     BOOST_TEST(removeBadNans(-1.0) == -1.0);
 
-    // This also tests bit_cast.
-    {
-        // safeNan is the first quiet nan.
-        const uint64_t d1 = details::bit_cast<uint64_t>(std::nan("1"));
-        BOOST_TEST(d1 == details::safeNaN);
-
-        // all other nans are not allowed.
-        const uint64_t d2 = details::bit_cast<uint64_t>(std::nan("2"));
-        BOOST_TEST(d2 != details::safeNaN);
-    }
-    {
-        const auto r = removeBadNans(safe_nan_double);
-        BOOST_TEST(std::isnan(r));
-    }
-    const auto test_quiet_nan = [](const char* s) {
+    const auto test_bad_nan_conversion = [](const char* s) {
         const auto nan = std::nan(s);
-        const auto r = removeBadNans(nan);
-        const uint64_t r_uint = details::bit_cast<uint64_t>(r);
-        // r should still be a nan
-        BOOST_TEST(std::isnan(r));
+        const auto safe_nan = removeBadNans(nan);
+        BOOST_TEST(std::isnan(safe_nan));
+        const auto nan_slot = PyrSlot::make<AssertDouble::CouldBeBadNan>(nan);
+        BOOST_TEST(nan_slot.isDouble());
+        BOOST_TEST(std::isnan(nan_slot.getDouble()));
+        const auto d = nan_slot.getDouble();
+        const auto d_int = details::bit_cast<uint64_t>(d);
 
-        // r should not be the same nan
-        BOOST_TEST(r_uint != details::bit_cast<uint64_t>(nan));
-
-        // r should be a the safe nan
-        BOOST_TEST(r_uint == details::bit_cast<uint64_t>(details::safeNaN));
-
-        const auto s_nan = PyrSlot::make<AssertDouble::CouldBeBadNan>(nan);
-        BOOST_TEST(s_nan.isDouble());
-        BOOST_TEST(std::isnan(s_nan.getDouble()));
+        // After going through the slot, all nans should be the same.
+        const auto nan_0_int = details::bit_cast<uint64_t>(std::nan("0"));
+        BOOST_TEST(d_int == nan_0_int);
     };
 
     // Just some random quiet nans. These should all be converted to the safe nan.
-    test_quiet_nan("2");
-    test_quiet_nan("3");
-    test_quiet_nan("33456344");
-    test_quiet_nan("93563455656");
+    test_bad_nan_conversion("1");
+    test_bad_nan_conversion("2");
+    test_bad_nan_conversion("3");
+    test_bad_nan_conversion("33456344");
+    test_bad_nan_conversion("93563455656");
+
+    {
+        const auto nan = std::nan("0");
+        BOOST_TEST(std::isnan(nan));
+        // Assume this is a safe nan value. This is the type of nan we might produce.
+        const auto nan_slot = PyrSlot::make<AssertDouble::Okay>(nan);
+        BOOST_TEST(nan_slot.isDouble());
+        BOOST_TEST(std::isnan(nan_slot.getDouble()));
+    }
 }

@@ -22,7 +22,6 @@ message(STATUS "SuperCollider Version: ${SC_VERSION}")
 message(STATUS "Building from ${GIT_REF_TYPE} ${GIT_BRANCH_OR_TAG}, commit hash is ${GIT_COMMIT_HASH}")
 include(CTest)
 enable_testing()
-list(APPEND CMAKE_CTEST_ARGUMENTS "--rerun-failed") 
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 
 include (cmake_modules/FinalFile.cmake)

@@ -91,12 +91,16 @@ inline void unreachable() {}
 // -Inf = 1111 1111 1111 0000 000000000000000000000000000000000000000000000000 = FFF0 0000 0000 0000
 
 // If exponents are all 1 and fraction isn't 0, its some type of nan (if fraction is zero, it is an inf)
-// sNaN = 0111 1111 1111 0000 000000000000000000000000000000000000000000000001 = 7FF0 0000 0000 0001
-// qNaN = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0001
-// qNaN = 1111 1111 1111 1000 000000000000000000000000000000000000000000000001 = FFF8 0000 0000 0001
-//        | sign is irrelevant to nan
-// qNaN = 1111 1111 1111 1111 111111111111111111111111111111111111111111111111 = FFFF FFFF FFFF FFFF
+// sNaN    = 0111 1111 1111 0000 000000000000000000000000000000000000000000000001 = 7FF0 0000 0000 0001
+// qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0000
+// qNaN(1) = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0001
+// qNaN(2) = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0002
+// qNaN    = 1111 1111 1111 1000 000000000000000000000000000000000000000000000001 = FFF8 0000 0000 0001
+//           | sign is irrelevant to nan
+// qNaN    = 1111 1111 1111 1111 111111111111111111111111111111111111111111111111 = FFFF FFFF FFFF FFFF
 //                     still qNaN
+
+// Quiet nans can be produced through std::nan("0"), std::nan("1"). The only nan that can be stored in a slot is "0".
 
 
 // Signaling NaN (sNaN) is used to signal some floating point error has occurred.
@@ -124,7 +128,6 @@ inline void unreachable() {}
 // If the data is less than 48 bits, additional bits can be used to create further tags.
 
 namespace details {
-static constexpr uint64_t safeNaN = 0x7FF8000000000001;
 
 // cpp reference
 template <class To, class From>
@@ -142,17 +145,13 @@ std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From
 // This is used as a non-type template parameter to check for nans when creating slots of doubles.
 enum struct AssertDouble { Okay, CouldBeBadNan };
 
-
-[[nodiscard]] inline double removeBadNans(double d) noexcept {
-    return std::isnan(d) ? details::bit_cast<double>(details::safeNaN) : d;
-}
-[[nodiscard]] inline float removeBadNans(float d) noexcept {
-    return std::isnan(d) ? static_cast<float>(details::bit_cast<double>(details::safeNaN)) : d;
-}
+[[nodiscard]] inline double removeBadNans(double d) noexcept { return std::isnan(d) ? std::nan("0") : d; }
+[[nodiscard]] inline float removeBadNans(float d) noexcept { return std::isnan(d) ? std::nanf("0") : d; }
 
 namespace details {
 
 struct Masks {
+    // Note, nanExponent is the only nan we can store inside the slot.
     static constexpr uint64_t nanExponent = 0x7FF8000000000000;
     static constexpr uint64_t boxedBit = 0x0001000000000000;
     static constexpr uint64_t boxed = boxedBit | nanExponent;
