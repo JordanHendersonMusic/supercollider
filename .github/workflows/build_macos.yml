@@ -221,6 +221,6 @@ jobs:
           path: ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE }}
 
       - name: Run CTests
-        continue-on-error: true
+        continue-on-error: false
         if: matrix.ctest
         run: env CTEST_OUTPUT_ON_FAILURE=1 cmake --build $BUILD_PATH --config Release --target RUN_TESTS
