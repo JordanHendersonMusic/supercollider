@@ -348,7 +348,7 @@ HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t 
     const int64_t unboundedSizeclass = LOG2CEIL(numSlots);
     const int64_t sizeclass = sc_min(unboundedSizeclass, kNumGCSizeClasses - 1);
 
-    const int32 credit = 1LL << sizeclass;
+    const int64_t credit = 1LL << sizeclass;
     mAllocTotal += credit;
     mNumAllocs++;
 
@@ -645,7 +645,7 @@ void PyrGC::FullCollection() {
     SweepBigObjects();
 }
 
-void PyrGC::Collect(int32 inNumToScan) {
+void PyrGC::Collect(int64_t inNumToScan) {
     mNumToScan = sc_max(mNumToScan, inNumToScan);
     Collect(); // collect space
 }

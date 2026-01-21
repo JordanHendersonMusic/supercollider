@@ -149,7 +149,7 @@ public:
     // users should not call anything below.
 
     void Collect();
-    void Collect(int32 inNumToScan);
+    void Collect(int64_t inNumToScan);
     void LazyCollect() {
         if (mUncollectedAllocations > kLazyCollectThreshold)
             Collect();
@@ -223,8 +223,8 @@ private:
     std::int64_t mNumToScan;
     int32 mNumGrey;
 
-    int32 mFlips, mCollects, mAllocTotal, mScans, mNumAllocs, mStackScans, mNumPartialScans, mSlotsScanned,
-        mUncollectedAllocations;
+    int64_t mAllocTotal;
+    int32 mFlips, mCollects, mScans, mNumAllocs, mStackScans, mNumPartialScans, mSlotsScanned, mUncollectedAllocations;
 
     unsigned char mBlackColor, mGreyColor, mWhiteColor, mFreeColor;
     bool mCanSweep;
