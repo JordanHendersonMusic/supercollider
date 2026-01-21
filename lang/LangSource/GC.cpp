@@ -334,30 +334,26 @@ void PyrGC::BecomeImmutable(PyrObject* inObject) { inObject->obj_flags |= obj_im
 void DumpBackTrace(VMGlobals* g);
 
 HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t inFormat, bool inRunCollection) {
-    PyrObject* obj = nullptr;
-
-    if (inFlags & obj_permanent) {
+    if (inFlags & obj_permanent)
         return NewPermanent(inNumBytes, inFlags, inFormat);
-    }
 
 #ifdef GC_SANITYCHECK
     SanityCheck();
 #endif
 
     // obtain size info
+    const int32 alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
+    const int32 numSlotsMaybe0 = alignedSize / sizeof(PyrSlot);
+    const int32 numSlots = numSlotsMaybe0 < 1 ? 1 : numSlotsMaybe0;
+    const int32 unboundedSizeclass = LOG2CEIL(numSlots);
+    const int32 sizeclass = sc_min(unboundedSizeclass, kNumGCSizeClasses - 1);
 
-    int32 alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
-    int32 numSlots = alignedSize / sizeof(PyrSlot);
-    numSlots = numSlots < 1 ? 1 : numSlots;
-    int32 sizeclass = LOG2CEIL(numSlots);
-    sizeclass = sc_min(sizeclass, kNumGCSizeClasses - 1);
-
-    int32 credit = 1LL << sizeclass;
+    const int32 credit = 1LL << sizeclass;
     mAllocTotal += credit;
     mNumAllocs++;
 
     mNumToScan += credit;
-    obj = Allocate(inNumBytes, sizeclass, inRunCollection);
+    PyrObject* obj = Allocate(inNumBytes, sizeclass, inRunCollection);
 
     obj->obj_format = inFormat;
     obj->obj_flags = inFlags & 255;

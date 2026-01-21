@@ -347,11 +347,13 @@ inline PyrObject* PyrGC::Allocate(size_t inNumBytes, int32 sizeclass, bool inRun
         assert(obj->obj_sizeclass == sizeclass);
     } else {
         if (sizeclass > kMaxPoolSet) {
+            // If the sizeclass has reached the cap, then allocSize (as calculated below) might not be large enough.
             SweepBigObjects();
-            size_t allocSize = sizeof(PyrObjectHdr) + (sizeof(PyrSlot) << sizeclass);
-            obj = (PyrObject*)mPool->Alloc(allocSize);
+            const size_t allocSize = sizeof(PyrObjectHdr) + (sizeof(PyrSlot) << sizeclass);
+            obj = (PyrObject*)mPool->Alloc(std::max(allocSize, inNumBytes));
         } else {
             size_t allocSize = sizeof(PyrObjectHdr) + (sizeof(PyrSlot) << sizeclass);
+            assert(allocSize >= inNumBytes);
             obj = (PyrObject*)mNewPool.Alloc(allocSize);
         }
         if (!obj)
