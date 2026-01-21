@@ -342,11 +342,11 @@ HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t 
 #endif
 
     // obtain size info
-    const int32 alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
-    const int32 numSlotsMaybe0 = alignedSize / sizeof(PyrSlot);
-    const int32 numSlots = numSlotsMaybe0 < 1 ? 1 : numSlotsMaybe0;
-    const int32 unboundedSizeclass = LOG2CEIL(numSlots);
-    const int32 sizeclass = sc_min(unboundedSizeclass, kNumGCSizeClasses - 1);
+    const int64_t alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
+    const int64_t numSlotsMaybe0 = alignedSize / sizeof(PyrSlot);
+    const int64_t numSlots = numSlotsMaybe0 < 1 ? 1 : numSlotsMaybe0;
+    const int64_t unboundedSizeclass = LOG2CEIL(numSlots);
+    const int64_t sizeclass = sc_min(unboundedSizeclass, kNumGCSizeClasses - 1);
 
     const int32 credit = 1LL << sizeclass;
     mAllocTotal += credit;
