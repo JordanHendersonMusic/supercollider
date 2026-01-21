@@ -483,7 +483,6 @@ void PyrGC::SweepBigObjects() {
             } while (!IsMarker(obj));
         }
     }
-    mCanSweep = false;
 }
 
 void PyrGC::CompletePartialScan(PyrObject* obj) {
