@@ -144,3 +144,22 @@ BOOST_AUTO_TEST_CASE(nan_tests) {
         BOOST_TEST(std::isnan(nan_slot.getDouble()));
     }
 }
+
+BOOST_AUTO_TEST_CASE(char_tests) {
+    for (size_t i { 0 }; i < 256; ++i) {
+        const auto c = static_cast<char>(i);
+        const auto slot = PyrSlot::make(c);
+        BOOST_TEST(slot.isChar());
+        BOOST_TEST(slot.getChar() == c);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(bool_test) {
+    const auto true_slot = PyrSlot::make(true);
+    const auto false_slot = PyrSlot::make(false);
+
+    BOOST_TEST(true_slot.isTrue());
+    BOOST_TEST(false_slot.isFalse());
+    BOOST_TEST(!true_slot.isFalse());
+    BOOST_TEST(!false_slot.isTrue());
+}

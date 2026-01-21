@@ -33,7 +33,6 @@ A PyrSlot is an 8-byte value which is either a double precision float or a
 #include <cassert>
 #include <cstring>
 #include <cmath>
-#include "SC_Endian.h"
 #include "PyrErrors.h"
 #include "function_attributes.h"
 #include "Hash.h"
@@ -41,30 +40,21 @@ A PyrSlot is an 8-byte value which is either a double precision float or a
 
 #ifdef __SIZEOF_POINTER__
 #    define SIZEOF_POINTER __SIZEOF_POINTER__
-#else // MSVC doesn't define __SIZEOF_POINTER__
-#    ifdef _WIN64
-#        define SIZEOF_POINTER 8
-#    else // For some reason, 64 bit windows defines _WIN32 ... this code is very fragile as there is no cross platform
-          // way to do this.
-#        define SIZEOF_POINTER 4
-#    endif
-#endif
-
-#if (SIZEOF_POINTER == 8)
-#    define POINTER_NEEDS_PADDING 0
-namespace details {
-static constexpr bool pointerNeedsPadding = false;
-}
-
-#elif (SIZEOF_POINTER == 4)
-#    define POINTER_NEEDS_PADDING 1
-namespace details {
-static constexpr bool pointerNeedsPadding = true;
-}
-
+#elif defined(__x86_64__) || defined(__aarch64__) || defined(_WIN64)
+#    define SIZEOF_POINTER 8
 #else
-#    error "no PyrSlot implementation for this platform"
+#    define SIZEOF_POINTER 4
 #endif
+
+// verify the pointer size
+static_assert(SIZEOF_POINTER == sizeof(void*), "unexpected pointer size");
+
+// The slot is 64 bits, on 32 bit systems, we must pad the data.
+#define POINTER_NEEDS_PADDING (SIZEOF_POINTER != 8)
+namespace details {
+static constexpr bool pointerNeedsPadding = POINTER_NEEDS_PADDING;
+}
+
 
 // https://stackoverflow.com/questions/60802864/emulating-gccs-builtin-unreachable-in-visual-studio
 #ifdef __GNUC__ // GCC 4.8+, Clang, Intel and other compilers compatible with GCC
@@ -127,8 +117,13 @@ inline void unreachable() {}
 
 // If the data is less than 48 bits, additional bits can be used to create further tags.
 
-namespace details {
+// This is used as a non-type template parameter to check for nans when creating slots of doubles.
+enum struct AssertDouble { Okay, CouldBeBadNan };
 
+[[nodiscard]] inline double removeBadNans(double d) noexcept { return std::isnan(d) ? std::nan("0") : d; }
+[[nodiscard]] inline float removeBadNans(float d) noexcept { return std::isnan(d) ? std::nanf("0") : d; }
+
+namespace details {
 // cpp reference
 template <class To, class From>
 std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From> && std::is_trivially_copyable_v<To>,
@@ -140,15 +135,6 @@ std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From
     std::memcpy(&dst, &src, sizeof(To));
     return dst;
 }
-}
-
-// This is used as a non-type template parameter to check for nans when creating slots of doubles.
-enum struct AssertDouble { Okay, CouldBeBadNan };
-
-[[nodiscard]] inline double removeBadNans(double d) noexcept { return std::isnan(d) ? std::nan("0") : d; }
-[[nodiscard]] inline float removeBadNans(float d) noexcept { return std::isnan(d) ? std::nanf("0") : d; }
-
-namespace details {
 
 struct Masks {
     // Note, nanExponent is the only nan we can store inside the slot.
@@ -195,7 +181,7 @@ static_assert(sizeof(PadValueTo64Bits<uint8_t>) == 8);
 static_assert(sizeof(PadValueTo64Bits<char>) == 8);
 
 // A wrapper around T (which is a pointer) that pads the value with known zeros if needed.
-// On a 32bit system, the slot has 32bits left over, this struct zero initialises them.
+// On a 32bit system, the slot has 32bits left over.
 template <typename T> struct MaybePadPointerTo64Bits {
     static_assert(std::is_pointer_v<T>);
 
@@ -212,6 +198,7 @@ template <typename T> struct MaybePadPointerTo64Bits {
     [[nodiscard]] int32 getPtrAsInt32() const noexcept { return static_cast<int32>(reinterpret_cast<uintptr_t>(ptr)); }
     [[nodiscard]] T getPtr() const noexcept {
         if constexpr (pointerNeedsPadding) {
+            // There is no need to mask when the pointer is padded as the mask doesn't touch the data.
             return ptr;
         } else {
             const auto r = reinterpret_cast<uintptr_t>(ptr);
@@ -221,7 +208,6 @@ template <typename T> struct MaybePadPointerTo64Bits {
 };
 
 
-// On 64 and 32 bit systems this should *always* be true.
 static_assert(sizeof(MaybePadPointerTo64Bits<void*>) == sizeof(double));
 }
 
@@ -253,9 +239,9 @@ private:
     struct PrivateTag {};
     PyrSlot(PrivateTag, uint64_t raw) noexcept: u_raw(raw) {}
     PyrSlot(PrivateTag, uint64_t tag, uint64_t raw) noexcept: u_raw(tag | raw) {}
-    // This must be a valid double, or not a nan that is used as a tag.
+    /// Requires a valid double or the safe nan value.
     PyrSlot(PrivateTag, double d) noexcept: u_double(d) {
-        // assert nans are the allowed type
+        // assert d is a valid double, or the safe nan.
         assert([&]() -> bool {
             if (std::isnan(d)) {
                 const auto bits = details::bit_cast<uint64_t>(d);
@@ -296,7 +282,7 @@ public:
 
     [[nodiscard]] friend inline bool operator==(PyrSlot lhs, PyrSlot rhs) noexcept {
         // This is identity, not equality in supercollider.
-        // Doubles have odd comparison rules...
+        // Doubles have odd comparison rules, otherwise compare the raw data.
         return (lhs.isDouble() && rhs.isDouble()) ? lhs.getDouble() == rhs.getDouble() : lhs.u_raw == rhs.u_raw;
     }
 
@@ -584,5 +570,3 @@ bool postString(PyrSlot* slot, char* str);
 template <typename numeric_type> inline void setSlotVal(PyrSlot* slot, numeric_type value) noexcept;
 template <> inline void setSlotVal<int>(PyrSlot* slot, int value) noexcept { SetInt(slot, value); }
 template <> inline void setSlotVal<double>(PyrSlot* slot, double value) noexcept { SetFloat(slot, value); }
-
-void PyrSlotTest();
