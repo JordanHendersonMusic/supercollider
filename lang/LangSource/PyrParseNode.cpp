@@ -2884,6 +2884,20 @@ void compileSwitchMsg(PyrCallNode* node) {
         int absoluteOffset = byteCodeLength(gCompilingByteCodes);
         int offset = 0;
         int lastOffset = 0;
+
+        std::vector<PyrSlot> visitedKeys;
+        visitedKeys.reserve(numArgs);
+        const auto hasDuplicateKeyPostErrorAndPrepareForReturn = [&](auto node, PyrSlot key) -> bool {
+            if (const auto duplicateKey = std::find(visitedKeys.begin(), visitedKeys.end(), key);
+                duplicateKey != visitedKeys.end()) {
+                error("Duplicate key found in inlined switch statement\n");
+                nodePostErrorLine(node);
+                compileErrors++;
+                return true;
+            } else
+                return false;
+        };
+
         for (; argnode; argnode = nextargnode) {
             nextargnode = argnode->mNext;
             if (nextargnode != nullptr) {
@@ -2895,12 +2909,18 @@ void compileSwitchMsg(PyrCallNode* node) {
                 PyrPushLitNode* keyargnode = (PyrPushLitNode*)argnode;
                 if (isAtomicLiteral(argnode)) {
                     key = &keyargnode->mSlot;
+                    if (hasDuplicateKeyPostErrorAndPrepareForReturn(keyargnode, *key))
+                        return;
                 } else {
                     PyrBlockNode* bnode = (PyrBlockNode*)slotRawPtr(&keyargnode->mSlot);
                     PyrDropNode* dropnode = (PyrDropNode*)bnode->mBody;
                     PyrPushLitNode* litnode = (PyrPushLitNode*)dropnode->mExpr1;
                     key = &litnode->mSlot;
+                    if (hasDuplicateKeyPostErrorAndPrepareForReturn(litnode, *key))
+                        return;
                 }
+
+                visitedKeys.push_back(*key);
 
                 int index = arrayAtIdentityHashInPairs(array, key);
                 PyrSlot* slot = array->slots + index;
