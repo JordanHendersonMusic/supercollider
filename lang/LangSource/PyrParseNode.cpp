@@ -3387,6 +3387,7 @@ void compileAssignVar(PyrParseNode* node, PyrSymbol* varName, bool drop) {
         error("Variable '%s' not defined.\n", varName->name);
         nodePostErrorLine(node);
         compileErrors++;
+        return;
     }
 
     const FindVarNameResult findResult = *result;
