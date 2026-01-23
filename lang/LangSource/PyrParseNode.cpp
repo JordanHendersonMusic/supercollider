@@ -18,6 +18,9 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include "PyrObject.h"
+#include "PyrSlot.h"
+#include "PyrSymbol.h"
 #include "SCBase.h"
 #include "PyrParseNode.h"
 #include "PyrLexer.h"
@@ -28,6 +31,8 @@
 #include "PyrKernelProto.h"
 #include "PyrObjectProto.h"
 #include "GC.h"
+#include <algorithm>
+#include <iterator>
 #include <new>
 #include <string>
 #include <optional>
@@ -565,13 +570,13 @@ PyrClass* getNodeSuperclass(PyrClassNode* node) {
 }
 
 void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* superclassobj) {
-    PyrVarListNode* varlist;
-    PyrVarDefNode* vardef;
-    PyrSlot *islot, *cslot, *kslot;
-    PyrSymbol **inameslot, **cnameslot, **knameslot;
-    PyrClass* metaclassobj;
-    PyrMethod* method;
-    PyrMethodRaw* methraw;
+    PyrVarListNode* varlist = nullptr;
+    PyrVarDefNode* vardef = nullptr;
+    PyrSlot *islot = nullptr, *cslot = nullptr, *kslot = nullptr;
+    PyrSymbol **inameslot = nullptr, **cnameslot = nullptr, **knameslot = nullptr;
+    PyrClass* metaclassobj = nullptr;
+    PyrMethod* method = nullptr;
+    PyrMethodRaw* methraw = nullptr;
     int instVarIndex, classVarIndex;
 
     // copy superclass's prototype to here
@@ -782,6 +787,48 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
             }
             break;
         }
+    }
+
+    // Is vector faster than a set? Since symbols are just pointers, one would hope for really good auto vectorization.
+    // That and it is unlikely we will have that many members?
+    auto findDuplicateName =
+        [names = std::vector<PyrSymbol*>()](const PyrSymbolArray* array) mutable -> std::optional<PyrSymbol*> {
+        if (array == nullptr)
+            return std::nullopt; // Arrays can be null, meaning, empty.
+        if (names.capacity() < array->size)
+            names.reserve(array->size);
+
+        std::copy(array->symbols, array->symbols + array->size, std::back_inserter(names));
+        std::sort(names.begin(), names.end());
+        const auto maybe_duplicate = std::adjacent_find(names.begin(), names.end());
+
+        if (maybe_duplicate != names.end()) {
+            return { *maybe_duplicate };
+        }
+
+        names.clear();
+        return std::nullopt;
+    };
+
+    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->instVarNames)); duplicate) {
+        error("Found duplicate instance variable name '%s'\n", (*duplicate)->name);
+        nodePostErrorLine((PyrParseNode*)node->mVarlists);
+        compileErrors++;
+        return;
+    }
+
+    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->classVarNames)); duplicate) {
+        error("Found duplicate class variable name '%s'\n", (*duplicate)->name);
+        nodePostErrorLine((PyrParseNode*)node->mVarlists);
+        compileErrors++;
+        return;
+    }
+
+    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->constNames)); duplicate) {
+        error("Found duplicate const variable name '%s'\n", (*duplicate)->name);
+        nodePostErrorLine((PyrParseNode*)node->mVarlists);
+        compileErrors++;
+        return;
     }
 }
 
