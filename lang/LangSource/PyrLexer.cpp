@@ -19,6 +19,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include <cctype>
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
@@ -678,6 +679,13 @@ digits_1: /* number started with digits */
             goto accidental1;
         if (d == c)
             goto accidental2;
+        if (std::isalpha(d)) {
+            yytext[yylen] = 0;
+            post("encountered an accidental '%s' with unknown trailing text. Ensure there is whitespace after "
+                 "accidentals.\n",
+                 yytext);
+            goto error1;
+        }
         goto accidental3;
     accidental1:
         d = input();
