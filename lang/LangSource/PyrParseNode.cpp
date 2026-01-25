@@ -2885,44 +2885,30 @@ void compileSwitchMsg(PyrCallNode* node) {
         int offset = 0;
         int lastOffset = 0;
 
-        std::vector<PyrSlot> visitedKeys;
+        // Maintain a record of the visited keys, if there are duplicates, post a compiler error.
+        using Key = std::pair<PyrSlot, PyrParseNode*>;
+        std::vector<Key> visitedKeys {};
         visitedKeys.reserve(numArgs);
-        const auto hasDuplicateKeyPostErrorAndPrepareForReturn = [&](auto node, PyrSlot key) -> bool {
-            if (const auto duplicateKey = std::find(visitedKeys.begin(), visitedKeys.end(), key);
-                duplicateKey != visitedKeys.end()) {
-                error("Duplicate key found in inlined switch statement\n");
-                nodePostErrorLine(node);
-                compileErrors++;
-                return true;
-            } else
-                return false;
-        };
 
         for (; argnode; argnode = nextargnode) {
             nextargnode = argnode->mNext;
             if (nextargnode != nullptr) {
                 ByteCodes byteCodes = compileSubExpressionWithGoto((PyrPushLitNode*)nextargnode, 0x6666, true);
+                PyrPushLitNode* keyargnode = (PyrPushLitNode*)argnode;
 
                 PyrSlot* key;
-                PyrSlot value;
-                SetInt(&value, offset);
-                PyrPushLitNode* keyargnode = (PyrPushLitNode*)argnode;
                 if (isAtomicLiteral(argnode)) {
                     key = &keyargnode->mSlot;
-                    if (hasDuplicateKeyPostErrorAndPrepareForReturn(keyargnode, *key))
-                        return;
+                    visitedKeys.push_back({ *key, keyargnode });
                 } else {
                     PyrBlockNode* bnode = (PyrBlockNode*)slotRawPtr(&keyargnode->mSlot);
                     PyrDropNode* dropnode = (PyrDropNode*)bnode->mBody;
                     PyrPushLitNode* litnode = (PyrPushLitNode*)dropnode->mExpr1;
                     key = &litnode->mSlot;
-                    if (hasDuplicateKeyPostErrorAndPrepareForReturn(litnode, *key))
-                        return;
+                    visitedKeys.push_back({ *key, litnode });
                 }
 
-                visitedKeys.push_back(*key);
-
-                int index = arrayAtIdentityHashInPairs(array, key);
+                const int index = arrayAtIdentityHashInPairs(array, key);
                 PyrSlot* slot = array->slots + index;
                 slotCopy(slot, key);
                 SetInt(slot + 1, offset);
@@ -2954,6 +2940,60 @@ void compileSwitchMsg(PyrCallNode* node) {
                     offset += 1;
                 }
             }
+        }
+
+        const auto keyLessThan = [](const Key& lhs, const Key& rhs) -> bool {
+            return lhs.first.rawBytes() < rhs.first.rawBytes();
+        };
+        std::sort(visitedKeys.begin(), visitedKeys.end(), keyLessThan);
+
+        // Note, we don't need to use the proper pyrslot ==, (or < if there was one) operator as that respects nans and
+        // other double comparison rules. Here we know the user doesn't have a nan in their inlineable switch, as it is
+        // impossible to create one — 'nan' is not a keyword.
+        // ... and even if there was, the PyrSlot requires that all nans take on the same byte representation.
+        // Also, it doesn't really make sense to switch on a nan since it compares equal with nothing.
+        const auto keyByteIdentical = [](const Key& lhs, const Key& rhs) -> bool {
+            return lhs.first.rawBytes() == rhs.first.rawBytes();
+        };
+        if (const auto maybe_duplicate = std::adjacent_find(visitedKeys.begin(), visitedKeys.end(), keyByteIdentical);
+            maybe_duplicate != visitedKeys.end()) {
+            const auto key = maybe_duplicate->first;
+            switch (key.getTag()) {
+            case tagInt:
+                error("Duplicate key '%d' found in inlined switch statement.\n", key.getInt());
+                break;
+            case tagFloat:
+                error("Duplicate key '%f' found in inlined switch statement.\n", key.getDouble());
+                break;
+            case tagChar:
+                error("Duplicate key '%c' found in inlined switch statement.\n", key.getChar());
+                break;
+            case tagSym:
+                error("Duplicate key '%s' found in inlined switch statement.\n", key.getSymbol()->name);
+                break;
+            case tagNil:
+                error("Duplicate key 'nil' found in inlined switch statement.\n");
+                break;
+            case tagFalse:
+                error("Duplicate key 'false' found in inlined switch statement.\n");
+                break;
+            case tagTrue:
+                error("Duplicate key 'true' found in inlined switch statement.\n");
+                break;
+            // These shouldn't be possible as it must be inlined, but I've made a default anyway.
+            case tagObj:
+                [[fallthrough]];
+            case tagPtr:
+                [[fallthrough]];
+            default: {
+                assert(false);
+                error("Duplicate key found in inlined switch statement.\n");
+                break;
+            }
+            }
+            nodePostErrorLine(maybe_duplicate->second);
+            compileErrors++;
+            return;
         }
 
         Byte* bytes = gCompilingByteCodes->bytes + absoluteOffset;
