@@ -1880,11 +1880,8 @@ void PyrCallNode::compileCall(PyrSlot* result) {
                 SendSpecialMsgX.emit(Operands::ArgumentCount::fromRaw(numArgs + 2 * numKeyArgs),
                                      Operands::KwArgumentCount::fromRaw(numKeyArgs), Operands::Index::fromRaw(index));
                 break;
-            case selUnary:
-            case selBinary:
-                index = conjureLiteralSlotIndex((PyrParseNode*)mSelector, gCompilingBlock, &mSelector->mSlot);
-                // fall through
             default:
+                index = conjureLiteralSlotIndex((PyrParseNode*)mSelector, gCompilingBlock, &mSelector->mSlot);
                 emitTailCall();
                 SendMsgX.emit(Operands::ArgumentCount::fromRaw(numArgs + 2 * numKeyArgs),
                               Operands::KwArgumentCount::fromRaw(numKeyArgs), Operands::Index::fromRaw(index));
