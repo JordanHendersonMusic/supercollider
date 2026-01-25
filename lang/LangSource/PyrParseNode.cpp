@@ -789,42 +789,35 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
         }
     }
 
-    // Is vector faster than a set? Since symbols are just pointers, one would hope for really good auto vectorization.
-    // That and it is unlikely we will have that many members?
+    // Vector seems faster than set here, this could change if we have a lot (100s) of members, but that seems unlikely.
     auto findDuplicateName =
         [names = std::vector<PyrSymbol*>()](const PyrSymbolArray* array) mutable -> std::optional<PyrSymbol*> {
-        if (array == nullptr)
-            return std::nullopt; // Arrays can be null, meaning, empty.
-        if (names.capacity() < array->size)
-            names.reserve(array->size);
+        names.clear();
+        if (array == nullptr || array->size == 0)
+            return std::nullopt; // can be null, meaning, empty.
 
-        std::copy(array->symbols, array->symbols + array->size, std::back_inserter(names));
+        names.insert(names.end(), array->symbols, array->symbols + array->size);
         std::sort(names.begin(), names.end());
         const auto maybe_duplicate = std::adjacent_find(names.begin(), names.end());
 
-        if (maybe_duplicate != names.end()) {
-            return { *maybe_duplicate };
-        }
-
-        names.clear();
-        return std::nullopt;
+        return (maybe_duplicate != names.end()) ? std::optional<PyrSymbol*> { *maybe_duplicate } : std::nullopt;
     };
 
-    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->instVarNames)); duplicate) {
+    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->instVarNames))) {
         error("Found duplicate instance variable name '%s'\n", (*duplicate)->name);
         nodePostErrorLine((PyrParseNode*)node->mVarlists);
         compileErrors++;
         return;
     }
 
-    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->classVarNames)); duplicate) {
+    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->classVarNames))) {
         error("Found duplicate class variable name '%s'\n", (*duplicate)->name);
         nodePostErrorLine((PyrParseNode*)node->mVarlists);
         compileErrors++;
         return;
     }
 
-    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->constNames)); duplicate) {
+    if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->constNames))) {
         error("Found duplicate const variable name '%s'\n", (*duplicate)->name);
         nodePostErrorLine((PyrParseNode*)node->mVarlists);
         compileErrors++;
