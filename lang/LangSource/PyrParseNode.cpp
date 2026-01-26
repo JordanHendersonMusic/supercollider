@@ -1897,7 +1897,7 @@ void PyrCallNode::compileCall(PyrSlot* result) {
             }
 
             default:
-                // In this case, the selector is a special one, and we can use the send speical message.
+                // In this case, the selector is a special one, and we can use the send special message.
                 emitTailCall();
                 SendSpecialMsgX.emit(Operands::ArgumentCount::fromRaw(numArgs + 2 * numKeyArgs),
                                      Operands::KwArgumentCount::fromRaw(numKeyArgs),
