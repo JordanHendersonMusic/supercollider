@@ -2311,7 +2311,8 @@ std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const Py
     // This is a little bit risky, but is wide spread.
     const auto& maybeBlock = *reinterpret_cast<PyrParseNode*>(slot.getPtr());
 
-    // We are now expecting a block node, then a drop node containing a block return node containing a literal.
+    // We are now expecting a block node, then a drop node containing a literal (as expression 1) and a block node
+    // return (as expression 2).
 
     if (maybeBlock.mClassno != pn_BlockNode)
         return std::nullopt;
