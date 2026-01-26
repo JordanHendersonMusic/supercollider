@@ -20,7 +20,6 @@
 
 #include "PyrObject.h"
 #include "PyrSlot.h"
-#include "PyrSymbol.h"
 #include "SCBase.h"
 #include "PyrParseNode.h"
 #include "PyrLexer.h"
@@ -40,11 +39,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <cctype>
-#include "InitAlloc.h"
 #include "PredefinedSymbols.h"
 #include "SimpleStack.h"
-#include "PyrPrimitive.h"
-#include "SC_Win32Utils.h"
 #include "SC_LanguageConfig.hpp"
 #include "SC_Codecvt.hpp"
 #include "SpecialSelectorsOperatorsAndClasses.h"
@@ -2291,6 +2287,78 @@ bool isAtomicLiteral(PyrParseNode* node) {
     return res;
 }
 
+enum struct MaybePostNonInlineableWarning { True, False };
+
+/// Return the value of a literal, allows literal to be wrap in a single pair of curly braces.
+/// Will post a warning by default if it can't produce a value and is a block.
+template <MaybePostNonInlineableWarning Post = MaybePostNonInlineableWarning::True>
+std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const PyrParseNode& node) {
+    if (node.mClassno != pn_PushLitNode)
+        return std::nullopt;
+
+    const auto& lit = static_cast<const PyrPushLitNode&>(node);
+    const auto& slot = lit.mSlot;
+
+    // There are no literal objects, arrays don't currently count as literals.
+    if (slot.isObjectHdr())
+        return std::nullopt;
+
+    // A literal object stored in the slot.
+    if (!slot.isPtr())
+        return { slot };
+
+    // The only thing we store in a pointer at this point in the parsing are other parse nodes.
+    // This is a little bit risky, but is wide spread.
+    const auto& maybeBlock = *reinterpret_cast<PyrParseNode*>(slot.getPtr());
+
+    // We are now expecting a block node, then a drop node containing a block return node containing a literal.
+
+    if (maybeBlock.mClassno != pn_BlockNode)
+        return std::nullopt;
+
+    const auto& block = static_cast<const PyrBlockNode&>(maybeBlock);
+
+    // Having arguments and variables mean we can't inline it, therefore, it isn't a literal.
+    if (block.mArglist || block.mVarlist) {
+        if constexpr (Post == MaybePostNonInlineableWarning::True) {
+            gNumUninlinedFunctions += 1;
+            if (SC_LanguageConfig::getPostInlineWarnings()) {
+                post("WARNING: FunctionDef contains variable declarations and so"
+                     " will not be inlined.\n");
+                if (block.mArglist)
+                    nodePostErrorLine((PyrParseNode*)block.mArglist);
+                else
+                    nodePostErrorLine((PyrParseNode*)block.mVarlist);
+            }
+        }
+        return std::nullopt;
+    }
+
+
+    if (block.mBody->mClassno != pn_DropNode)
+        return std::nullopt;
+
+    const auto& dropNode = *static_cast<PyrDropNode*>(block.mBody);
+
+    // Not a single return statement, e.g., { 1 },
+    if (dropNode.mExpr2->mClassno != pn_BlockReturnNode)
+        return std::nullopt;
+
+    if (dropNode.mExpr1->mClassno != pn_PushLitNode)
+        return std::nullopt;
+
+    const auto& blockedLit = static_cast<PyrPushLitNode&>(*dropNode.mExpr1);
+    const auto& blockedSlot = blockedLit.mSlot;
+    if (blockedSlot.isObjectHdr())
+        return std::nullopt;
+    // We don't allow functions to be literals, e.g., here the value returned would be a function`{ {1} }` but that is
+    // not a literal. Otherwise we could do recursion with tail call for this function.
+    if (blockedSlot.isPtr())
+        return std::nullopt;
+
+    return blockedSlot;
+}
+
 bool isWhileTrue(PyrParseNode* node) {
     bool res = false;
     if (node->mClassno == pn_PushLitNode) {
@@ -2710,33 +2778,38 @@ void compileSwitchMsg(PyrCallNode* node) {
 
         PyrParseNode* nextargnode = nullptr;
         for (; argnode; argnode = nextargnode) {
-            // This loop is confusing, argnode can refer to either the case of the default depending on whether the
+            // This loop is confusing, argnode can refer to either the case or the default depending on whether the
             // nextargnode is nullptr or not.
             nextargnode = argnode->mNext;
-            if (nextargnode != nullptr) {
-                if (!isAtomicLiteral(argnode) && !isAnInlineableAtomicLiteralBlock(argnode)) {
+            if (nextargnode == nullptr) {
+                // argnode is the default, this is how this loop terminates.
+                if (!isAnInlineableBlock(argnode))
                     canInline = false;
-                    break;
-                }
-                if (!isAnInlineableBlock(nextargnode)) {
-                    canInline = false;
-                    break;
-                }
+                break; // nothing left, leave.
+            }
 
-                // If the case is 'nil', do not inline as the empty element in the identity dictionary is nil.
-                if (argnode->mClassno == pn_PushLitNode) {
-                    if (const auto& lit = *static_cast<PyrPushLitNode*>(argnode); lit.mSlot.isNil()) {
-                        canInline = false;
-                        break;
-                    }
-                }
-                nextargnode = nextargnode->mNext;
-            } else {
-                if (!isAnInlineableBlock(argnode)) {
-                    canInline = false;
-                }
+            const auto& case_node = argnode;
+            const auto& function_node = nextargnode;
+
+            const auto case_literal = getAtomicValueFromLiteralOrBlockMaybePostWarning(*case_node);
+            if (!case_literal.has_value()) {
+                canInline = false;
                 break;
             }
+
+            // If the case is 'nil', do not inline as the empty element in the identity dictionary is nil.
+            if (case_literal->isNil()) {
+                canInline = false;
+                break;
+            }
+
+            // Check the function after the case.
+            if (!isAnInlineableBlock(function_node)) {
+                canInline = false;
+                break;
+            }
+
+            nextargnode = function_node->mNext;
         }
     }
 
