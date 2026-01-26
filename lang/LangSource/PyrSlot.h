@@ -90,17 +90,23 @@
 //  Signaling NaN (sNaN) is used to signal some floating point error has occurred.
 //    These are not produced by supercollider.
 //  Quiet NaN (qNaN) is normal nan. There are many types of qNaN.
+//  Note how the top fraction bit is set here, but not when it is a sNaN.
 //
 //  sNaN    = 0111 1111 1111 0000 000000000000000000000000000000000000000000000001 = 7FF0 0000 0000 0001
+//  qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000000 = 7FF8 0000 0000 0000
 //  qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0001
 //  qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000010 = 7FF8 0000 0000 0002
-//  qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000011 = 7FF8 0000 0000 0003
+//
+//            | sign is irrelevant
 //  qNaN    = 1111 1111 1111 1000 000000000000000000000000000000000000000000000001 = FFF8 0000 0000 0001
-//            | sign is irrelevant to nan
 //  qNaN    = 1111 1111 1111 1111 111111111111111111111111111111111111111111111111 = FFFF FFFF FFFF FFFF
+//          .... Still a  qNaN
 //
 
-// Quiet nans can be produced through std::nan("0"), std::nan("1"). The only nan that can be stored in a slot is "0".
+// Quiet nans can be produced through std::nan("0"), std::nan("1").
+
+// By limiting ourselves to only one types of nan, the result of std:nan("0") (7FF8000000000000), we can use the other
+// values to store other data types in. That is the basic idea of nan-boxing.
 
 //========================//
 // Doubles and Pointers   //
