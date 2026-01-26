@@ -2710,6 +2710,8 @@ void compileSwitchMsg(PyrCallNode* node) {
 
         PyrParseNode* nextargnode = nullptr;
         for (; argnode; argnode = nextargnode) {
+            // This loop is confusing, argnode can refer to either the case of the default depending on whether the
+            // nextargnode is nullptr or not.
             nextargnode = argnode->mNext;
             if (nextargnode != nullptr) {
                 if (!isAtomicLiteral(argnode) && !isAnInlineableAtomicLiteralBlock(argnode)) {
@@ -2719,6 +2721,14 @@ void compileSwitchMsg(PyrCallNode* node) {
                 if (!isAnInlineableBlock(nextargnode)) {
                     canInline = false;
                     break;
+                }
+
+                // If the case is 'nil', do not inline as the empty element in the identity dictionary is nil.
+                if (argnode->mClassno == pn_PushLitNode) {
+                    if (const auto& lit = *static_cast<PyrPushLitNode*>(argnode); lit.mSlot.isNil()) {
+                        canInline = false;
+                        break;
+                    }
                 }
                 nextargnode = nextargnode->mNext;
             } else {
