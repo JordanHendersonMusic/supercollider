@@ -152,4 +152,19 @@ TestKwargs : UnitTest {
 			[[1, 2], 42, 23]
 		);
 	}
+
+	test_control_flow {
+		// These all used to crash.
+		this.assertEquals(true.if(trueFunc: {'s'}), 's');
+		this.assertEquals(true.if(falseFunc: {'s'}), nil);
+
+		this.assertEquals(false.if(trueFunc: {'s'}), nil);
+		this.assertEquals(false.if(falseFunc: {'s'}), 's');
+
+		// Posts a warning, but that is fine.
+		this.assertEquals(100.loop(xyz: 1).(), 100);
+
+		this.assertEquals(true.and(that: {1}), 1);
+		this.assertEquals(false.and(that: {1}), false);
+	}
 }
