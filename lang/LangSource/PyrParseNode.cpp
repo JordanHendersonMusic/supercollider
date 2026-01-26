@@ -31,8 +31,6 @@
 #include "PyrObjectProto.h"
 #include "GC.h"
 #include <algorithm>
-#include <iterator>
-#include <new>
 #include <string>
 #include <optional>
 #include <string.h>
