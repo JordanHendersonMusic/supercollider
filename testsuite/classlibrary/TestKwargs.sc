@@ -166,5 +166,8 @@ TestKwargs : UnitTest {
 
 		this.assertEquals(true.and(that: {1}), 1);
 		this.assertEquals(false.and(that: {1}), false);
+
+		this.assertEquals(true.not(asd: 1), false);
+		this.assertEquals(false.not(asd: 1), true);
 	}
 }
