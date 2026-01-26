@@ -11,7 +11,7 @@ ServerOptions {
 	var <>maxSynthDefs = 8192;
 	var <>protocol = \udp;
 	var <>blockSize = 64;
-	var <>hardwareBufferSize = 0;
+	var <>hardwareBufferSize = nil;
 
 	var <>memSize = 256000;
 	var <>numRGens = 64;
@@ -83,7 +83,9 @@ ServerOptions {
 		o = o ++ " -n " ++ maxNodes.asInteger;
 		o = o ++ " -d " ++ maxSynthDefs.asInteger;
 		o = o ++ " -z " ++ blockSize.asInteger;
-		o = o ++ " -Z " ++ hardwareBufferSize.asInteger;
+		if (hardwareBufferSize.notNil) {
+			o = o ++ " -Z " ++ hardwareBufferSize.asInteger
+		};
 		o = o ++ " -m " ++ memSize.asInteger;
 		o = o ++ " -r " ++ numRGens.asInteger;
 		o = o ++ " -w " ++ numWireBufs.asInteger;
