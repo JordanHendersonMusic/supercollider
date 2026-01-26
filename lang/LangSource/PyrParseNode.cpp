@@ -4039,13 +4039,13 @@ int conjureSelectorIndex(PyrParseNode* node, PyrBlock* func, bool isSuper, PyrSy
             return opmLoop;
         } else if (selector == gSpecialSelectors[opmQuestionMark]) {
             *selType = selQuestionMark;
-            return opmAnd; // TODO: why are we returning opmAnd (14) ? Okay the value is ignored.
+            return opmQuestionMark;
         } else if (selector == gSpecialSelectors[opmDoubleQuestionMark]) {
             *selType = selDoubleQuestionMark;
-            return opmAnd; // TODO: why are we returning opmAnd (14) ? Okay the value is ingored
+            return opmDoubleQuestionMark;
         } else if (selector == gSpecialSelectors[opmExclamationQuestionMark]) {
             *selType = selExclamationQuestionMark;
-            return opmAnd; // TODO: why are we returning opmAnd (14) ?  Okay the value is ingored
+            return opmExclamationQuestionMark;
         }
 
         for (i = 0; i < opmNumSpecialSelectors; ++i) {
