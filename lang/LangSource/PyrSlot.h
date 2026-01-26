@@ -17,13 +17,6 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-/*
-
-PyrSlot is a value holder for SC variables.
-A PyrSlot is an 8-byte value which is either a double precision float or a
-32-bit tag plus a 32-bit value.
-
-*/
 
 #pragma once
 
@@ -37,6 +30,92 @@ A PyrSlot is an 8-byte value which is either a double precision float or a
 #include "function_attributes.h"
 #include "Hash.h"
 #include "PyrSymbol.h"
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Description of how nan-boxing and pointer tagging work in sc.                                                      //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// TLDR: SClang uses nan-boxing and requires all pointer to be in user space for a 64 bit slot.
+
+//===========//
+// Pointers  //
+//===========//
+
+// On 64-bit systems sc requires all pointers to fit into 48 bits, aka, to be in user space.
+// On 32 bit systems the whole address space may be used.
+// This means the top 16 bits are free to store data in.
+
+// Technically it is possible to have a pointer that doesn't fit into this range, but these are usually reserved for use
+// by the operating system kernel
+//  --- terms to familiarize yourself with here are 'user' and 'kernel' space addresses along with 'virtual' address.
+// Such large pointers only arise when explicitly passing a specific flag to mmap, so this shouldn't happen unless you
+// are writing an os kernel in supercollider
+//          ... let's assume this isn't the case...
+// Here is a good article on the subject of storing extra data inside of pointers
+// https://muxup.com/2023q4/storing-data-in-pointers.
+
+// If someone finds a use-case where they need kernel-space addresses this could be added by tagging the lowest bit of
+// the pointer and replacing the upper bits before returning from the slot, but until then, we don't support it.
+
+// Note: this would be different across architectures as x86 uses sign extention on bit 47 but aarch64 doesn't
+//   --- we've encountered bugs due to this in the past.
+// See https://docs.kernel.org/arch/arm64/memory.html and compare with
+// https://en.wikipedia.org/wiki/X86-64#Canonical_form_addresses for some more information on this.
+
+// Layout of 64 bit pointer:
+//        |-----------------| these are free
+// Ptr  = 1111 1111 1111 1111 000000000000000000000000000000000000000000000000
+
+
+//===========//
+// Doubles   //
+//===========//
+
+// It is recommend to familiarize yourself with the double specification before reading this
+// https://en.wikipedia.org/wiki/Double-precision_floating-point_format.
+
+// Double spec:
+//      1 sign bit, 11 exponents bits, 52 fraction bits.
+
+// Layout of double when an inf and -inf:
+//     sign bit
+//        |  exponent                       fraction
+//        |   11-bit                         52-bit
+//        ||-----------| |---------------------------------------------------|
+//  Inf = 0111 1111 1111 0000 000000000000000000000000000000000000000000000000 = 7FF0 0000 0000 0000
+// -Inf = 1111 1111 1111 0000 000000000000000000000000000000000000000000000000 = FFF0 0000 0000 0000
+
+// Layout of double when a nan:
+//  If exponents are all 1 and fraction isn't 0, its some type of nan (if fraction is zero, it is an inf).
+//  Signaling NaN (sNaN) is used to signal some floating point error has occurred.
+//    These are not produced by supercollider.
+//  Quiet NaN (qNaN) is normal nan. There are many types of qNaN.
+//
+//  sNaN    = 0111 1111 1111 0000 000000000000000000000000000000000000000000000001 = 7FF0 0000 0000 0001
+//  qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0001
+//  qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000010 = 7FF8 0000 0000 0002
+//  qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000011 = 7FF8 0000 0000 0003
+//  qNaN    = 1111 1111 1111 1000 000000000000000000000000000000000000000000000001 = FFF8 0000 0000 0001
+//            | sign is irrelevant to nan
+//  qNaN    = 1111 1111 1111 1111 111111111111111111111111111111111111111111111111 = FFFF FFFF FFFF FFFF
+//
+
+// Quiet nans can be produced through std::nan("0"), std::nan("1"). The only nan that can be stored in a slot is "0".
+
+//========================//
+// Doubles and Pointers   //
+//========================//
+
+// So this means the free bits in each are...
+// 0 = used, 1 = free bit
+// qNan = 1000 0000 0000 0111 111111111111111111111111111111111111111111111111
+// Ptr  = 1111 1111 1111 1111 000000000000000000000000000000000000000000000000
+
+// This leaves these 4 bits in which a tag can be stored.
+// 1000 0000 0000 0111 000000000000000000000000000000000000000000000000
+
+// For the value of the tags, see details::Tags below.
+
 
 #ifdef __SIZEOF_POINTER__
 #    define SIZEOF_POINTER __SIZEOF_POINTER__
@@ -65,57 +144,6 @@ static constexpr bool pointerNeedsPadding = POINTER_NEEDS_PADDING;
 inline void unreachable() {}
 #endif
 
-// On 64-bit systems the pointer is assumed to fit into 48 bits.
-// This is not true for some very modern intel systems which use 56 bits
-//      - but this is not in common use and nan boxing is very common
-
-//        |-----------------| these are free in a pointer
-// Ptr  = 1111 1111 1111 1111 000000000000000000000000000000000000000000000000
-
-//  Double spec:
-//     sign bit
-//        |  exponent                       fraction
-//        |   11-bit                         52-bit
-//        ||-----------| |---------------------------------------------------|
-//  Inf = 0111 1111 1111 0000 000000000000000000000000000000000000000000000000 = 7FF0 0000 0000 0000
-// -Inf = 1111 1111 1111 0000 000000000000000000000000000000000000000000000000 = FFF0 0000 0000 0000
-
-// If exponents are all 1 and fraction isn't 0, its some type of nan (if fraction is zero, it is an inf)
-// sNaN    = 0111 1111 1111 0000 000000000000000000000000000000000000000000000001 = 7FF0 0000 0000 0001
-// qNaN    = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0000
-// qNaN(1) = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0001
-// qNaN(2) = 0111 1111 1111 1000 000000000000000000000000000000000000000000000001 = 7FF8 0000 0000 0002
-// qNaN    = 1111 1111 1111 1000 000000000000000000000000000000000000000000000001 = FFF8 0000 0000 0001
-//           | sign is irrelevant to nan
-// qNaN    = 1111 1111 1111 1111 111111111111111111111111111111111111111111111111 = FFFF FFFF FFFF FFFF
-//                     still qNaN
-
-// Quiet nans can be produced through std::nan("0"), std::nan("1"). The only nan that can be stored in a slot is "0".
-
-
-// Signaling NaN (sNaN) is used to signal some floating point error has occurred.
-// Quiet NaN (qNaN) is normal nan.
-// We only use qNaN to store the tags in.
-
-// So this means the free bits in each are...
-// 0 = used, 1 = free bit
-// qNan = 1000 0000 0000 0111 111111111111111111111111111111111111111111111111
-// Ptr  = 1111 1111 1111 1111 000000000000000000000000000000000000000000000000
-
-// This leaves these 4 bits in which a tag can be stored.
-// 1000 0000 0000 0111 000000000000000000000000000000000000000000000000
-
-// condensing this to 4 bits...
-// 0...000 double - the far right bit is called the boxed bit, it is always set if not a double.
-// 0...001 nil
-// 0...011 int
-// 0...101 sym
-// 0...111 char
-// 1...011 ptr
-// 1...101 false
-// 1...111 objHdrPtr
-
-// If the data is less than 48 bits, additional bits can be used to create further tags.
 
 // This is used as a non-type template parameter to check for nans when creating slots of doubles.
 enum struct AssertDouble { Okay, CouldBeBadNan };
@@ -141,14 +169,14 @@ struct Masks {
     static constexpr uint64_t nanExponent = 0x7FF8000000000000;
     static constexpr uint64_t boxedBit = 0x0001000000000000;
     static constexpr uint64_t boxed = boxedBit | nanExponent;
+    // This is the valid user space pointer mask.
     static constexpr uint64_t pointer = 0x0000FFFFFFFFFFFF;
-    static constexpr uint64_t tagMask = 0xFFFF000000000000;
 };
 
 
 struct Tags {
     // These tags include the boxed mask, which makes it easier to test if they are active.
-    // The binary values are written above in the comment. KEEP THEM IN SYNC!
+    // The double is without a tag.
     static constexpr uint64_t objHdrTag = 0xFFFF000000000000;
     static constexpr uint64_t intTag = 0x7FFB000000000000;
     static constexpr uint64_t symTag = 0x7FFD000000000000;
@@ -211,7 +239,8 @@ template <typename T> struct MaybePadPointerTo64Bits {
 static_assert(sizeof(MaybePadPointerTo64Bits<void*>) == sizeof(double));
 }
 
-// This is the old tag and their values are assumed and used as indices elsewhere in the code, do not change them!
+// This is the old tag and their values are assumed and used as indices elsewhere in the code, do not change them
+// without refactoring the rest of the code base!
 enum {
     tagNotInitialized, // uninitialized slots have a tag of 0
     tagObj,
@@ -226,7 +255,7 @@ enum {
     tagUnused,
 };
 
-// A Tag used in construct of a slot containing nil
+// A Tag used to construct a slot containing nil
 struct PyrNil {};
 
 union PyrSlot {
@@ -241,7 +270,6 @@ private:
     PyrSlot(PrivateTag, uint64_t tag, uint64_t raw) noexcept: u_raw(tag | raw) {}
     /// Requires a valid double or the safe nan value.
     PyrSlot(PrivateTag, double d) noexcept: u_double(d) {
-        // assert d is a valid double, or the safe nan.
         assert([&]() -> bool {
             if (std::isnan(d)) {
                 const auto bits = details::bit_cast<uint64_t>(d);
