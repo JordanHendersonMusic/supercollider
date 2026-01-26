@@ -1879,6 +1879,23 @@ void PyrCallNode::compileCall(PyrSlot* result) {
                               Operands::KwArgumentCount::fromRaw(numKeyArgs),
                               Operands::Index::fromRaw(selectorSlotOrSpecialIndex));
                 break;
+
+            case selUnary:
+                [[fallthrough]];
+            case selBinary: {
+                // When the selector is of the type unary or binary, no selector has been emited to the function def.
+                // This is because it is indented to be called with special bytes codes for the unary and binary message
+                // format respectively, however, these do not take kwargs. Therefore, we put the selector into the
+                // function def and use its index for a normal message send.
+                const auto selectorSlotIndex =
+                    conjureLiteralSlotIndex((PyrParseNode*)mSelector, gCompilingBlock, &mSelector->mSlot);
+                emitTailCall();
+                SendMsgX.emit(Operands::ArgumentCount::fromRaw(numArgs + 2 * numKeyArgs),
+                              Operands::KwArgumentCount::fromRaw(numKeyArgs),
+                              Operands::Index::fromRaw(selectorSlotIndex));
+                break;
+            }
+
             default:
                 // In this case, the selector is a special one, and we can use the send speical message.
                 emitTailCall();
