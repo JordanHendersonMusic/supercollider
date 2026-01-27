@@ -223,7 +223,7 @@ private:
     int64 mNumToScan;
     int32 mNumGrey;
 
-    int64_t mAllocTotal;
+    int64 mAllocTotal;
     int32 mFlips, mCollects, mScans, mNumAllocs, mStackScans, mNumPartialScans, mSlotsScanned, mUncollectedAllocations;
 
     unsigned char mBlackColor, mGreyColor, mWhiteColor, mFreeColor;
