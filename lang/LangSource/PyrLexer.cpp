@@ -681,8 +681,7 @@ digits_1: /* number started with digits */
             goto accidental2;
         if (std::isalpha(d)) {
             yytext[yylen] = 0;
-            post("encountered an accidental '%s' with unknown trailing text. Ensure there is whitespace after "
-                 "accidentals.\n",
+            post("encountered an accidental '%s' with unknown trailing text. Ensure there is whitespace after it.\n",
                  yytext);
             goto error1;
         }
