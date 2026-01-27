@@ -648,8 +648,8 @@ void PyrGC::FullCollection() {
     SweepBigObjects();
 }
 
-void PyrGC::Collect(int64_t inNumToScan) {
-    mNumToScan = sc_max(mNumToScan, inNumToScan);
+void PyrGC::Collect(uint64 inNumToScan) {
+    mNumToScan = std::max<size_t>(mNumToScan, inNumToScan);
     Collect(); // collect space
 }
 

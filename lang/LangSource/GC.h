@@ -38,7 +38,7 @@ const int kMaxPoolSet = 7;
 const int kNumGCSizeClasses = 28;
 const int kFinalizerSet = kNumGCSizeClasses;
 const int kNumGCSets = kNumGCSizeClasses + 1;
-const std::int64_t kScanThreshold = 256LL;
+const uint64_t kScanThreshold = 256LL;
 
 
 class GCSet {
@@ -149,7 +149,7 @@ public:
     // users should not call anything below.
 
     void Collect();
-    void Collect(int64_t inNumToScan);
+    void Collect(uint64 inNumToScan);
     void LazyCollect() {
         if (mUncollectedAllocations > kLazyCollectThreshold)
             Collect();
@@ -220,7 +220,7 @@ private:
     PyrObjectHdr mGrey;
 
     int32 mPartialScanSlot;
-    std::int64_t mNumToScan;
+    uint64 mNumToScan;
     int32 mNumGrey;
 
     int64_t mAllocTotal;
