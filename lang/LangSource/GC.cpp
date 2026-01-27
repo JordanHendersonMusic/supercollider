@@ -24,6 +24,7 @@
 #include "PyrObjectProto.h"
 #include "PyrSymbol.h"
 #include "InitAlloc.h"
+#include <limits>
 #include <string.h>
 #include <stdexcept>
 #include "PyrLexer.h"
@@ -342,13 +343,16 @@ HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t 
 #endif
 
     // obtain size info
-    const int64_t alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
-    const int64_t numSlotsMaybe0 = alignedSize / sizeof(PyrSlot);
-    const int64_t numSlots = numSlotsMaybe0 < 1 ? 1 : numSlotsMaybe0;
-    const int64_t unboundedSizeclass = LOG2CEIL(numSlots);
-    const int64_t sizeclass = sc_min(unboundedSizeclass, kNumGCSizeClasses - 1);
-
-    const int64_t credit = 1LL << sizeclass;
+    const size_t alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
+    const size_t numSlotsMaybe0 = alignedSize / sizeof(PyrSlot);
+    const size_t numSlots = numSlotsMaybe0 < 1 ? 1 : numSlotsMaybe0;
+    assert(numSlots <= std::numeric_limits<int>::max());
+    // LOG2CEIL only accepts int as it uses compiler builtins.
+    const int unboundedSizeclass = LOG2CEIL(static_cast<int>(numSlots));
+    const int sizeclass = std::min<int>(unboundedSizeclass, kNumGCSizeClasses - 1);
+    assert(sizeclass >= 0);
+    static_assert(kNumGCSizeClasses < 64);
+    const uint64_t credit = 1ULL << sizeclass;
     mAllocTotal += credit;
     mNumAllocs++;
 

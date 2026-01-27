@@ -338,6 +338,7 @@ inline PyrObject* PyrGC::Allocate(size_t inNumBytes, int32 sizeclass, bool inRun
             ++mUncollectedAllocations;
     }
 
+    assert(sizeclass >= 0);
     GCSet* gcs = mSets + sizeclass;
 
     PyrObject* obj = (PyrObject*)gcs->mFree;
