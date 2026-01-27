@@ -2285,11 +2285,11 @@ bool isAtomicLiteral(PyrParseNode* node) {
     return res;
 }
 
-enum struct MaybePostNonInlineableWarning { True, False };
+enum struct UninlinableWarningOption { PostWarning, DontPostWarning };
 
 /// Return the value of a literal, allows literal to be wrap in a single pair of curly braces.
 /// Will post a warning by default if it can't produce a value and is a block.
-template <MaybePostNonInlineableWarning Post = MaybePostNonInlineableWarning::True>
+template <UninlinableWarningOption Warning = UninlinableWarningOption::PostWarning>
 std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const PyrParseNode& node) {
     if (node.mClassno != pn_PushLitNode)
         return std::nullopt;
@@ -2318,21 +2318,25 @@ std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const Py
     const auto& block = static_cast<const PyrBlockNode&>(maybeBlock);
 
     // Having arguments and variables mean we can't inline it, therefore, it isn't a literal.
-    if (block.mArglist || block.mVarlist) {
-        if constexpr (Post == MaybePostNonInlineableWarning::True) {
-            gNumUninlinedFunctions += 1;
-            if (SC_LanguageConfig::getPostInlineWarnings()) {
-                post("WARNING: FunctionDef contains variable declarations and so"
-                     " will not be inlined.\n");
-                if (block.mArglist)
-                    nodePostErrorLine((PyrParseNode*)block.mArglist);
-                else
-                    nodePostErrorLine((PyrParseNode*)block.mVarlist);
-            }
+    // Printing warnings first if requested to.
+    if constexpr (Warning == UninlinableWarningOption::PostWarning) {
+        const auto postWarning = SC_LanguageConfig::getPostInlineWarnings();
+        if (block.mArglist && postWarning) {
+            post("WARNING: FunctionDef contains argument declarations and so will not be inlined.\n");
+            nodePostErrorLine((PyrParseNode*)block.mArglist);
         }
-        return std::nullopt;
+        if (block.mVarlist && postWarning) {
+            post("WARNING: FunctionDef contains variable declarations and so will not be inlined.\n");
+            nodePostErrorLine((PyrParseNode*)block.mVarlist);
+        }
+        if (block.mArglist || block.mVarlist) {
+            gNumUninlinedFunctions += 1;
+            return std::nullopt;
+        }
+    } else {
+        if (block.mArglist || block.mVarlist)
+            return std::nullopt;
     }
-
 
     if (block.mBody->mClassno != pn_DropNode)
         return std::nullopt;
