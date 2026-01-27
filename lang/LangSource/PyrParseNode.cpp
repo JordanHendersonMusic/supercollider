@@ -799,16 +799,14 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
     };
 
     const auto attemptToPrintDuplicateLocation = [&](const PyrSymbol* duplicate, int varFlagType) {
-        if (node->mVarlists) {
-            for (auto varlist = node->mVarlists; varlist; varlist = static_cast<PyrVarListNode*>(varlist->mNext)) {
-                if (varlist->mFlags == varFlagType) {
-                    for (auto def = varlist->mVarDefs; def; def = static_cast<PyrVarDefNode*>(def->mNext)) {
-                        const auto varName = def->mVarName->mSlot;
-                        assert(varName.isSymbol());
-                        if (varName.getSymbol() == duplicate) {
-                            nodePostErrorLine(def->mVarName);
-                            return;
-                        }
+        for (auto varlist = node->mVarlists; varlist; varlist = static_cast<PyrVarListNode*>(varlist->mNext)) {
+            if (varlist->mFlags == varFlagType) {
+                for (auto def = varlist->mVarDefs; def; def = static_cast<PyrVarDefNode*>(def->mNext)) {
+                    const auto varName = def->mVarName->mSlot;
+                    assert(varName.isSymbol());
+                    if (varName.getSymbol() == duplicate) {
+                        nodePostErrorLine(def->mVarName);
+                        return;
                     }
                 }
             }
