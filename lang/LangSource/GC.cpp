@@ -649,7 +649,8 @@ void PyrGC::FullCollection() {
 }
 
 void PyrGC::Collect(uint64 inNumToScan) {
-    mNumToScan = std::max<size_t>(mNumToScan, inNumToScan);
+    assert(inNumToScan <= std::numeric_limits<int64>::max());
+    mNumToScan = std::max<int64>(mNumToScan, inNumToScan);
     Collect(); // collect space
 }
 

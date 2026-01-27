@@ -220,7 +220,7 @@ private:
     PyrObjectHdr mGrey;
 
     int32 mPartialScanSlot;
-    uint64 mNumToScan;
+    int64 mNumToScan;
     int32 mNumGrey;
 
     int64_t mAllocTotal;
