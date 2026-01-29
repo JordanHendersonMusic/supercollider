@@ -1,4 +1,4 @@
-%token	NAME INTEGER SC_FLOAT ACCIDENTAL SYMBOL STRING ASCII PRIMITIVENAME CLASSNAME CURRYARG
+%token	NAME INTEGER SC_FLOAT ACCIDENTAL SYMBOL STRING ASCII PRIMITIVENAME CLASSNAME CURRYARG 
 %token  VAR ARG CLASSVAR SC_CONST
 %token	NILOBJ TRUEOBJ FALSEOBJ
 %token	PSEUDOVAR
@@ -11,10 +11,12 @@
 %left	'.'
 %right  '`'
 %right  UMINUS
+%right  KWARGEXPAND
 %start  root
 
 %{
 
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
 #include "PyrLexer.h"
@@ -398,6 +400,11 @@ msgsend : name blocklist1
 		| expr '.' name blocklist
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$3, (PyrParseNode*)$1, 0, (PyrParseNode*)$4);
+			}
+		
+		| expr '.' '(' bigArgsList optcomma ')'
+			{
+				std::cout << "GOT A THING!" << std::endl;
 			}
 		;
 
@@ -1248,6 +1255,14 @@ keyarglist1	: keyarg
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			;
 
+bigArgs : exprseq
+		| keyarg
+		| '*' exprseq
+		| KWARGEXPAND exprseq
+		;
+
+bigArgsList : bigArgs | bigArgsList ',' bigArgs; 
+
 keyarg	: keybinop exprseq
 				{ $$ = (intptr_t)newPyrPushKeyArgNode((PyrSlotNode*)$1, (PyrParseNode*)$2); }
 		;
@@ -1622,6 +1637,7 @@ binop	: BINOP { $$ = zzval; }
 		| '*'  { $$ = zzval; }
 		| '+'  { $$ = zzval; }
 		| '|'  { $$ = zzval; }
+		| KWARGEXPAND { $$ = zzval; }
 	;
 
 keybinop : KEYBINOP { $$ = zzval; }

@@ -938,6 +938,8 @@ int processbinop(char* token) {
         return LEFTARROW;
     if (strcmp(token, "<>") == 0)
         return READWRITEVAR;
+    if (strcmp(token, "**") == 0)
+        return KWARGEXPAND;
     if (strcmp(token, "|") == 0)
         return '|';
     if (strcmp(token, "<") == 0)

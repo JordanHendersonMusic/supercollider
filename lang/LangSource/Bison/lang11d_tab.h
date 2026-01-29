@@ -84,7 +84,8 @@ extern int yydebug;
     BINOP = 285,                   /* BINOP  */
     KEYBINOP = 286,                /* KEYBINOP  */
     READWRITEVAR = 287,            /* READWRITEVAR  */
-    UMINUS = 288                   /* UMINUS  */
+    UMINUS = 288,                  /* UMINUS  */
+    KWARGEXPAND = 289              /* KWARGEXPAND  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
