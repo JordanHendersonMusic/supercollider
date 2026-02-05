@@ -40,7 +40,6 @@
 #include <QMimeData>
 #include <qtextcursor.h>
 #include <qtextformat.h>
-#include <qtypes.h>
 #include <qurl.h>
 
 namespace ScIDE {
