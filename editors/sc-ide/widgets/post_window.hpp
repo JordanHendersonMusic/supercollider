@@ -24,6 +24,7 @@
 #include <QAction>
 #include <QGestureEvent>
 #include <QPlainTextEdit>
+#include <qurl.h>
 
 namespace ScIDE {
 
@@ -61,8 +62,26 @@ public:
     QSize minimumSizeHint() const { return QSize(50, 50); }
     QString symbolUnderCursor();
 
+    void mousePressEvent(QMouseEvent* e) override {
+        clickedAnchor = (e->button() & Qt::LeftButton) ? anchorAt(e->pos()) : QString();
+        QPlainTextEdit::mousePressEvent(e);
+    }
+
+    void mouseReleaseEvent(QMouseEvent* e) override {
+        // Make sure that the release event was over the same anchor it started on.
+        if (e->button() & Qt::LeftButton && !clickedAnchor.isEmpty() && anchorAt(e->pos()) == clickedAnchor) {
+            QUrl url { clickedAnchor };
+            auto command =
+                QString("PostWindowURLHandler(\"") + url.scheme() + QString("\", \"") + clickedAnchor + QString("\");");
+            emit handleClickedURL(command, true);
+        }
+        QPlainTextEdit::mouseReleaseEvent(e);
+    }
+
+
 signals:
     void scrollToBottomRequest();
+    void handleClickedURL(const QString& command, bool silent);
 
 public slots:
     void post(const QString& text);
@@ -106,6 +125,8 @@ private:
     QSize mSizeHint;
     QChar previousChar;
     QTextCharFormat currentFormat;
+
+    QString clickedAnchor;
 };
 
 
