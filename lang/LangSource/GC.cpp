@@ -351,20 +351,21 @@ HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t 
     // LOG2CEIL currently only accepts ints, so we make sure that numSlots does not exceed
     // the maximum sizeclass value (which is guaranteed to fit into an int32).
     static constexpr auto maxSizeClass = kNumGCSizeClasses - 1;
+
     static constexpr size_t maxCredit = 1ULL << (maxSizeClass);
     static_assert(maxCredit <= std::numeric_limits<int32>::max());
 
-    const size_t credit = (numSlots > maxCredit) ? maxCredit : NEXTPOWEROFTWO(static_cast<int32>(numSlots));
+    // If numSlots is smaller than maxSizeClass, it is also guaranteed to fit into an int32
+    // and so it is safe to call LOG2CEIL (which currently only accepts 32-bit integers)
+    const int32 sizeclass = (numSlots >= maxCredit) ? maxSizeClass : LOG2CEIL(static_cast<int32>(numSlots));
+
+    // If the object fits inside a size band, credit is the true number of slots allocated.
+    // If is doesn't, then this is dealt with separately through classification as a 'large' object.
+    const size_t credit = 1ULL << sizeclass;
 
     mAllocTotal += credit;
     mNumToScan += credit;
     mNumAllocs++;
-
-    // If numSlots is outside int32 range, we can't cast it to perform LOG2CEIL (which only works on ints), so return
-    // max sizeclass.
-    const int32 sizeclass = (numSlots > std::numeric_limits<int32>::max())
-        ? maxSizeClass
-        : std::min<int32>(LOG2CEIL(static_cast<int32>(numSlots)), maxSizeClass);
 
     // Now we can allocate.
     PyrObject* obj = Allocate(inNumBytes, sizeclass, inRunCollection);
