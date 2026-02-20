@@ -25,12 +25,17 @@
 
 // Does not support tweaks.
 // Useful for branches in the code as this inherits tuple's lexigraphical comparisons.
+// Initialise with {Major, Minor, Patch}.
 struct SemanticVersion : public std::tuple<uint32_t, uint32_t, uint32_t> {
-    using std::tuple<uint32_t,uint32_t, uint32_t>::tuple;
+    using std::tuple<uint32_t, uint32_t, uint32_t>::tuple;
+
+    [[nodiscard]] constexpr uint32_t major() const { return std::get<0>(*this); } 
+    [[nodiscard]] constexpr uint32_t minor() const { return std::get<1>(*this); } 
+    [[nodiscard]] constexpr uint32_t patch() const { return std::get<2>(*this); } 
 
     [[nodiscard]] std::string asString() const {
         std::stringstream out;
-        out << std::get<0>(*this) << "." << std::get<1>(*this) << "." << std::get<2>(*this);
+        out << major() << "." << minor() << "." << patch();
         return out.str();
     }
  };

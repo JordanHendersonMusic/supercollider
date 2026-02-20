@@ -42,7 +42,6 @@
 #include "SC_LanguageConfig.hpp"
 #include "SC_Codecvt.hpp"
 #include "SpecialSelectorsOperatorsAndClasses.h"
-#include "SC_Version.hpp"
 
 namespace fs = std::filesystem;
 
@@ -106,8 +105,6 @@ const char* nodename[] = { "ClassNode", "ClassExtNode", "MethodNode", "BlockNode
 
                            "ReturnNode", "BlockReturnNode" };
 
-/// Creates a compiler error if current version is greater than or equal to 'version'.
-/// Otherwise posts a warning informing the user to fix their code before updating.
 void emitCompilerErrorFromVersion(SemanticVersion version) {
     if (SC_Version >= version) {
         compileErrors++;

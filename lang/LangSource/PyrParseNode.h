@@ -22,6 +22,7 @@
 
 #include "PyrSlot.h"
 #include "PyrKernel.h"
+#include "SC_Version.hpp"
 #include "ByteCodeArray.h"
 #include "Opcodes.h"
 #include "AdvancingAllocPool.h"
@@ -468,6 +469,11 @@ PyrParseNode* linkNextNode(PyrParseNode* a, PyrParseNode* b);
 PyrParseNode* linkAfterHead(PyrParseNode* a, PyrParseNode* b);
 
 extern int compileErrors;
+
+/// Creates a compiler error if current version is greater than or equal to 'version'.
+/// Otherwise posts a warning informing the user to fix their code before updating.
+void emitCompilerErrorFromVersion(SemanticVersion version);
+
 extern int numOverwrites;
 extern std::string overwriteMsg;
 
