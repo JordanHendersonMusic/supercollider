@@ -126,6 +126,10 @@ private:
     QChar previousChar;
     QTextCharFormat currentFormat;
 
+    /// Stores the html anchor that the user clicked on.
+    /// This is to facilitate clickable URL links in the post window.
+    /// Will be empty when no anchor has been clicked
+    /// Used in conjuction with anchorAt(QPos)
     QString clickedAnchor;
 };
 

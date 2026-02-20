@@ -15,11 +15,13 @@ ScIDE {
 		Class.initClassTree(PostWindowURLHandler);
 
 		PostWindowURLHandler.register(\scdoc, {|url|
-			ScIDE.openHelpUrl("file://" ++ SCDoc.helpTargetDir +/+ url[8..])
+			var prefix = "scdoc://";
+			ScIDE.openHelpUrl("file://" ++ SCDoc.helpTargetDir +/+ url[prefix.size..])
 		});
 
 		PostWindowURLHandler.register(\file, {|url|
-			var parts = url[7..].split($:);
+			var prefix = "file://";
+			var parts = url[prefix.size..].split($:);
 			{ Document.open("/" ++ parts[0], parts[1] ?? { 0 }, parts[2] ?? [0]) }.fork(AppClock)
 		});
 
@@ -457,7 +459,7 @@ PostWindowURLHandler {
 	}
 
 	*prDefault { |url|
-		"PostWindowURLHandler does not know how to handle the URL '%'".format(url).postln
+		" PostWindowURLHandler does not know how to handle the URL '%'".format(url).warn.postln
 	}
 }
 
