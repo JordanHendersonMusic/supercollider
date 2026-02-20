@@ -345,22 +345,33 @@ HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t 
     // obtain size info
     const size_t alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
     const size_t numSlotsMaybe0 = alignedSize / sizeof(PyrSlot);
-    const size_t numSlots = numSlotsMaybe0 < 1 ? 1 : numSlotsMaybe0;
-    assert(numSlots <= std::numeric_limits<int>::max());
-    // LOG2CEIL only accepts int as it uses compiler builtins.
-    const int unboundedSizeclass = LOG2CEIL(static_cast<int>(numSlots));
-    const int sizeclass = std::min<int>(unboundedSizeclass, kNumGCSizeClasses - 1);
-    assert(sizeclass >= 0);
-    static_assert(kNumGCSizeClasses < 64);
-    const uint64_t credit = 1ULL << sizeclass;
+
+    const size_t numSlots = std::max<size_t>(alignedSize / sizeof(PyrSlot), 1);
+
+    // LOG2CEIL currently only accepts ints, so we make sure that numSlots does not exceed
+    // the maximum sizeclass value (which is guaranteed to fit into an int32).
+    static constexpr auto maxSizeClass = kNumGCSizeClasses - 1;
+    static constexpr size_t maxCredit = 1ULL << (maxSizeClass);
+    static_assert(maxCredit <= std::numeric_limits<int32>::max());
+
+    const size_t credit = (numSlots > maxCredit) ? maxCredit : NEXTPOWEROFTWO(static_cast<int32>(numSlots));
+
     mAllocTotal += credit;
+    mNumToScan += credit;
     mNumAllocs++;
 
-    mNumToScan += credit;
+    // If numSlots is outside int32 range, we can't cast it to perform LOG2CEIL (which only works on ints), so return
+    // max sizeclass.
+    const int32 sizeclass = (numSlots > std::numeric_limits<int32>::max())
+        ? maxSizeClass
+        : std::min<int32>(LOG2CEIL(static_cast<int32>(numSlots)), maxSizeClass);
+
+    // Now we can allocate.
     PyrObject* obj = Allocate(inNumBytes, sizeclass, inRunCollection);
 
     obj->obj_format = inFormat;
     obj->obj_flags = inFlags & 255;
+    // The size of the object is set to zero and the data inside the object is uninitialized memory.
     obj->size = 0;
     obj->classptr = class_object;
     obj->gc_color = mWhiteColor;
