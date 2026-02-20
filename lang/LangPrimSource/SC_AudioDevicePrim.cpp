@@ -18,6 +18,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include "PyrErrors.h"
 #if defined(SC_AUDIO_API_COREAUDIO)
 #    include <CoreAudio/AudioHardware.h>
 #elif defined(SC_AUDIO_API_PORTAUDIO)
@@ -180,8 +181,10 @@ int listDevices(VMGlobals* g, int type) {
 int prListAudioDevices(VMGlobals* g, int numArgsPushed) {
     int in = 0;
     int out = 0;
-    slotIntVal(g->sp, &out);
-    slotIntVal(g->sp - 1, &in);
+    if (slotIntVal(g->sp, &out))
+        assert(false);
+    if (slotIntVal(g->sp - 1, &in))
+        assert(false);
 
     int type;
     if (in && out)
