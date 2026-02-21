@@ -344,7 +344,6 @@ HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t 
 
     // obtain size info
     const size_t alignedSize = (inNumBytes + kAlignMask) & ~kAlignMask; // 16 byte align
-    const size_t numSlotsMaybe0 = alignedSize / sizeof(PyrSlot);
 
     const size_t numSlots = std::max<size_t>(alignedSize / sizeof(PyrSlot), 1);
 
@@ -356,7 +355,7 @@ HOT PyrObject* PyrGC::New(size_t inNumBytes, std::int64_t inFlags, std::int64_t 
     static_assert(maxCredit <= std::numeric_limits<int32>::max());
 
     // If numSlots is smaller than maxSizeClass, it is also guaranteed to fit into an int32
-    // and so it is safe to call LOG2CEIL (which currently only accepts 32-bit integers)
+    // and so it is safe to call LOG2CEIL.
     const int32 sizeclass = (numSlots >= maxCredit) ? maxSizeClass : LOG2CEIL(static_cast<int32>(numSlots));
 
     // If the object fits inside a size band, credit is the true number of slots allocated.
