@@ -4034,31 +4034,31 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
             if (name == s_this) {
                 error("Cannot redefine 'this'\n");
                 nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
+                emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curProcess) {
                 error("Cannot redefine 'thisProcess'\n");
                 nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
+                emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curMethod) {
                 error("Cannot redefine 'thisMethod'\n");
                 nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
+                emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curBlock) {
                 error("Cannot redefine 'thisFunctionDef'\n");
                 nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
+                emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curClosure) {
                 error("Cannot redefine 'thisFunction'\n");
                 nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
+                emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curThread) {
                 error("Cannot redefine 'thisThread'\n");
                 nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
+                emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_super) {
                 error("Cannot redefine 'super'\n");
                 nodePostErrorLine((PyrParseNode*)vardef);
-                compileErrors++;
+                emitCompilerErrorFromVersion({ 3, 16, 0 });
             }
 
             // already declared as arg?
