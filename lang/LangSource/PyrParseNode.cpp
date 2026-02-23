@@ -20,6 +20,7 @@
 
 #include "ByteCodeArray.h"
 #include "OpcodeDetails.h"
+#include "OpcodeIterator.h"
 #include "OpcodeOperands.h"
 #include "PyrObject.h"
 #include "PyrSlot.h"
@@ -37,7 +38,9 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 #include <optional>
 #include <string.h>
@@ -1712,7 +1715,7 @@ bool PyrVarDefNode::hasExpr(PyrSlot* result) {
     if (IsPtr(&node->mSlot)) {
         PyrParseNode* litnode = (PyrParseNode*)slotRawPtr(&node->mSlot);
         if (litnode) {
-            if (litnode->mClassno == pn_BlockNode) {
+            if (litnode->mClassno == pn_BlockNode || litnode->mClassno == pn_NewBlock) {
                 // post("hasExpr B %s:%s %s %d\n", slotRawSymbol(&gCompilingClass->name)->name,
                 // slotRawSymbol(&gCompilingMethod->name)->name, mVarName->slotRawSymbol(&mSlot)->name, node->mClassno);
                 return true;
@@ -1736,6 +1739,9 @@ void PyrVarDefNode::compile(PyrSlot* result) {
 }
 
 void PyrVarDefNode::compileArg(PyrSlot* result) {
+    // If not a literal.
+    // hasExpr returns as an out param the literal value is present, which should be placed in the prototypeframe at
+    // compile time.
     if (hasExpr(nullptr)) {
         compilePushVar((PyrParseNode*)this, slotRawSymbol(&mVarName->mSlot));
 
@@ -3322,8 +3328,9 @@ void emitPushInt(LocationInSourceCode loc, int value) {
 void PyrSlotNode::compilePushLit(PyrSlot* result) {
     if (IsPtr(&mSlot)) {
         PyrParseNode* literalObj = (PyrParseNode*)slotRawPtr(&mSlot);
+        const auto class_no = literalObj->mClassno;
 
-        if (literalObj->mClassno == pn_BlockNode) {
+        if (class_no == pn_BlockNode || class_no == pn_NewBlock) {
             CompilingBytecodes storedCodes { std::move(gCompilingBytecodes) };
             PyrSlot slot;
             COMPILENODE(literalObj, &slot, false);
@@ -3335,7 +3342,6 @@ void PyrSlotNode::compilePushLit(PyrSlot* result) {
             PyrFunctionDef* block = slotRawBlock(&slot);
             if (NotNil(&block->contextDef))
                 METHRAW(gCompilingBlock)->needsHeapContext = 1;
-
         } else {
             PyrSlot slot;
             COMPILENODE(literalObj, &slot, false);
@@ -3384,7 +3390,7 @@ void compilePyrLiteralNode(PyrSlotNode* node, PyrSlot* result) {
 void PyrSlotNode::compileLiteral(PyrSlot* result) {
     if (IsPtr(&mSlot)) {
         PyrParseNode* literalObj = (PyrParseNode*)slotRawPtr(&mSlot);
-        if (literalObj->mClassno == pn_BlockNode) {
+        if (literalObj->mClassno == pn_BlockNode || literalObj->mClassno == pn_NewBlock) {
             CompilingBytecodes storedCodes { std::move(gCompilingBytecodes) };
             COMPILENODE(literalObj, result, false);
             gCompilingBytecodes = std::move(storedCodes);
@@ -3712,6 +3718,46 @@ void PyrLitDictNode::compile(PyrSlot* result) {}
 extern LongStack closedFuncCharNo;
 extern int lastClosedFuncCharNo;
 
+bool nameOfIdentifierIsOkayOrPostError(PyrSymbol* name, PyrParseNode* node) {
+    if (name == s_this) {
+        error("Cannot redefine 'this'\n");
+        nodePostErrorLine(node);
+        emitCompilerErrorFromVersion({ 3, 16, 0 });
+        return false;
+    } else if (name == s_curProcess) {
+        error("Cannot redefine 'thisProcess'\n");
+        nodePostErrorLine(node);
+        emitCompilerErrorFromVersion({ 3, 16, 0 });
+        return false;
+    } else if (name == s_curMethod) {
+        error("Cannot redefine 'thisMethod'\n");
+        nodePostErrorLine(node);
+        emitCompilerErrorFromVersion({ 3, 16, 0 });
+        return false;
+    } else if (name == s_curBlock) {
+        error("Cannot redefine 'thisFunctionDef'\n");
+        nodePostErrorLine(node);
+        emitCompilerErrorFromVersion({ 3, 16, 0 });
+        return false;
+    } else if (name == s_curClosure) {
+        error("Cannot redefine 'thisFunction'\n");
+        nodePostErrorLine(node);
+        emitCompilerErrorFromVersion({ 3, 16, 0 });
+        return false;
+    } else if (name == s_curThread) {
+        error("Cannot redefine 'thisThread'\n");
+        nodePostErrorLine(node);
+        emitCompilerErrorFromVersion({ 3, 16, 0 });
+        return false;
+    } else if (name == s_super) {
+        error("Cannot redefine 'super'\n");
+        nodePostErrorLine(node);
+        emitCompilerErrorFromVersion({ 3, 16, 0 });
+        return false;
+    }
+    return true;
+}
+
 void PyrBlockNode::compile(PyrSlot* slotResult) {
     const int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
 
@@ -3857,38 +3903,10 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         for (size_t i { 0 }; i < numVars; ++i, varIt = reinterpret_cast<PyrVarDefNode*>(varIt->mNext)) {
             auto* name = varIt->mVarName->mSlot.getSymbol();
             assert(name);
-			if (name == s_this) {
-                error("Cannot redefine 'this'\n");
-                nodePostErrorLine((PyrParseNode*)varIt);
-                emitCompilerErrorFromVersion({ 3, 16, 0 });
-            } else if (name == s_curProcess) {
-                error("Cannot redefine 'thisProcess'\n");
-                nodePostErrorLine((PyrParseNode*)varIt);
-                emitCompilerErrorFromVersion({ 3, 16, 0 });
-            } else if (name == s_curMethod) {
-                error("Cannot redefine 'thisMethod'\n");
-                nodePostErrorLine((PyrParseNode*)varIt);
-                emitCompilerErrorFromVersion({ 3, 16, 0 });
-            } else if (name == s_curBlock) {
-                error("Cannot redefine 'thisFunctionDef'\n");
-                nodePostErrorLine((PyrParseNode*)varIt);
-                emitCompilerErrorFromVersion({ 3, 16, 0 });
-            } else if (name == s_curClosure) {
-                error("Cannot redefine 'thisFunction'\n");
-                nodePostErrorLine((PyrParseNode*)varIt);
-                emitCompilerErrorFromVersion({ 3, 16, 0 });
-            } else if (name == s_curThread) {
-                error("Cannot redefine 'thisThread'\n");
-                nodePostErrorLine((PyrParseNode*)varIt);
-                emitCompilerErrorFromVersion({ 3, 16, 0 });
-            } else if (name == s_super) {
-                error("Cannot redefine 'super'\n");
-                nodePostErrorLine((PyrParseNode*)varIt);
-                emitCompilerErrorFromVersion({ 3, 16, 0 });
-            } else {
-				compilerErrorIfDuplicate(name, varIt);
-				varNames->symbols[i] = name;
-			}
+            if (nameOfIdentifierIsOkayOrPostError(name, varIt)) {
+                compilerErrorIfDuplicate(name, varIt);
+                varNames->symbols[i] = name;
+            }
         }
     } else {
         assert(numVars == 0);
@@ -3910,7 +3928,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         }
     }
 
-	// put variable argument and variable keyword arguments default into proto, always the empty array.
+    // put variable argument and variable keyword arguments default into proto, always the empty array.
     for (size_t i = numNormalArguments; i < numArgsTotal; ++i) {
         prototypeFrame->slots[i] = o_emptyarray;
     }
@@ -4294,6 +4312,312 @@ bool findVarName(PyrFunctionDef* func, PyrClass** classobj, PyrSymbol* name, int
         return true;
     }
     return false;
+}
+
+std::vector<PyrVarDefNode*> PyrNewBlockNode::gather_vars() const {
+    std::vector<PyrVarDefNode*> nodes {};
+    for_each_var([&](auto* n, size_t) { nodes.push_back(n); });
+    return nodes;
+}
+
+uint32_t PyrNewBlockNode::count_vars() const {
+    uint32_t num_vars { 0 };
+    const auto counter = [&](PyrVarDefNode*, size_t i) { ++num_vars; };
+    for_each_var(counter);
+    return num_vars;
+}
+
+template <typename T> class Defer {
+public:
+    constexpr Defer(T&& action): action(std::forward<T>(action)) {}
+    constexpr Defer() = delete;
+    constexpr Defer(Defer&&) = delete;
+    constexpr Defer(const Defer&) = delete;
+    constexpr Defer& operator=(Defer&&) = delete;
+    constexpr Defer& operator=(const Defer&) = delete;
+    ~Defer() { action(); }
+
+private:
+    T action;
+};
+
+template <class T> T replace_return_old(T& ptr, T v) {
+    T old { ptr };
+    ptr = v;
+    return old;
+}
+
+template <typename Action> void PyrNewBlockNode::for_each_normal_arg(Action&& action) const {
+    size_t i { 0 };
+    if (!arguments)
+        return;
+    for (auto* arg_item_it = arguments->mVarDefs; arg_item_it;
+         arg_item_it = reinterpret_cast<PyrVarDefNode*>(arg_item_it->mNext)) {
+        action(arg_item_it, i);
+        ++i;
+    }
+}
+template <typename Action> void PyrNewBlockNode::for_each_var_arg_name(Action&& action) const {
+    if (!arguments)
+        return;
+    if (arguments->mVariableArgumentName)
+        action(arguments->mVariableArgumentName, 0);
+    if (arguments->mVariableKeywordArgumentName)
+        action(arguments->mVariableKeywordArgumentName, 1);
+}
+
+template <typename Action> void PyrNewBlockNode::for_each_var(Action&& action) const {
+    size_t i { 0 };
+    // Please note, in PyrBlock, we call catVarList to join all the PyrVarDefNodes into one list.
+    // We do not do that here because we can have multiple lists across the whole body, therefore our iteration is a
+    // little more complex.
+    for (auto* body_item_it = body; body_item_it; body_item_it = body_item_it->mNext) {
+        if (const auto varlist = body_item_it->tryCast<PyrVarListNode>()) {
+            for (auto* var_it = (*varlist)->mVarDefs; var_it;
+                 var_it = reinterpret_cast<PyrVarDefNode*>(var_it->mNext)) {
+                assert(var_it->mClassno == PyrVarDefNode::nodeEnum);
+                action(var_it, i);
+                ++i;
+            }
+        }
+    }
+}
+
+template <typename ExprAction, typename VarDefAction>
+void PyrNewBlockNode::for_each_body_expr_and_var_def(ExprAction&& expr_action, VarDefAction&& var_action) const {
+    size_t i { 0 };
+
+    for (auto* body_item_it = body; body_item_it; body_item_it = body_item_it->mNext) {
+        if (const auto varlist = body_item_it->tryCast<PyrVarListNode>()) {
+            for (auto* var_it = (*varlist)->mVarDefs; var_it;
+                 var_it = reinterpret_cast<PyrVarDefNode*>(var_it->mNext)) {
+                var_action(var_it, i);
+                i += 1;
+            }
+        } else {
+            expr_action(body_item_it, i);
+            i += 1;
+        }
+    }
+}
+
+void PyrNewBlockNode::compile(PyrSlot* result) {
+    const uint32 num_varible_args = [&]() -> uint32 {
+        if (!arguments)
+            return 0;
+        if (!arguments->mVariableArgumentName)
+            return 0;
+        return (arguments->mVariableKeywordArgumentName) ? 2 : 1;
+    }();
+    const uint32 num_normal_args { arguments ? static_cast<uint32>(nodeListLength(arguments->mVarDefs)) : 0 };
+    const uint32 num_total_args = num_normal_args + num_varible_args;
+    const uint32 num_vars { count_vars() };
+    const uint32 num_slots = num_total_args + num_vars;
+
+    if (num_total_args > 255) {
+        error("Too many arguments in function definition (> 255)\n");
+        nodePostErrorLine(arguments);
+        ++compileErrors;
+    }
+
+    if (num_vars > 255) {
+        error("Too many variables in function definition (> 255)\n");
+        nodePostErrorLine(this);
+        ++compileErrors;
+    }
+
+    const auto gc_flags { compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable };
+
+    // Throughout this function we will be building fdef, it is the only mutable variable.
+    auto fdef { newPyrFunctionDef(gc_flags, location()) };
+    *result = PyrSlot::make(fdef);
+
+    *METHRAW(fdef) = { 0,
+                       0,
+                       methBlock,
+                       static_cast<unsigned short>((num_slots + FRAMESIZE) * sizeof(PyrSlot)),
+                       0,
+                       static_cast<unsigned char>(num_normal_args),
+                       static_cast<unsigned char>(num_varible_args),
+                       static_cast<unsigned char>(num_vars),
+                       static_cast<unsigned char>(num_slots),
+                       0,
+                       static_cast<unsigned char>(num_slots),
+                       static_cast<unsigned char>(num_total_args) };
+
+    // Push globals
+    const int prevFunctionHighestExternalRef { replace_return_old(gFunctionHighestExternalRef, 0) };
+    const bool prevFunctionCantBeClosed { replace_return_old(gFunctionCantBeClosed, false) };
+    auto* const prevFunctionDef { replace_return_old(gCompilingBlock, fdef) };
+    auto* const prevClass { replace_return_old(gCompilingClass, is_top_level ? class_interpreter : gCompilingClass) };
+    auto* const prevPartiallyAppliedFunction { replace_return_old(gPartiallyAppliedFunction,
+                                                                  static_cast<PyrFunctionDef*>(nullptr)) };
+
+    // Pop globals at end of scope.
+    const Defer reset_globals { [&]() {
+        gCompilingBlock = prevFunctionDef;
+        gCompilingClass = prevClass;
+        gPartiallyAppliedFunction = prevPartiallyAppliedFunction;
+        gFunctionCantBeClosed = gFunctionCantBeClosed || prevFunctionCantBeClosed;
+        gFunctionHighestExternalRef = sc_max(gFunctionHighestExternalRef - 1, prevFunctionHighestExternalRef);
+    } };
+
+
+    // This is overridden later, but it is important to set this now so name resolution can work.
+    fdef->contextDef = is_top_level ? PyrSlot {} : PyrSlot::make(prevFunctionDef);
+
+    // Ensure no variable or argument name in this scope collide.
+    std::vector<PyrSymbol*> encounteredNames {};
+    encounteredNames.reserve(num_slots);
+    const auto compilerErrorIfDuplicate = [&](PyrSymbol* sym, PyrParseNode* where) {
+        if (const auto fnd = std::find(encounteredNames.begin(), encounteredNames.end(), sym);
+            fnd != encounteredNames.end()) {
+            error("duplicate name");
+            nodePostErrorLine(where);
+            compileErrors++;
+        }
+        encounteredNames.push_back(sym);
+    };
+
+    // Fill argument names array
+    fdef->argNames = (num_total_args == 0) ? PyrSlot {} : [&]() -> PyrSlot {
+        auto* array = newPyrSymbolArray(compileGC(), num_total_args, gc_flags, false);
+        for_each_normal_arg([&](PyrVarDefNode* n, size_t i) {
+            auto* sym = n->mVarName->mSlot.getSymbol();
+            if (nameOfIdentifierIsOkayOrPostError(sym, n)) {
+                compilerErrorIfDuplicate(sym, n);
+                array->symbols[i] = sym;
+            }
+        });
+        for_each_var_arg_name([&](PyrSlotNode* n, size_t i) {
+            auto* sym = n->mSlot.getSymbol();
+            if (nameOfIdentifierIsOkayOrPostError(sym, n)) {
+                compilerErrorIfDuplicate(sym, n);
+                array->symbols[num_normal_args + i] = sym;
+            }
+        });
+        array->size = num_total_args;
+        return PyrSlot::make(array);
+    }();
+
+    // Fill variable names array
+    fdef->varNames = (num_vars == 0) ? PyrSlot {} : [&]() -> PyrSlot {
+        auto* array = newPyrSymbolArray(compileGC(), num_vars, gc_flags, false);
+        for_each_var([&](PyrVarDefNode* var, size_t i) {
+            auto* sym = var->mVarName->mSlot.getSymbol();
+            if (nameOfIdentifierIsOkayOrPostError(sym, var)) {
+                compilerErrorIfDuplicate(sym, var);
+                array->symbols[i] = sym;
+            }
+        });
+        array->size = num_vars;
+        return PyrSlot::make(array);
+    }();
+
+
+    fdef->prototypeFrame = (num_slots == 0) ? PyrSlot {} : [&]() -> PyrSlot {
+        auto array = newPyrArray(compileGC(), num_slots, gc_flags, false);
+
+        size_t index { 0 };
+
+        for_each_normal_arg([&](PyrVarDefNode* node, size_t i) {
+            PyrSlot lit {};
+            // hasExpr actually fills the slot if it is a literal value.
+            // It also returns true if there is a non-literal expression.
+            node->hasExpr(&lit);
+            array->slots[index] = lit;
+            index += 1;
+        });
+
+        for_each_var_arg_name([&](PyrSlotNode*, size_t i) {
+            array->slots[index] = o_emptyarray;
+            index += 1;
+        });
+
+        assert(index == num_total_args);
+
+        for_each_var([&](PyrVarDefNode* node, size_t i) {
+            PyrSlot lit {};
+            node->hasExpr(&lit);
+            array->slots[index] = lit;
+            index += 1;
+        });
+
+        assert(index == num_slots);
+
+        array->size = num_slots;
+        return PyrSlot::make(array);
+    }();
+
+    gCompilingBytecodes.assertEmpty();
+    // Compile body and return whether the final statement was an assignment.
+    {
+        SetTailBranch branch { true };
+        SetTailIsMethodReturn method_return { false };
+
+        for_each_normal_arg([&](PyrVarDefNode* node, size_t) {
+            PyrSlot dummy;
+            node->compileArg(&dummy);
+        });
+
+        // No need to compile the variable arguments, you can't set them.
+
+        // Count how many statements there are.
+        size_t num_statements_in_body { 0 };
+        for_each_body_expr_and_var_def([&](PyrParseNode*, size_t) { num_statements_in_body += 1; },
+                                       [&](PyrVarDefNode*, size_t) { num_statements_in_body += 1; });
+
+        bool final_statement_was_a_var_def { false };
+
+        for_each_body_expr_and_var_def(
+            [&](PyrParseNode* expr, size_t i) {
+                PyrSlot dummy {};
+                const auto is_final = i == num_statements_in_body - 1;
+                if (auto assign = expr->tryCast<PyrAssignNode>()) {
+                    // TODO: Why is this necessary, I have just copied it from PyrDropNode::compile.
+                    (*assign)->mDrop = !is_final;
+                    // Tail call only on the last.
+                    COMPILENODE(*assign, &dummy, is_final);
+                } else {
+                    // Tail call only on the last.
+                    COMPILENODE(expr, &dummy, is_final);
+                    if (!is_final)
+                        Drop.emit(expr->location());
+                }
+
+                final_statement_was_a_var_def = false;
+            },
+            [&](PyrVarDefNode* node, size_t i) {
+                PyrSlot dummy {};
+                // Always drop the assignment.
+                // If it was the last statement, we will undo this shortly.
+                node->mDrop = true; // always drop `var = 1;`
+                node->compile(&dummy);
+                final_statement_was_a_var_def = true;
+            });
+
+        if (num_statements_in_body == 0 || final_statement_was_a_var_def)
+            PushSpecialValue.emit(location(), { OpSpecialValue::Nil_ });
+    };
+
+
+    BlockReturn.emit(location());
+
+    auto data = std::move(gCompilingBytecodes).finishGetData();
+
+    // {
+    //     std::cout << "printing bytecodes\n";
+    //     auto start = data.codes.begin().base();
+    //     const auto end = data.codes.end().base();
+    //     Opcode::printAllBytecodes(std::cout, start, end);
+    //     std::cout << std::endl;
+    // }
+
+    installByteCodes(fdef, std::move(data));
+
+    const auto is_closed = (!gFunctionCantBeClosed && gFunctionHighestExternalRef == 0) || is_top_level;
+    fdef->contextDef = is_closed ? PyrSlot {} : PyrSlot::make(prevFunctionDef);
+    fdef->isClosed = PyrSlot::make(is_closed);
 }
 
 extern PyrSymbol* s_env;

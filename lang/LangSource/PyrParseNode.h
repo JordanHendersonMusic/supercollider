@@ -30,6 +30,7 @@
 #include "AdvancingAllocPool.h"
 #include "SpecialSelectorsOperatorsAndClasses.h"
 #include <cassert>
+#include <optional>
 #include <type_traits>
 
 // TODO: remove these macros.
@@ -97,6 +98,8 @@ enum ParseNodeEnum : unsigned char {
     pn_ReturnNode,
     pn_BlockReturnNode,
 
+    pn_NewBlock,
+
     pn_NumTypes
 };
 
@@ -137,6 +140,7 @@ public:
     template <typename T, typename... ARGS> friend T* allocNode(ARGS&&... args);
 
     template <typename T> T* assertCast();
+    template <typename T> std::optional<T*> tryCast();
 };
 
 extern AdvancingAllocPool gParseNodePool;
@@ -190,6 +194,21 @@ template <typename T> T* PyrParseNode::assertCast() {
         assert(mClassno == T::nodeEnum);
     }
     return reinterpret_cast<T*>(this);
+}
+
+template <typename T> std::optional<T*> PyrParseNode::tryCast() {
+    if constexpr (std::is_same_v<T, PyrSlotNode>) {
+        if (mClassno == pn_SlotNode || mClassno == pn_PushLitNode || mClassno == pn_PushNameNode
+            || mClassno == pn_LiteralNode) {
+            return { reinterpret_cast<T*>(this) };
+        } else
+            return std::nullopt;
+    } else {
+        if (mClassno == T::nodeEnum) {
+            return { reinterpret_cast<T*>(this) };
+        } else
+            return std::nullopt;
+    }
 }
 
 struct PyrCurryArgNode : public PyrParseNode {
@@ -560,6 +579,35 @@ struct PyrBlockNode : public PyrParseNode {
     struct PyrVarListNode* mVarlist;
     struct PyrParseNode* mBody;
     bool mIsTopLevel;
+};
+
+
+struct PyrNewBlockNode : public PyrParseNode {
+    static constexpr ParseNodeEnum nodeEnum { pn_NewBlock };
+    PyrNewBlockNode(PyrParseNode::TAG, LocationType loc, struct PyrArgListNode* arguments, PyrParseNode* body,
+                    bool is_top_level):
+        PyrParseNode({}, loc, pn_NewBlock),
+        arguments(arguments),
+        body(body),
+        is_top_level(is_top_level) {}
+
+
+    void compile(PyrSlot* result) override;
+    void dump(int level) override {}
+
+private:
+    struct PyrArgListNode* arguments;
+    PyrParseNode* body; // (PyrVarListNode* | PyrParseNode*) either varlist or whatever expr has produced
+    bool is_top_level;
+
+    uint32_t count_vars() const;
+    std::vector<PyrVarDefNode*> gather_vars() const;
+
+    template <typename Action> void for_each_normal_arg(Action&& action) const;
+    template <typename Action> void for_each_var_arg_name(Action&& action) const;
+    template <typename Action> void for_each_var(Action&& action) const;
+    template <typename ExprAction, typename VarDefAction>
+    void for_each_body_expr_and_var_def(ExprAction&& expr_action, VarDefAction&& var_action) const;
 };
 
 struct PyrArgListNode : public PyrParseNode {

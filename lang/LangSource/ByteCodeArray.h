@@ -53,12 +53,32 @@ public:
     CompilingBytecodes& operator=(CompilingBytecodes&&) = default;
 
     void consume(CompilingBytecodes&& other) {
+        data.assertValid();
+        other.data.assertValid();
         data.codes.insert(data.codes.end(), other.data.codes.begin(), other.data.codes.end());
         data.startAndEndLocations.insert(data.startAndEndLocations.end(), other.data.startAndEndLocations.begin(),
                                          other.data.startAndEndLocations.end());
         data.sizeOfCodes.insert(data.sizeOfCodes.end(), other.data.sizeOfCodes.begin(), other.data.sizeOfCodes.end());
+        data.assertValid();
     }
 
+    template <class Opcode> [[nodiscard]] bool previousInstructionWas(const Opcode& opcode) const {
+        const auto size = opcode.byteSize;
+        if (data.sizeOfCodes.empty())
+            return false;
+        if (data.sizeOfCodes.back() != size)
+            return false;
+        return data.codes[data.codes.size() - data.sizeOfCodes.back()] == opcode.code;
+    }
+
+    void erasePreviousInstruction() {
+        assert(!data.sizeOfCodes.empty());
+        const auto size = data.sizeOfCodes.back();
+        data.startAndEndLocations.erase(data.startAndEndLocations.end() - 2, data.startAndEndLocations.end());
+        data.codes.erase(data.codes.end() - size, data.codes.end());
+        data.sizeOfCodes.pop_back();
+        data.assertValid();
+    }
 
     template <typename... BYTES> void emit(LocationInSourceCode loc, BYTES... bytes) {
         static_assert(sizeof...(BYTES) > 0);
@@ -66,6 +86,7 @@ public:
         data.startAndEndLocations.push_back(std::get<1>(loc));
         (data.codes.push_back(static_cast<Byte>(bytes)), ...);
         data.sizeOfCodes.push_back(static_cast<uint8>(sizeof...(bytes)));
+        data.assertValid();
     }
 
     [[nodiscard]] size_t length() const noexcept { return data.codes.size(); }
@@ -74,6 +95,12 @@ public:
         std::vector<Byte> codes;
         std::vector<uint32_t> startAndEndLocations; // location is source text. Twice as large as the codes vector.
         std::vector<uint8_t> sizeOfCodes; // codes can be variable width.
+
+        void assertValid() const {
+            // The sum of the sizeOfCodes should be equal to the size of codes.
+            assert(codes.size() >= sizeOfCodes.size());
+            assert(sizeOfCodes.size() * 2 == startAndEndLocations.size());
+        }
     };
 
     // Returns data and sets the held data to empty as per the move constructor (not assignment).

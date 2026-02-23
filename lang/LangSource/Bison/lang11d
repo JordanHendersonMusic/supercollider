@@ -168,6 +168,8 @@ extern LongStack generatorStack;
 %type <node> blockliteral pushname litdictslotdef msgsend adverb dictslotlist retval blocklist1 blocklist valrange2 valrange3
 %type <node> slotliteral listliteral block methbody dictslotdef dictslotlist1 dictlit2 blocklistitem curryArg
 
+%type <node> newBody newBodyItem newBlock newBodyOpt newBlockLiteral
+
 %start root
 
 %%
@@ -564,6 +566,7 @@ qual			: name LEFTARROW exprseq nextqual
 
 expr1			: pushliteral
 				| blockliteral
+				| newBlockLiteral
 				| generator
 				| pushname
 				| curryArg
@@ -1021,6 +1024,7 @@ block			: '{' argdecls funcvardecls funcbody '}'
 					{ $$ = allocNode<PyrBlockNode>(@$, $2, $3, $4, true); }
 				;
 
+
 funcvardecls	: %empty { $$ = nullptr; }
 				| funcvardecls funcvardecl
 					{ $$ = linkNextNode($1, $2); };
@@ -1031,6 +1035,22 @@ funcvardecls1	: funcvardecl
 
 funcvardecl		: VAR vardeflist ';'
 					{ $$ = allocNode<PyrVarListNode>(@$, $2, varLocal); };
+	
+newBlockLiteral : newBlock { $$ = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>($1), pn_PushLitNode); };
+
+newBlock		: '#' ';' '{' argdecls newBodyOpt '}' 
+					{ $$ = allocNode<PyrNewBlockNode>(@$, $4, $5, false); }
+
+newBodyOpt		: %empty { $$ = nullptr; } 
+				| newBody;
+
+newBody			: newBodyItem optsemi { $$ = $1; } 
+				| newBodyItem ';' newBody 
+					{ $$ = linkNextNode($1, $3); }
+
+newBodyItem		: VAR vardeflist 
+					{  $$ = allocNode<PyrVarListNode>(@$, $2, varLocal); } 
+				| expr;
 
 argdecls		: %empty { $$ = nullptr; }
 				| ARG vardeflist ';'
