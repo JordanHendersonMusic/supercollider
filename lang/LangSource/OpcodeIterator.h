@@ -373,34 +373,29 @@ struct WriterAction {
     void operator()(std::tuple<const char*, Tups...> codeInfo, Operands&&... operands) {
         std::apply([&](auto&&... infos) { ((stream << infos << " "), ...); }, codeInfo);
 
+        auto loop_over_each_operand_value = [&, counter = size_t { 0 }](auto... values) mutable {
+            if constexpr (sizeof...(values) != 0) {
+                stream << "(";
+                ((stream << values << (counter != sizeof...(values) ? ", " : "")), ...);
+                counter += 1;
+                stream << ")";
+            }
+        };
+
+        auto for_each_operand = [&, counter = size_t { 0 }](auto op) mutable {
+            std::apply(loop_over_each_operand_value, op.asTuple());
+
+            counter += 1;
+            if (counter != sizeof...(Operands))
+                stream << ", ";
+        };
+
         if constexpr (sizeof...(Operands) != 0) {
-            std::apply(
-                [&](auto&&... ops) {
-                    size_t operand_counter { 0 };
-                    stream << '[';
-                    const auto app = [&](auto op) {
-                        size_t operand_value_counter { 0 };
-
-                        std::apply(
-                            [&](auto... values) {
-                                if constexpr (sizeof...(values) != 0) {
-                                    stream << "(";
-                                    ((stream << values << (operand_value_counter != sizeof...(values) ? ", " : "")),
-                                     ...);
-                                    stream << ")";
-                                }
-                            },
-                            op.asTuple());
-
-                        operand_counter += 1;
-                        if (operand_counter != sizeof...(Operands))
-                            stream << ", ";
-                    };
-                    (app(ops), ...);
-                    stream << ']';
-                },
-                std::tuple { std::forward<Operands>(operands)... });
+            stream << '[';
+            ((for_each_operand(operands)), ...);
+            stream << ']';
         }
+
         stream << "\n";
     }
 };

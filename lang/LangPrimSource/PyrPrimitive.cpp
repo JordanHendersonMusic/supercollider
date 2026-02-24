@@ -1931,39 +1931,33 @@ struct BytecodeToSCLangBytecodeConverter {
                 codeInfo);
         }
 
-        std::apply(
-            [&](auto... ops) {
-                currentBytecode->slots[2] = PyrSlot::make(newPyrArray(g.gc, sizeof...(Operands), 0, false));
-                size_t operand_counter { 0 };
-                auto* operand_array = currentBytecode->slots[2].getPyrObjType<PyrObject>();
-                operand_array->size = sizeof...(Operands);
-                // yes this is an apply and a fold expresion...
-                (std::apply(
-                     [&](const char* operand_name, auto... operandValues) {
-                         auto* bytecode_operand =
-                             instantiateObject(g.gc, getsym("BytecodeOperand")->u.classobj, 2, true, false);
-                         operand_array->slots[operand_counter] = PyrSlot::make(bytecode_operand);
+        currentBytecode->slots[2] = PyrSlot::make(newPyrArray(g.gc, sizeof...(Operands), 0, false));
+        auto* operand_array = currentBytecode->slots[2].getPyrObjType<PyrObject>();
+        operand_array->size = sizeof...(Operands);
 
-                         bytecode_operand->slots[0] = convertToSC(operand_name);
+        auto for_each_operand = [&, counter = size_t { 0 }](const char* operand_name, auto... operandValues) mutable {
+            auto* bytecode_operand = instantiateObject(g.gc, getsym("BytecodeOperand")->u.classobj, 2, true, false);
+            operand_array->slots[counter] = PyrSlot::make(bytecode_operand);
 
-                         if (sizeof...(operandValues) == 0) {
-                             bytecode_operand->slots[1] = PyrSlot::make(PyrNil {});
-                         } else if (sizeof...(operandValues) == 1) {
-                             bytecode_operand->slots[1] = (convertToSC(operandValues), ...);
-                         } else {
-                             auto* values_array = newPyrArray(g.gc, sizeof...(operandValues), 0, false);
-                             values_array->size = sizeof...(operandValues);
-                             bytecode_operand->slots[1] = PyrSlot::make(values_array);
-                             size_t operand_value_counter { 0 };
-                             ((values_array->slots[operand_value_counter++] = convertToSC(operandValues)), ...);
-                         }
+            bytecode_operand->slots[0] = convertToSC(operand_name);
 
-                         operand_counter += 1;
-                     },
-                     ops.asTuple()),
-                 ...);
-            },
-            std::tuple { std::forward<Operands>(operands)... });
+            if (sizeof...(operandValues) == 0) {
+                bytecode_operand->slots[1] = PyrSlot::make(PyrNil {});
+            } else if (sizeof...(operandValues) == 1) {
+                bytecode_operand->slots[1] = (convertToSC(operandValues), ...);
+            } else {
+                auto* values_array = newPyrArray(g.gc, sizeof...(operandValues), 0, false);
+                values_array->size = sizeof...(operandValues);
+                bytecode_operand->slots[1] = PyrSlot::make(values_array);
+                size_t operand_value_counter { 0 };
+                ((values_array->slots[operand_value_counter++] = convertToSC(operandValues)), ...);
+            }
+
+            counter += 1;
+        };
+
+
+        ((std::apply(for_each_operand, operands.asTuple())), ...);
 
         currentBytecode->slots[3] = PyrSlot::make(index);
     }
