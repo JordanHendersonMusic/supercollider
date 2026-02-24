@@ -111,12 +111,8 @@ void emitCompilerErrorFromVersion(SemanticVersion version) {
     }
 }
 
-// Forward declare helpers.
-// This means they aren't a part of the public interface of the header.
 void emitPushInt(int value);
-
 void installByteCodes(PyrFunctionDef* block, CompilingBytecodes::Data codes);
-
 void compileAnyIfMsg(PyrCallNodeBase2* node);
 void compileIfMsg(PyrCallNodeBase2* node);
 void compileIfNilMsg(PyrCallNodeBase2* node, bool flag);
@@ -135,10 +131,7 @@ bool isAnInlineableBlock(PyrParseNode* node);
 bool isAnInlineableAtomicLiteralBlock(PyrParseNode* node);
 bool isAtomicLiteral(PyrParseNode* node);
 bool isWhileTrue(PyrParseNode* node);
-
-void compilePyrMethodNode(PyrMethodNode* node, PyrSlot* result);
 void compilePyrLiteralNode(PyrSlotNode* node, PyrSlot* result);
-
 PyrClass* getNodeSuperclass(PyrClassNode* node);
 void countNodeMethods(PyrClassNode* node, int* numClassMethods, int* numInstMethods);
 void compileExtNodeMethods(PyrClassExtNode* node);
@@ -147,6 +140,10 @@ bool compareVarDefs(PyrClassNode* node, PyrClass* classobj);
 void recompileSubclasses(PyrClass* classobj);
 void compileNodeMethods(PyrClassNode* node);
 void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* superclassobj);
+
+// Turns many PyrVarListNodes into a single list of PyrVarDefNodes
+// I.e., turns `var a, b, c; var d, e, f;` into a list of `a, b, c, d, e, f`.
+void flattenVarListNode(PyrVarListNode* varlist);
 
 bool isThisObjNode(PyrParseNode* node);
 int conjureSelectorIndex(PyrParseNode* node, PyrFunctionDef* func, bool isSuper, PyrSymbol* selector, int* selType);
@@ -165,8 +162,182 @@ CompilingBytecodes compileSubExpressionWithGoto(PyrSlotNode* litnode, int branch
 CompilingBytecodes compileBodyWithGoto(PyrParseNode* body, int branchLen, bool onTailBranch);
 
 
-PyrClassNode::PyrClassNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* className, PyrSlotNode* superClassName,
-                           PyrSlotNode* indexType, PyrVarListNode* varlists, PyrMethodNode* methods):
+PyrParseNode::PyrParseNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation location, ParseNodeEnum classno):
+    mClassno(classno),
+    mLocation(location) {}
+
+[[nodiscard]] LocationInSourceCode PyrParseNode::location() const {
+    return { mLocation.begin.absolute, mLocation.end.absolute };
+}
+
+PyrSlotNode::PyrSlotNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation location, PyrSlot slot, ParseNodeEnum classno):
+    PyrParseNode({}, location, classno),
+    mSlot(slot) {
+    assert(classno == pn_SlotNode || classno == pn_LiteralNode || classno == pn_PushLitNode
+           || classno == pn_PushNameNode);
+}
+
+PyrSlotNode* PyrSlotNode::changeLiteralType(ParseNodeEnum e) {
+    assert(mClassno == pn_SlotNode);
+    assert(e == pn_LiteralNode || e == pn_PushLitNode || e == pn_PushNameNode);
+    mClassno = e;
+    return this;
+}
+
+PyrCurryArgNode::PyrCurryArgNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, int argNum):
+    PyrParseNode({}, loc, pn_CurryArgNode),
+    mArgNum(argNum) {}
+
+PyrClassExtNode::PyrClassExtNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* classname,
+                                 struct PyrMethodNode* methods):
+    PyrParseNode({}, loc, pn_ClassExtNode),
+    mClassName(classname),
+    mMethods(methods) {}
+
+PyrVarListNode::PyrVarListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, struct PyrVarDefNode* vardef,
+                               int flags):
+    PyrParseNode({}, loc, pn_VarListNode),
+    mVarDefs(vardef),
+    mFlags(flags) {}
+
+PyrVarDefNode::PyrVarDefNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* varname,
+                             PyrParseNode* defVal, ReadWriteAccessor rwAccessor):
+    PyrParseNode({}, loc, nodeEnum),
+    mVarName(varname),
+    mDefVal(defVal),
+    mFlags(static_cast<int>(rwAccessor)),
+    mDrop(true) {
+    assert(mVarName);
+    assert(mVarName->mSlot.isSymbol());
+};
+
+PyrCallNodeBase::PyrCallNodeBase(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, ParseNodeEnum classno):
+    PyrParseNode({}, loc, classno) {}
+
+PyrCallNodeBase2::PyrCallNodeBase2(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, ParseNodeEnum classno,
+                                   PyrSlotNode* selector, PyrParseNode* arglist, PyrParseNode* keyarglist):
+    PyrCallNodeBase({}, loc, classno),
+    mSelector(selector),
+    mArglist(arglist),
+    mKeyarglist(keyarglist) {
+    assert(selector);
+    assert(selector->mSlot.isSymbol());
+}
+
+PyrCallNode::PyrCallNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector,
+                         PyrParseNode* arglist, PyrParseNode* keyarglist):
+    PyrCallNodeBase2({}, loc, pn_CallNode, selector, arglist, keyarglist) {}
+
+PyrBinopCallNode::PyrBinopCallNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector,
+                                   PyrParseNode* arglist):
+    PyrCallNodeBase2({}, loc, pn_BinopCallNode, selector, arglist, nullptr) {}
+
+PyrSetterNode::PyrSetterNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector,
+                             PyrParseNode* expr1, PyrParseNode* expr2):
+    PyrCallNodeBase({}, loc, pn_SetterNode),
+    mSelector(selector),
+    mExpr1(expr1),
+    mExpr2(expr2) {
+    assert(mSelector);
+    assert(mSelector->mSlot.isSymbol());
+}
+
+PyrDynListNode::PyrDynListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* className,
+                               PyrParseNode* elems):
+    PyrCallNodeBase({}, loc, pn_DynListNode),
+    mClassname(className),
+    mElems(elems) {
+    if (className)
+        assert(className->mSlot.isSymbol());
+}
+
+PyrDynDictNode::PyrDynDictNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* elems):
+    PyrCallNodeBase({}, loc, pn_DynDictNode),
+    mElems(elems) {}
+
+
+PyrDropNode::PyrDropNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* expr1, PyrParseNode* expr2):
+    PyrParseNode({}, loc, pn_DropNode),
+    mExpr1(expr1),
+    mExpr2(expr2) {
+    assert(mExpr1);
+    assert(mExpr2);
+}
+
+PyrPushKeyArgNode::PyrPushKeyArgNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector,
+                                     PyrParseNode* expr):
+    PyrParseNode({}, loc, pn_PushKeyArgNode),
+    mSelector(selector),
+    mExpr(expr) {
+    assert(selector);
+    assert(selector->mSlot.isSymbol());
+}
+
+PyrReturnNode::PyrReturnNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* expr):
+    PyrParseNode({}, loc, pn_ReturnNode),
+    mExpr(expr) {}
+
+PyrBlockReturnNode::PyrBlockReturnNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* expr):
+    PyrParseNode({}, loc, pn_BlockReturnNode),
+    mExpr(expr) {}
+
+PyrAssignNode::PyrAssignNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* varName,
+                             PyrParseNode* expr):
+    PyrParseNode({}, loc, pn_AssignNode),
+    mVarName(varName),
+    mExpr(expr) {
+    assert(varName);
+    assert(varName->mSlot.isSymbol());
+    assert(expr);
+}
+
+PyrMultiAssignNode::PyrMultiAssignNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc,
+                                       struct PyrMultiAssignVarListNode* varlist, PyrParseNode* expr):
+    PyrParseNode({}, loc, pn_MultiAssignNode),
+    mVarList(varlist),
+    mExpr(expr) {
+    assert(mVarList);
+    assert(mExpr);
+}
+
+PyrMultiAssignVarListNode::PyrMultiAssignVarListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc,
+                                                     PyrSlotNode* varNames, PyrSlotNode* rest):
+    PyrParseNode({}, loc, pn_MultiAssignVarListNode),
+    mVarNames(varNames),
+    mRest(rest) {
+    assert(mVarNames);
+}
+
+PyrArgListNode::PyrArgListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrVarDefNode* vardefs,
+                               PyrSlotNode* varArgName, PyrSlotNode* varKwArgName):
+    PyrParseNode({}, loc, pn_ArgListNode),
+    mVarDefs(vardefs),
+    mVariableArgumentName(varArgName),
+    mVariableKeywordArgumentName(varKwArgName) {
+    if (mVariableArgumentName)
+        assert(mVariableArgumentName->mSlot.isSymbol());
+    if (mVariableKeywordArgumentName) {
+        assert(mVariableArgumentName->mSlot.isSymbol()); // Can't have one without the other.
+        assert(mVariableKeywordArgumentName->mSlot.isSymbol());
+    }
+}
+
+PyrLitListNode::PyrLitListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* classname,
+                               PyrParseNode* elems):
+    PyrParseNode({}, loc, pn_LitListNode),
+    mClassname(classname),
+    mElems(elems) {
+    if (mClassname)
+        assert(mClassname->mSlot.isSymbol());
+}
+
+PyrLitDictNode::PyrLitDictNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* elems):
+    PyrParseNode({}, loc, pn_LitDictNode),
+    mElems(elems) {}
+
+PyrClassNode::PyrClassNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* className,
+                           PyrSlotNode* superClassName, PyrSlotNode* indexType, PyrVarListNode* varlists,
+                           PyrMethodNode* methods):
     PyrParseNode({}, loc, pn_ClassNode),
     mClassName(className),
     mSuperClassName(superClassName),
@@ -179,6 +350,34 @@ PyrClassNode::PyrClassNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* cla
         assert(superClassName->mSlot.isSymbol());
     if (indexType)
         assert(indexType->mSlot.isSymbol());
+}
+
+PyrMethodNode::PyrMethodNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* methodName,
+                             PyrSlotNode* primitiveName, PyrArgListNode* arglist, PyrVarListNode* varlist,
+                             PyrParseNode* body, bool isClassMethod):
+    PyrParseNode({}, loc, pn_MethodNode),
+    mMethodName(methodName),
+    mPrimitiveName(primitiveName),
+    mArglist(arglist),
+    mVarlist(varlist),
+    mBody(body),
+    mIsClassMethod(isClassMethod) {
+    assert(methodName);
+    assert(methodName->mSlot.isSymbol());
+    if (primitiveName)
+        assert(primitiveName->mSlot.isSymbol());
+    flattenVarListNode(mVarlist);
+}
+
+PyrBlockNode::PyrBlockNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, struct PyrArgListNode* argList,
+                           struct PyrVarListNode* varList, struct PyrParseNode* body, bool topLevel):
+    PyrParseNode({}, loc, pn_BlockNode),
+    mArglist(argList),
+    mVarlist(varList),
+    mBody(body),
+    mIsTopLevel(topLevel) {
+    assert(mBody);
+    flattenVarListNode(mVarlist);
 }
 
 
@@ -214,26 +413,16 @@ void finiParser() {}
 
 void initParseNodes() {}
 
-void initParserPool() {
-    // postfl("initPool gParseNodePool pyr_pool_compile\n");
-    gParseNodePool.Init(pyr_pool_compile, 32000, 32000, 2000);
-}
+void initParserPool() { gParseNodePool.Init(pyr_pool_compile, 32000, 32000, 2000); }
 
-void freeParserPool() {
-    // postfl("freePool gParseNodePool pyr_pool_compile\n");
-    gParseNodePool.FreeAll();
-}
+void freeParserPool() { gParseNodePool.FreeAll(); }
 
 
 void compileNodeList(PyrParseNode* node, bool onTailBranch) {
     PyrSlot dummy;
-    // postfl("->compileNodeList\n");
     for (; node; node = node->mNext) {
-        // postfl("-->compileNodeList %p\n", node);
         COMPILENODE(node, &dummy, onTailBranch);
-        // postfl("<--compileNodeList %p\n", node);
     }
-    // postfl("<-compileNodeList\n");
 }
 
 void nodePostErrorLine(PyrParseNode* node) {
@@ -387,7 +576,7 @@ void compileExtNodeMethods(PyrClassExtNode* node) {
         PyrSlot dummy;
         // post("compile ext %s:%s\n",
         method->mExtension = true;
-        compilePyrMethodNode(method, &dummy);
+        method->compile(&dummy);
     }
     gCompilingMethod = nullptr;
     gCompilingBlock = nullptr;
@@ -464,9 +653,6 @@ void countClassVarDefs(PyrClassNode* node, int* numClassMethods, int* numInstMet
     PyrVarListNode* varlist;
     PyrVarDefNode* vardef;
 
-    //*numClassMethods = 0;
-    //*numInstMethods = 0;
-
     node->mVarTally[varInst] = 0;
     node->mVarTally[varClass] = 0;
     node->mVarTally[varTemp] = 0;
@@ -501,8 +687,6 @@ void countClassVarDefs(PyrClassNode* node, int* numClassMethods, int* numInstMet
 void countNodeMethods(PyrClassNode* node, int* numClassMethods, int* numInstMethods) {
     // count methods
     PyrMethodNode* method;
-    //*numClassMethods = 0;
-    //*numInstMethods = 0;
     method = node->mMethods;
     for (; method; method = (PyrMethodNode*)method->mNext) {
         if (method->mIsClassMethod)
@@ -518,7 +702,7 @@ void compileNodeMethods(PyrClassNode* node) {
     for (; method; method = (PyrMethodNode*)method->mNext) {
         PyrSlot dummy;
         method->mExtension = false;
-        compilePyrMethodNode(method, &dummy);
+        method->compile(&dummy);
     }
     gCompilingMethod = nullptr;
     gCompilingBlock = nullptr;
@@ -635,9 +819,6 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     char setterName[256];
                     PyrSymbol* setterSym;
                     sprintf(setterName, "%s_", slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore = strcpy(setterName, slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore[0] = '_';
-                    // underscore[1] = 0;
                     setterSym = getsym(setterName);
                     // create setter method
                     method = newPyrMethod(node->location());
@@ -705,9 +886,6 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     char setterName[256];
                     PyrSymbol* setterSym;
                     sprintf(setterName, "%s_", slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore = strcpy(setterName, slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore[0] = '_';
-                    // underscore[1] = 0;
                     setterSym = getsym(setterName);
                     // create setter method
                     method = newPyrMethod(node->location());
@@ -878,9 +1056,6 @@ void PyrClassNode::compile(PyrSlot* result) {
     // postfl("%s %d\n", slotRawSymbol(&mClassName->mSlot)->name, indexType);
 
     if ((size_t)superclassobj == -1) {
-        // redundant error message removed:
-        // error("Can't find superclass of '%s'\n", slotRawSymbol(&mClassName->mSlot)->name);
-        // nodePostErrorLine(node);
         return; // can't find superclass
     }
     mNumSuperInstVars = numSuperInstVars(superclassobj);
@@ -907,8 +1082,6 @@ void PyrClassNode::compile(PyrSlot* result) {
         varsDiffer = compareVarDefs(this, classobj);
         if (varsDiffer) {
             if (isIntrinsic) {
-                // error("Class '%s' declaration doesn't match intrinsic definition.\n",
-                //	slotRawSymbol(&mClassName->mSlot)->name);
                 return;
             } else {
                 shouldRecompileSubclasses = true;
@@ -1003,11 +1176,12 @@ void PyrClassNode::compile(PyrSlot* result) {
     }
 }
 
-void recompileSubclasses(PyrClass* classobj) {}
+void recompileSubclasses(PyrClass* classobj) {
+    // TODO: this is empty. Why?
+}
 
 
-// TODO: What does this do?
-void catVarLists(PyrVarListNode* varlist) {
+void flattenVarListNode(PyrVarListNode* varlist) {
     PyrVarListNode* prevvarlist;
     PyrVarDefNode *vardef, *lastvardef;
 
@@ -1029,37 +1203,8 @@ void catVarLists(PyrVarListNode* varlist) {
 }
 
 
-PyrMethodNode::PyrMethodNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* methodName, PyrSlotNode* primitiveName,
-                             PyrArgListNode* arglist, PyrVarListNode* varlist, PyrParseNode* body, bool isClassMethod):
-    PyrParseNode({}, loc, pn_MethodNode),
-    mMethodName(methodName),
-    mPrimitiveName(primitiveName),
-    mArglist(arglist),
-    mVarlist(varlist),
-    mBody(body),
-    mIsClassMethod(isClassMethod) {
-    assert(methodName);
-    assert(methodName->mSlot.isSymbol());
-    if (primitiveName)
-        assert(primitiveName->mSlot.isSymbol());
-    catVarLists(mVarlist);
-}
-
-PyrBlockNode::PyrBlockNode(PyrParseNode::TAG, LocationType loc, struct PyrArgListNode* argList,
-                           struct PyrVarListNode* varList, struct PyrParseNode* body, bool topLevel):
-    PyrParseNode({}, loc, pn_BlockNode),
-    mArglist(argList),
-    mVarlist(varList),
-    mBody(body),
-    mIsTopLevel(topLevel) {
-    assert(mBody);
-    catVarLists(mVarlist);
-}
-
-
 enum { push_Normal, push_AllArgs, push_AllButFirstArg, push_AllButFirstArg2 };
 
-int checkPushAllArgs(PyrParseNode* actualArg, int numArgs);
 int checkPushAllArgs(PyrParseNode* actualArg, int numArgs) {
     PyrFunctionDef* block;
     PyrSlotNode* nameNode;
@@ -1101,7 +1246,6 @@ int checkPushAllArgs(PyrParseNode* actualArg, int numArgs) {
 }
 
 
-int checkPushAllButFirstTwoArgs(PyrParseNode* actualArg, int numArgs);
 int checkPushAllButFirstTwoArgs(PyrParseNode* actualArg, int numArgs) {
     PyrFunctionDef* block;
     PyrSlotNode* nameNode;
@@ -1250,7 +1394,6 @@ void installByteCodes(PyrFunctionDef* fdef, CompilingBytecodes::Data data) {
 
 PyrMethod* initPyrMethod(PyrMethod* method, LocationInSourceCode loc);
 
-void compilePyrMethodNode(PyrMethodNode* node, PyrSlot* result) { node->compile(result); }
 
 void PyrMethodNode::compile(PyrSlot* result) {
     PyrMethod *method, *oldmethod;
@@ -3857,7 +4000,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         for (size_t i { 0 }; i < numVars; ++i, varIt = reinterpret_cast<PyrVarDefNode*>(varIt->mNext)) {
             auto* name = varIt->mVarName->mSlot.getSymbol();
             assert(name);
-			if (name == s_this) {
+            if (name == s_this) {
                 error("Cannot redefine 'this'\n");
                 nodePostErrorLine((PyrParseNode*)varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
@@ -3886,9 +4029,9 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
                 nodePostErrorLine((PyrParseNode*)varIt);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else {
-				compilerErrorIfDuplicate(name, varIt);
-				varNames->symbols[i] = name;
-			}
+                compilerErrorIfDuplicate(name, varIt);
+                varNames->symbols[i] = name;
+            }
         }
     } else {
         assert(numVars == 0);
@@ -3910,7 +4053,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         }
     }
 
-	// put variable argument and variable keyword arguments default into proto, always the empty array.
+    // put variable argument and variable keyword arguments default into proto, always the empty array.
     for (size_t i = numNormalArguments; i < numArgsTotal; ++i) {
         prototypeFrame->slots[i] = o_emptyarray;
     }

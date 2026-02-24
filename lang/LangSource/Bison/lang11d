@@ -47,7 +47,7 @@ YYSTYPE is defined below with the %union statement.
 
 yylloc:
 
-This is the location in the source file of the token. The type of this is LocationType (defined in PyrLexer.h).
+This is the location in the source file of the token. 
 
 
 It is recommended to read a basic introduction to bison before proceeding, but for ease of understanding:
@@ -120,14 +120,12 @@ extern LongStack generatorStack;
 	PyrArgListNode* argListNode;
 	PyrMultiAssignVarListNode* multiAssignListNode;
 	ReadWriteAccessor rwAccessor;
-	EmptyLexerResult empty;
+	sc::lex::EmptyLexerResult empty;
 }
 
-// Enable yyloc and the use of @N to access the LocationType struct.
+// Enable yyloc and the use of @N to access the source code location struct.
 %locations
-%define api.location.type {LocationType}
-
-
+%define api.location.type {sc::lex::SourceCodeLocation}
 
 // List of tokens, these are turned into an enum which can be accessed in PyrLexer.
 %token <slotNode> NAME INTEGER SC_FLOAT ACCIDENTAL SYMBOL STRING ASCII CLASSNAME PIE WHILE PRIMITIVENAME LEFTARROW TRUEOBJ FALSEOBJ NILOBJ PSEUDOVAR
@@ -306,7 +304,7 @@ msgsend 		: name blocklist1
 					{
 						PyrSlot slot;
 						if (isSuperObjNode($3)) {
-							$3->assertCast<PyrSlotNode>()->mSlot = PyrSlot::make(s_this);
+							assertCast<PyrSlotNode>($3)->mSlot = PyrSlot::make(s_this);
 							slot = PyrSlot::make(s_superPerformList);
 						} else {
 							slot = PyrSlot::make(s_performList);
@@ -355,7 +353,7 @@ msgsend 		: name blocklist1
 					{
 						PyrSlot slot;
 						if (isSuperObjNode($1)) {
-							$1->assertCast<PyrSlotNode>()->mSlot = PyrSlot::make(s_this);
+							assertCast<PyrSlotNode>($1)->mSlot = PyrSlot::make(s_this);
 							slot = PyrSlot::make(s_superPerformList);
 						} else {
 							slot = PyrSlot::make(s_performList);
@@ -390,7 +388,7 @@ msgsend 		: name blocklist1
 					{
 						PyrSlot selectorSlot;
 						if (isSuperObjNode($1)) {
-							$1->assertCast<PyrSlotNode>()->mSlot = PyrSlot::make(s_this);
+							assertCast<PyrSlotNode>($1)->mSlot = PyrSlot::make(s_this);
 							selectorSlot = PyrSlot::make(s_superPerformList);
 						} else {
 							selectorSlot = PyrSlot::make(s_performList);
@@ -410,7 +408,7 @@ msgsend 		: name blocklist1
 					{
 						PyrSlot slot;
 						if (isSuperObjNode($1)) {
-							$1->assertCast<PyrSlotNode>()->mSlot = PyrSlot::make(s_this);
+							assertCast<PyrSlotNode>($1)->mSlot = PyrSlot::make(s_this);
 							slot = PyrSlot::make(s_superPerformList);
 						} else {
 							slot = PyrSlot::make(s_performList);
@@ -459,7 +457,7 @@ qual			: name LEFTARROW exprseq nextqual
 						// later should check if exprseq is a series and optimize it to for loop
 						PyrParseNode *exprseq = $3;
 						if (exprseq->mClassno == pn_CallNode) {
-							PyrCallNode *callnode = exprseq->assertCast<PyrCallNode>();
+							PyrCallNode *callnode = assertCast<PyrCallNode>(exprseq);
 							if (slotRawSymbol(&callnode->mSelector->mSlot) == s_series) {
 								SetSymbol(&callnode->mSelector->mSlot, getsym("forSeries"));
 
@@ -492,7 +490,7 @@ qual			: name LEFTARROW exprseq nextqual
 						// later should check if exprseq is a series and optimize it to for loop
 						PyrParseNode *exprseq = $4;
 						if (exprseq->mClassno == pn_CallNode) {
-							PyrCallNode *callnode = exprseq->assertCast<PyrCallNode>();
+							PyrCallNode *callnode = assertCast<PyrCallNode>(exprseq);
 							if (slotRawSymbol(&callnode->mSelector->mSlot) == s_series) {
 								SetSymbol(&callnode->mSelector->mSlot, getsym("forSeries"));
 

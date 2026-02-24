@@ -103,7 +103,7 @@ union YYSTYPE
 	PyrArgListNode* argListNode;
 	PyrMultiAssignVarListNode* multiAssignListNode;
 	ReadWriteAccessor rwAccessor;
-	EmptyLexerResult empty;
+	sc::lex::EmptyLexerResult empty;
 
 #line 109 "lang11d_tab.h"
 
@@ -114,7 +114,7 @@ typedef union YYSTYPE YYSTYPE;
 #endif
 
 /* Location type.  */
-typedef LocationType YYLTYPE;
+typedef sc::lex::SourceCodeLocation YYLTYPE;
 
 
 extern YYSTYPE yylval;

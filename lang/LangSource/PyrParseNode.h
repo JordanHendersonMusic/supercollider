@@ -40,13 +40,10 @@
             (node)->dump(level);                                                                                       \
     } while (false);
 
-// This value count the un-inlined functions, these are not desirable in the class library because they are slow.
-// There is a primitive that returns this value so it can be checked in sclang's unit tests.
-extern int gNumUninlinedFunctions;
 
-// TODO: remove this in favour of the strongly typed version.
 enum { rwPrivate = 0, rwReadOnly = 1, rwWriteOnly = 2, rwReadWrite = 3 };
 
+// Strongly typed version of above. Used in grammar to name return type of rules.
 enum struct ReadWriteAccessor {
     Private = rwPrivate,
     Read = rwReadOnly,
@@ -103,11 +100,6 @@ enum ParseNodeEnum : unsigned char {
 // Base class of all parse nodes.
 // Because the parser does not do any memory management, we require all parse nodes to be arena/pool allocated.
 struct PyrParseNode {
-protected:
-    struct TAG {};
-    PyrParseNode(TAG, LocationType location, ParseNodeEnum classno): mClassno(classno), mLocation(location) {}
-
-public:
     // Pinned type. Does not move. Pointer stability must be guaranteed.
     PyrParseNode() = delete;
     PyrParseNode(PyrParseNode&&) = delete;
@@ -115,109 +107,67 @@ public:
     PyrParseNode& operator=(PyrParseNode&&) = delete;
     PyrParseNode& operator=(const PyrParseNode&) = delete;
 
-    // Currently this is never called due to how the parse node pool allocated works.
-    // I've left all the virtual destructors commented out until this is fixed.
-    // There is also a static_assert in the allocNode function to ensure all derived classes are trivial to destruct.
-    // virtual ~PyrParseNode() = default;
-
-    ~PyrParseNode() = default;
+    // Currently the virtual destructor is never called due to how the parse node pool allocated works.
+    // There is a static_assert in the allocNode function to ensure all derived classes are trivial to destruct.
 
     virtual void compile(PyrSlot* result) = 0;
     virtual void dump(int level) = 0;
 
-    [[nodiscard]] LocationInSourceCode location() const { return { mLocation.begin.absolute, mLocation.end.absolute }; }
+    [[nodiscard]] LocationInSourceCode location() const;
 
     PyrParseNode* mNext { nullptr };
     PyrParseNode* mTail { this }; // not setting this will cause all sorts of weird bugs.
-    LocationType mLocation;
+    sc::lex::SourceCodeLocation mLocation;
     ParseNodeEnum mClassno;
-    bool mParens { false }; // TODO: what does this mean? Parentheses? Parents? It is parenthesis, but why?
+    bool mParens { false }; // parentheses
 
     // This is how you make a node.
     template <typename T, typename... ARGS> friend T* allocNode(ARGS&&... args);
 
-    template <typename T> T* assertCast();
+protected:
+    struct TAG {};
+    // Only useable constructor.
+    PyrParseNode(TAG, sc::lex::SourceCodeLocation location, ParseNodeEnum classno);
 };
-
-extern AdvancingAllocPool gParseNodePool;
-
-template <typename T, typename... ARGS> T* allocNode(LocationType loc, ARGS&&... args) {
-    static_assert(std::is_base_of<PyrParseNode, T>::value, "Can only allocate PyrParseNodes through this function.");
-    static_assert(std::is_trivially_destructible<T>::value,
-                  "Right now the allocator does NOT call the destructors, therefore all the PyrParseNodes MUST be "
-                  "trival to destruct.");
-    return new (gParseNodePool.Alloc(sizeof(T))) T({}, loc, std::forward<ARGS>(args)...);
-}
-
 
 // The PyrSlotNode supports four 'sub' types, indicated with the ParseNodeEnum: pn_SlotNode, pn_LiteralNode,
 // pn_PushLitNode, and pn_PushNameNode. In future these could be their own types, however, the parser often transmutates
 // one to the other without reallocating the node. To avoid doing some crazy casting of 'this' (`new (this)
 // PushNameName(...)`), the enum is used as a switch.
 struct PyrSlotNode : public PyrParseNode {
-    PyrSlotNode(PyrParseNode::TAG, LocationType location, PyrSlot slot = {}, ParseNodeEnum classno = pn_SlotNode):
-        PyrParseNode({}, location, classno),
-        mSlot(slot) {
-        assert(classno == pn_SlotNode || classno == pn_LiteralNode || classno == pn_PushLitNode
-               || classno == pn_PushNameNode);
-    }
+    PyrSlotNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation location, PyrSlot slot = {},
+                ParseNodeEnum classno = pn_SlotNode);
 
-    // virtual ~PyrSlotNode() {}
+    PyrSlotNode* changeLiteralType(ParseNodeEnum e);
 
-    PyrSlotNode* changeLiteralType(ParseNodeEnum e) {
-        assert(mClassno == pn_SlotNode);
-        assert(e == pn_LiteralNode || e == pn_PushLitNode || e == pn_PushNameNode);
-        mClassno = e;
-        return this;
-    }
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
-    virtual void compile(PyrSlot* result);
     virtual void compileLiteral(PyrSlot* result);
     virtual void compilePushLit(PyrSlot* result);
-    virtual void dump(int level);
     virtual void dumpLiteral(int level);
     virtual void dumpPushLit(int level);
 
     PyrSlot mSlot;
 };
 
-
-template <typename T> T* PyrParseNode::assertCast() {
-    if constexpr (std::is_same_v<T, PyrSlotNode>) {
-        assert(mClassno == pn_SlotNode || mClassno == pn_PushLitNode || mClassno == pn_PushNameNode
-               || mClassno == pn_LiteralNode);
-    } else {
-        assert(mClassno == T::nodeEnum);
-    }
-    return reinterpret_cast<T*>(this);
-}
-
 struct PyrCurryArgNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_CurryArgNode };
+    PyrCurryArgNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, int argNum = -1);
 
-    PyrCurryArgNode(PyrParseNode::TAG, LocationType loc, int argNum = -1):
-        PyrParseNode({}, loc, pn_CurryArgNode),
-        mArgNum(argNum) {}
-
-    // virtual ~PyrCurryArgNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     int mArgNum;
 };
 
 struct PyrClassExtNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_ClassExtNode };
-    PyrClassExtNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* classname, struct PyrMethodNode* methods):
-        PyrParseNode({}, loc, pn_ClassExtNode),
-        mClassName(classname),
-        mMethods(methods) {}
+    PyrClassExtNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* classname,
+                    struct PyrMethodNode* methods);
 
-    // virtual ~PyrClassExtNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrSlotNode* mClassName;
     struct PyrMethodNode* mMethods;
@@ -225,13 +175,12 @@ struct PyrClassExtNode : public PyrParseNode {
 
 struct PyrClassNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_ClassNode };
-    PyrClassNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* className, PyrSlotNode* superClassName,
-                 PyrSlotNode* indexType, struct PyrVarListNode* varlists, struct PyrMethodNode* methods);
+    PyrClassNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* className,
+                 PyrSlotNode* superClassName, PyrSlotNode* indexType, struct PyrVarListNode* varlists,
+                 struct PyrMethodNode* methods);
 
-    // virtual ~PyrClassNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrSlotNode* mClassName;
     PyrSlotNode* mSuperClassName;
@@ -246,14 +195,12 @@ struct PyrClassNode : public PyrParseNode {
 
 struct PyrMethodNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_MethodNode };
-    PyrMethodNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* methodName, PyrSlotNode* primitiveName,
-                  struct PyrArgListNode* arglist, struct PyrVarListNode* varlist, PyrParseNode* body,
-                  bool isClassMethod);
+    PyrMethodNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* methodName,
+                  PyrSlotNode* primitiveName, struct PyrArgListNode* arglist, struct PyrVarListNode* varlist,
+                  PyrParseNode* body, bool isClassMethod);
 
-    // virtual ~PyrMethodNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrSlotNode* mMethodName;
     PyrSlotNode* mPrimitiveName;
@@ -267,15 +214,10 @@ struct PyrMethodNode : public PyrParseNode {
 
 struct PyrVarListNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_VarListNode };
-    PyrVarListNode(PyrParseNode::TAG, LocationType loc, struct PyrVarDefNode* vardef, int flags):
-        PyrParseNode({}, loc, pn_VarListNode),
-        mVarDefs(vardef),
-        mFlags(flags) {}
+    PyrVarListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, struct PyrVarDefNode* vardef, int flags);
 
-    // virtual ~PyrVarListNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     struct PyrVarDefNode* mVarDefs;
     int mFlags;
@@ -284,23 +226,13 @@ struct PyrVarListNode : public PyrParseNode {
 struct PyrVarDefNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_VarDefNode };
 
-    PyrVarDefNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* varname, PyrParseNode* defVal,
-                  ReadWriteAccessor rwAccessor):
-        PyrParseNode({}, loc, nodeEnum),
-        mVarName(varname),
-        mDefVal(defVal),
-        mFlags(static_cast<int>(rwAccessor)),
-        mDrop(true) {
-        assert(mVarName);
-        assert(mVarName->mSlot.isSymbol());
-    };
+    PyrVarDefNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* varname, PyrParseNode* defVal,
+                  ReadWriteAccessor rwAccessor);
 
-    // virtual ~PyrVarDefNode() {}
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
-    virtual void compile(PyrSlot* result);
-    virtual void compileArg(PyrSlot* result);
-    virtual void dump(int level);
-
+    void compileArg(PyrSlot* result);
     bool hasExpr(PyrSlot* result);
 
     PyrSlotNode* mVarName;
@@ -310,29 +242,18 @@ struct PyrVarDefNode : public PyrParseNode {
 };
 
 struct PyrCallNodeBase : public PyrParseNode {
-    PyrCallNodeBase(PyrParseNode::TAG, LocationType loc, ParseNodeEnum classno): PyrParseNode({}, loc, classno) {}
+    PyrCallNodeBase(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, ParseNodeEnum classno);
 
-    // virtual ~PyrCallNodeBase() {}
+    void compile(PyrSlot* result) override;
 
-    virtual void compile(PyrSlot* result);
     virtual void compilePartialApplication(int numCurryArgs, PyrSlot* result);
     virtual void compileCall(PyrSlot* result) = 0;
-
     virtual int isPartialApplication() = 0;
 };
 
 struct PyrCallNodeBase2 : public PyrCallNodeBase {
-    PyrCallNodeBase2(PyrParseNode::TAG, LocationType loc, ParseNodeEnum classno, PyrSlotNode* selector,
-                     PyrParseNode* arglist, PyrParseNode* keyarglist):
-        PyrCallNodeBase({}, loc, classno),
-        mSelector(selector),
-        mArglist(arglist),
-        mKeyarglist(keyarglist) {
-        assert(selector);
-        assert(selector->mSlot.isSymbol());
-    }
-
-    // virtual ~PyrCallNodeBase2() {}
+    PyrCallNodeBase2(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, ParseNodeEnum classno, PyrSlotNode* selector,
+                     PyrParseNode* arglist, PyrParseNode* keyarglist);
 
     PyrSlotNode* mSelector;
     PyrParseNode* mArglist;
@@ -342,48 +263,34 @@ struct PyrCallNodeBase2 : public PyrCallNodeBase {
 
 struct PyrCallNode : public PyrCallNodeBase2 {
     static constexpr ParseNodeEnum nodeEnum { pn_CallNode };
-    PyrCallNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* selector, PyrParseNode* arglist,
-                PyrParseNode* keyarglist):
-        PyrCallNodeBase2({}, loc, pn_CallNode, selector, arglist, keyarglist) {}
+    PyrCallNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector, PyrParseNode* arglist,
+                PyrParseNode* keyarglist);
 
-    // virtual ~PyrCallNode() {}
+    void dump(int level) override;
 
-    virtual void compileCall(PyrSlot* result);
-    virtual void dump(int level);
-
-    virtual int isPartialApplication();
+    void compileCall(PyrSlot* result) override;
+    int isPartialApplication() override;
 };
 
 struct PyrBinopCallNode : public PyrCallNodeBase2 {
     static constexpr ParseNodeEnum nodeEnum { pn_BinopCallNode };
-    PyrBinopCallNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* selector, PyrParseNode* arglist):
-        PyrCallNodeBase2({}, loc, pn_BinopCallNode, selector, arglist, nullptr) {}
+    PyrBinopCallNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector, PyrParseNode* arglist);
 
-    // virtual ~PyrBinopCallNode() {}
+    void dump(int level) override;
 
-    virtual void compileCall(PyrSlot* result);
-    virtual void dump(int level);
-
-    virtual int isPartialApplication();
+    void compileCall(PyrSlot* result) override;
+    int isPartialApplication() override;
 };
 
 struct PyrSetterNode : public PyrCallNodeBase {
     static constexpr ParseNodeEnum nodeEnum { pn_SetterNode };
-    PyrSetterNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* selector, PyrParseNode* expr1, PyrParseNode* expr2):
-        PyrCallNodeBase({}, loc, pn_SetterNode),
-        mSelector(selector),
-        mExpr1(expr1),
-        mExpr2(expr2) {
-        assert(mSelector);
-        assert(mSelector->mSlot.isSymbol());
-    }
+    PyrSetterNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector, PyrParseNode* expr1,
+                  PyrParseNode* expr2);
 
-    // virtual ~PyrSetterNode() {}
+    void dump(int level) override;
 
-    virtual void compileCall(PyrSlot* result);
-    virtual void dump(int level);
-
-    virtual int isPartialApplication();
+    void compileCall(PyrSlot* result) override;
+    int isPartialApplication() override;
 
     PyrSlotNode* mSelector;
     PyrParseNode* mExpr1;
@@ -393,20 +300,12 @@ struct PyrSetterNode : public PyrCallNodeBase {
 
 struct PyrDynListNode : public PyrCallNodeBase {
     static constexpr ParseNodeEnum nodeEnum { pn_DynListNode };
-    PyrDynListNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* className, PyrParseNode* elems):
-        PyrCallNodeBase({}, loc, pn_DynListNode),
-        mClassname(className),
-        mElems(elems) {
-        if (className)
-            assert(className->mSlot.isSymbol());
-    }
+    PyrDynListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* className, PyrParseNode* elems);
 
-    // virtual ~PyrDynListNode() {}
+    void dump(int level) override;
 
-    virtual void compileCall(PyrSlot* result);
-    virtual void dump(int level);
-
-    virtual int isPartialApplication();
+    void compileCall(PyrSlot* result) override;
+    int isPartialApplication() override;
 
     PyrSlotNode* mClassname;
     PyrParseNode* mElems;
@@ -414,32 +313,22 @@ struct PyrDynListNode : public PyrCallNodeBase {
 
 struct PyrDynDictNode : public PyrCallNodeBase {
     static constexpr ParseNodeEnum nodeEnum { pn_DynDictNode };
-    PyrDynDictNode(PyrParseNode::TAG, LocationType loc, PyrParseNode* elems):
-        PyrCallNodeBase({}, loc, pn_DynDictNode),
-        mElems(elems) {}
-    // virtual ~PyrDynDictNode() {}
-    virtual void compileCall(PyrSlot* result);
-    virtual void dump(int level);
+    PyrDynDictNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* elems);
 
-    virtual int isPartialApplication();
+    void dump(int level) override;
+
+    void compileCall(PyrSlot* result) override;
+    int isPartialApplication() override;
 
     PyrParseNode* mElems;
 };
 
 struct PyrDropNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_DropNode };
-    PyrDropNode(PyrParseNode::TAG, LocationType loc, PyrParseNode* expr1, PyrParseNode* expr2):
-        PyrParseNode({}, loc, pn_DropNode),
-        mExpr1(expr1),
-        mExpr2(expr2) {
-        assert(mExpr1);
-        assert(mExpr2);
-    }
+    PyrDropNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* expr1, PyrParseNode* expr2);
 
-    // virtual ~PyrDropNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     struct PyrParseNode* mExpr1;
     struct PyrParseNode* mExpr2;
@@ -447,64 +336,43 @@ struct PyrDropNode : public PyrParseNode {
 
 struct PyrPushKeyArgNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_PushKeyArgNode };
-    PyrPushKeyArgNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* selector, PyrParseNode* expr):
-        PyrParseNode({}, loc, pn_PushKeyArgNode),
-        mSelector(selector),
-        mExpr(expr) {
-        assert(selector);
-        assert(selector->mSlot.isSymbol());
-    }
+    PyrPushKeyArgNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* selector, PyrParseNode* expr);
 
-    // virtual ~PyrPushKeyArgNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrSlotNode* mSelector;
     PyrParseNode* mExpr;
 };
 
-
+// When refactoring for var in middle of blocks, these return nodes should be unified,
+//  and the new PyrBlockNode and PyrMethodNode should inspect them and compile them differently.
 struct PyrReturnNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_ReturnNode };
-    PyrReturnNode(PyrParseNode::TAG, LocationType loc, PyrParseNode* expr):
-        PyrParseNode({}, loc, pn_ReturnNode),
-        mExpr(expr) {}
-    // virtual ~PyrReturnNode() {}
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    PyrReturnNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* expr);
+
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrParseNode* mExpr; // if null, return self
 };
 
-
 struct PyrBlockReturnNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_BlockReturnNode };
-    PyrBlockReturnNode(PyrParseNode::TAG, LocationType loc, PyrParseNode* expr):
-        PyrParseNode({}, loc, pn_BlockReturnNode),
-        mExpr(expr) {}
-    // virtual ~PyrBlockReturnNode() {}
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    PyrBlockReturnNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* expr);
+
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrParseNode* mExpr; // if null, return self
 };
 
 struct PyrAssignNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_AssignNode };
-    PyrAssignNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* varName, PyrParseNode* expr):
-        PyrParseNode({}, loc, pn_AssignNode),
-        mVarName(varName),
-        mExpr(expr) {
-        assert(varName);
-        assert(varName->mSlot.isSymbol());
-        assert(expr);
-    }
+    PyrAssignNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* varName, PyrParseNode* expr);
 
-    // virtual ~PyrAssignNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrSlotNode* mVarName;
     PyrParseNode* mExpr;
@@ -513,17 +381,11 @@ struct PyrAssignNode : public PyrParseNode {
 
 struct PyrMultiAssignNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_MultiAssignNode };
-    PyrMultiAssignNode(PyrParseNode::TAG, LocationType loc, struct PyrMultiAssignVarListNode* varlist,
-                       PyrParseNode* expr):
-        PyrParseNode({}, loc, pn_MultiAssignNode),
-        mVarList(varlist),
-        mExpr(expr) {
-        assert(mVarList);
-        assert(mExpr);
-    }
-    // virtual ~PyrMultiAssignNode() {}
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    PyrMultiAssignNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, struct PyrMultiAssignVarListNode* varlist,
+                       PyrParseNode* expr);
+
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     struct PyrMultiAssignVarListNode* mVarList;
     PyrParseNode* mExpr;
@@ -532,15 +394,11 @@ struct PyrMultiAssignNode : public PyrParseNode {
 
 struct PyrMultiAssignVarListNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_MultiAssignVarListNode };
-    PyrMultiAssignVarListNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* varNames, PyrSlotNode* rest):
-        PyrParseNode({}, loc, pn_MultiAssignVarListNode),
-        mVarNames(varNames),
-        mRest(rest) {
-        assert(mVarNames);
-    }
-    // virtual ~PyrMultiAssignVarListNode() {}
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    PyrMultiAssignVarListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* varNames,
+                              PyrSlotNode* rest);
+
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrSlotNode* mVarNames;
     PyrSlotNode* mRest;
@@ -548,13 +406,11 @@ struct PyrMultiAssignVarListNode : public PyrParseNode {
 
 struct PyrBlockNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_BlockNode };
-    PyrBlockNode(PyrParseNode::TAG, LocationType loc, struct PyrArgListNode* argList, struct PyrVarListNode* varList,
-                 struct PyrParseNode* body, bool topLevel);
+    PyrBlockNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, struct PyrArgListNode* argList,
+                 struct PyrVarListNode* varList, struct PyrParseNode* body, bool topLevel);
 
-    // virtual ~PyrBlockNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     struct PyrArgListNode* mArglist;
     struct PyrVarListNode* mVarlist;
@@ -564,22 +420,11 @@ struct PyrBlockNode : public PyrParseNode {
 
 struct PyrArgListNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_ArgListNode };
-    PyrArgListNode(PyrParseNode::TAG, LocationType loc, PyrVarDefNode* vardefs, PyrSlotNode* varArgName,
-                   PyrSlotNode* varKwArgName):
-        PyrParseNode({}, loc, pn_ArgListNode),
-        mVarDefs(vardefs),
-        mVariableArgumentName(varArgName),
-        mVariableKeywordArgumentName(varKwArgName) {
-        if (mVariableArgumentName)
-            assert(mVariableArgumentName->mSlot.isSymbol());
-        if (mVariableKeywordArgumentName)
-            assert(mVariableKeywordArgumentName->mSlot.isSymbol());
-    }
+    PyrArgListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrVarDefNode* vardefs, PyrSlotNode* varArgName,
+                   PyrSlotNode* varKwArgName);
 
-    // virtual ~PyrArgListNode() {}
-
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrVarDefNode* mVarDefs;
     PyrSlotNode* mVariableArgumentName;
@@ -588,16 +433,10 @@ struct PyrArgListNode : public PyrParseNode {
 
 struct PyrLitListNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_LitListNode };
-    PyrLitListNode(PyrParseNode::TAG, LocationType loc, PyrSlotNode* classname, PyrParseNode* elems):
-        PyrParseNode({}, loc, pn_LitListNode),
-        mClassname(classname),
-        mElems(elems) {
-        if (mClassname)
-            assert(mClassname->mSlot.isSymbol());
-    }
-    // virtual ~PyrLitListNode() {}
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    PyrLitListNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrSlotNode* classname, PyrParseNode* elems);
+
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrSlotNode* mClassname;
     PyrParseNode* mElems;
@@ -605,36 +444,75 @@ struct PyrLitListNode : public PyrParseNode {
 
 struct PyrLitDictNode : public PyrParseNode {
     static constexpr ParseNodeEnum nodeEnum { pn_LitDictNode };
-    PyrLitDictNode(PyrParseNode::TAG, LocationType loc, PyrParseNode* elems):
-        PyrParseNode({}, loc, pn_LitDictNode),
-        mElems(elems) {}
-    // virtual ~PyrLitDictNode() {}
-    virtual void compile(PyrSlot* result);
-    virtual void dump(int level);
+    PyrLitDictNode(PyrParseNode::TAG, sc::lex::SourceCodeLocation loc, PyrParseNode* elems);
+
+    void compile(PyrSlot* result) override;
+    void dump(int level) override;
 
     PyrParseNode* mElems;
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T> [[nodiscard]] T* tryCast(PyrParseNode* n) noexcept {
+    if (!n)
+        return nullptr;
+
+    if constexpr (std::is_same_v<T, PyrSlotNode>) {
+        if (n->mClassno == pn_SlotNode || n->mClassno == pn_PushLitNode || n->mClassno == pn_PushNameNode
+            || n->mClassno == pn_LiteralNode) {
+            return reinterpret_cast<T*>(n);
+        } else
+            return nullptr;
+    } else if (n->mClassno == T::nodeEnum) {
+        return reinterpret_cast<T*>(n);
+    } else
+        return nullptr;
+}
+
+template <typename T> T* assertCast(PyrParseNode* n) noexcept {
+    if (auto ptr = tryCast<T>(n)) {
+        return ptr;
+    } else {
+        assert(false);
+        unreachable();
+    }
+}
+
+extern AdvancingAllocPool gParseNodePool;
+
+template <typename T, typename... ARGS> T* allocNode(sc::lex::SourceCodeLocation loc, ARGS&&... args) {
+    static_assert(std::is_base_of<PyrParseNode, T>::value, "Can only allocate PyrParseNodes through this function.");
+    static_assert(std::is_trivially_destructible<T>::value,
+                  "Right now the allocator does NOT call the destructors, therefore all the PyrParseNodes MUST be "
+                  "trival to destruct.");
+    return new (gParseNodePool.Alloc(sizeof(T))) T({}, loc, std::forward<ARGS>(args)...);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// This value count the un-inlined functions, these are not desirable in the class library because they are slow.
+// There is a primitive that returns this value so it can be checked in sclang's unit tests.
+extern int gNumUninlinedFunctions;
 
 extern PyrParseNode* gRootParseNode;
 extern intptr_t gParserResult;
 extern bool gIsTailCodeBranch;
 extern bool gTailIsMethodReturn;
-
 extern bool compilingCmdLine;
 
+extern int compileErrors;
 
-class SetTailBranch {
-    bool mSave;
-
-public:
+struct SetTailBranch {
     SetTailBranch(bool inValue) {
         mSave = gIsTailCodeBranch;
         gIsTailCodeBranch = inValue;
     }
     ~SetTailBranch() { gIsTailCodeBranch = mSave; }
+
+private:
+    bool mSave;
 };
 
 inline void compileNode(PyrParseNode* node, PyrSlot* result, bool onTailBranch) {
@@ -673,7 +551,6 @@ template <typename... NODES> PyrParseNode* linkAllNodes(NODES... nodes) {
     return rolling;
 }
 
-extern int compileErrors;
 
 /// Creates a compiler error if current version is greater than or equal to 'version'.
 /// Otherwise posts a warning informing the user to fix their code before updating.
@@ -693,5 +570,3 @@ extern PyrClass* gCurrentMetaClass;
 extern PyrClass* gCompilingClass;
 extern PyrMethod* gCompilingMethod;
 extern PyrFunctionDef* gCompilingBlock;
-
-// #define YYSTYPE intptr_t

@@ -460,12 +460,12 @@ int yylex() {
 
     // To leave the finite state machine you must call `goto leave`, but BEFORE doing so, one of these lambda must be
     // called.
-    const auto endEmptyToken = [&](int tokenType, LocationType::Begin begin) {
+    const auto endEmptyToken = [&](int tokenType, sc::lex::SourceCodeLocation::Begin begin) {
         returnLexerToken = tokenType;
         yylval.empty = {};
         yylloc = { begin, { textpos, currentLineCount, characterIndexInCurrentLine } };
     };
-    const auto endSlotNodeToken = [&](int tokenType, PyrSlot slot, LocationType::Begin begin) {
+    const auto endSlotNodeToken = [&](int tokenType, PyrSlot slot, sc::lex::SourceCodeLocation::Begin begin) {
         returnLexerToken = tokenType;
         yylloc = { begin, { textpos, currentLineCount, characterIndexInCurrentLine } };
         yylval.slotNode = allocNode<PyrSlotNode>(yylloc, slot);
@@ -479,7 +479,7 @@ int yylex() {
     }
 
 start : {
-    const LocationType::Begin startLocation = { textpos, currentLineCount, characterIndexInCurrentLine };
+    const sc::lex::SourceCodeLocation::Begin startLocation = { textpos, currentLineCount, characterIndexInCurrentLine };
 
     // The current character being considered.
     int c = input();

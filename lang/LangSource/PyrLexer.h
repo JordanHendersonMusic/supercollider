@@ -73,13 +73,12 @@ SCLANG_DLLEXPORT_C void runLibrary(PyrSymbol* selector);
 
 void interpretCmdLine(const char* textbuf, int textlen, char* methodname);
 
+namespace sc::lex {
 
 struct EmptyLexerResult {};
 
-// This is used in the parser and will become the type of yyloc, the location data for each token.
-struct LocationType {
-    // TODO: consider making these small types.
-    // absolute must be large, but the other two could be smaller, perhaps uint16_t?
+// This is used in the lexer and parser and will become the type of yyloc, the location data for each token.
+struct SourceCodeLocation {
     struct Part {
         int absolute, lineNumber, offsetInLine;
     };
@@ -89,13 +88,12 @@ struct LocationType {
     Begin begin;
     End end;
 
-    [[nodiscard]] constexpr static LocationType range(LocationType left, LocationType right) {
-        return {
-            left.begin,
-            right.end,
-        };
+    [[nodiscard]] constexpr static SourceCodeLocation range(SourceCodeLocation left, SourceCodeLocation right) {
+        return { left.begin, right.end };
     }
 };
+
+}
 
 // This macro defines the default rule for how to combine location types. It is used in the parser.
 #define YYLLOC_DEFAULT(Current, Rhs, N)                                                                                \
@@ -103,10 +101,9 @@ struct LocationType {
         if ((N) == 0) {                                                                                                \
             (Current) = YYRHSLOC(Rhs, 0);                                                                              \
         } else {                                                                                                       \
-            (Current) = LocationType::range(YYRHSLOC(Rhs, 1), YYRHSLOC(Rhs, N));                                       \
+            (Current) = sc::lex::SourceCodeLocation::range(YYRHSLOC(Rhs, 1), YYRHSLOC(Rhs, N));                        \
         }                                                                                                              \
     while (0)
-
 
 int input();
 int input0();
