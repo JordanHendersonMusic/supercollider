@@ -369,8 +369,8 @@ struct WriterAction {
         this->operator()(std::tuple { name }, std::forward<Operands>(operands)...);
     }
 
-    template <typename... Tups, typename... Operands>
-    void operator()(std::tuple<const char*, Tups...> codeInfo, Operands&&... operands) {
+    template <typename... CodeInfo, typename... Operands>
+    void operator()(std::tuple<const char*, CodeInfo...> codeInfo, Operands&&... operands) {
         std::apply([&](auto&&... infos) { ((stream << infos << " "), ...); }, codeInfo);
 
         auto loop_over_each_operand_value = [&, counter = size_t { 0 }](auto... values) mutable {
