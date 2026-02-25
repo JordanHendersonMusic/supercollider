@@ -51,9 +51,7 @@ If you see someone who is making an extra effort to ensure our community is welc
 * AI slop and AI based low effort contributions are not tolerated and will be judged by moderators discretion on a case by case basis.
 * Ensure all AI‑generated text or code has been carefully reviewed and edited by yourself.
 * Do not paste other user's content or code into LLMs without their consent.
-* AI tools, such as translators, may be used to help one participate and contribute to the community, 
-but they should be used in moderation, or as a last resort. 
-The community would rather engage with human imperfection than a confident machine.
+* AI tools, such as translators, may be used to help one participate and contribute to the community, but they should be used in moderation, or as a last resort.  The community would rather engage with human imperfection than a confident machine.
 
 ## Unacceptable Behavior
 
