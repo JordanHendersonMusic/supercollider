@@ -662,28 +662,28 @@ static const yytype_int16 yyrline[] =
      277,   278,   281,   281,   283,   283,   285,   288,   291,   294,
      297,   300,   303,   316,   322,   325,   331,   337,   343,   352,
      370,   375,   380,   382,   387,   403,   405,   407,   420,   429,
-     429,   436,   436,   439,   453,   455,   488,   525,   536,   544,
-     546,   563,   564,   565,   566,   567,   568,   569,   576,   582,
-     584,   586,   588,   590,   596,   598,   614,   624,   642,   659,
-     670,   693,   715,   725,   742,   759,   768,   786,   794,   804,
-     810,   815,   823,   833,   844,   854,   864,   870,   871,   872,
-     873,   874,   879,   888,   894,   896,   902,   904,   913,   915,
-     920,   926,   927,   928,   929,   931,   932,   935,   937,   938,
-     940,   941,   943,   945,   947,   949,   952,   953,   956,   958,
-     961,   962,   965,   968,   969,   971,   973,   976,   977,   980,
-     981,   982,   983,   984,   985,   986,   987,   988,   990,   992,
-     994,   995,   996,   997,   998,   999,  1000,  1001,  1002,  1004,
-    1005,  1006,  1007,  1008,  1009,  1010,  1011,  1012,  1013,  1014,
-    1016,  1018,  1022,  1023,  1026,  1027,  1030,  1033,  1034,  1036,
-    1038,  1040,  1042,  1044,  1047,  1049,  1051,  1053,  1055,  1057,
-    1061,  1062,  1065,  1068,  1069,  1071,  1072,  1075,  1077,  1079,
-    1086,  1087,  1089,  1090,  1093,  1095,  1097,  1104,  1106,  1110,
-    1111,  1114,  1115,  1117,  1118,  1121,  1123,  1126,  1129,  1131,
-    1134,  1135,  1138,  1139,  1143,  1145,  1148,  1150,  1153,  1154,
-    1156,  1157,  1160,  1161,  1162,  1163,  1165,  1166,  1168,  1169,
-    1176,  1177,  1184,  1185,  1195,  1196,  1197,  1203,  1209,  1210,
-    1217,  1217,  1218,  1218,  1218,  1218,  1218,  1218,  1218,  1218,
-    1219,  1219,  1220
+     429,   436,   436,   439,   450,   452,   469,   489,   499,   506,
+     508,   522,   523,   524,   525,   526,   527,   528,   535,   541,
+     543,   545,   547,   549,   555,   557,   573,   583,   601,   618,
+     630,   653,   675,   686,   703,   720,   729,   747,   755,   765,
+     771,   776,   784,   794,   805,   815,   825,   831,   832,   833,
+     834,   835,   840,   849,   855,   857,   863,   865,   874,   876,
+     881,   887,   888,   889,   890,   892,   893,   896,   898,   899,
+     901,   902,   904,   906,   908,   910,   913,   914,   917,   919,
+     922,   923,   926,   929,   930,   932,   934,   937,   938,   941,
+     942,   943,   944,   945,   946,   947,   948,   949,   951,   953,
+     955,   956,   957,   958,   959,   960,   961,   962,   963,   965,
+     966,   967,   968,   969,   970,   971,   972,   973,   974,   975,
+     977,   979,   983,   984,   987,   988,   991,   994,   995,   997,
+     999,  1001,  1003,  1005,  1008,  1010,  1012,  1014,  1016,  1018,
+    1021,  1022,  1025,  1028,  1029,  1031,  1032,  1035,  1037,  1039,
+    1046,  1047,  1049,  1050,  1053,  1055,  1057,  1064,  1066,  1070,
+    1071,  1074,  1075,  1077,  1078,  1081,  1083,  1086,  1089,  1091,
+    1094,  1095,  1098,  1099,  1101,  1103,  1106,  1108,  1111,  1112,
+    1114,  1115,  1118,  1119,  1120,  1121,  1123,  1124,  1126,  1127,
+    1134,  1135,  1142,  1143,  1152,  1153,  1154,  1160,  1166,  1167,
+    1174,  1174,  1175,  1175,  1175,  1175,  1175,  1175,  1175,  1175,
+    1176,  1176,  1177
 };
 #endif
 
@@ -2763,105 +2763,69 @@ yyreduce:
                                         {
 						// innermost part
 						const int action = popls(&generatorStack);
-						PyrParseNode* expr = (PyrParseNode*)popls(&generatorStack);
-						switch (action) {
-							case 1 : 
-								(yyval.node) = allocNode<PyrCallNode>((yyloc), allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("yield"))), expr, nullptr);
-								break;
-							case 2 : 
-								(yyval.node) = expr; 
-								break;
-						}
+						auto* expr = (PyrParseNode*)popls(&generatorStack);
+						if (action == 1) 
+							(yyval.node) = allocNode<PyrCallNode>((yyloc), allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("yield"))), expr, nullptr);
+						else if (action == 2)
+							(yyval.node) = expr; 
+						// if action is neither, then what?
 					}
-#line 2777 "lang11d_tab.cpp"
+#line 2774 "lang11d_tab.cpp"
     break;
 
   case 84: /* nextqual: ',' qual  */
-#line 453 "lang11d"
+#line 450 "lang11d"
                                            { (yyval.node) = (yyvsp[0].node); }
-#line 2783 "lang11d_tab.cpp"
+#line 2780 "lang11d_tab.cpp"
     break;
 
   case 85: /* qual: name LEFTARROW exprseq nextqual  */
-#line 456 "lang11d"
+#line 453 "lang11d"
                                         {
 						// later should check if exprseq is a series and optimize it to for loop
-						PyrParseNode *exprseq = (yyvsp[-1].node);
-						if (exprseq->mClassno == pn_CallNode) {
-							PyrCallNode *callnode = assertCast<PyrCallNode>(exprseq);
-							if (slotRawSymbol(&callnode->mSelector->mSlot) == s_series) {
-								SetSymbol(&callnode->mSelector->mSlot, getsym("forSeries"));
-
-								auto* var = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-3].slotNode), nullptr, ReadWriteAccessor::Private);
-								auto* args = allocNode<PyrArgListNode>((yyloc), var, nullptr, nullptr);
-								auto *block = allocNode<PyrBlockNode>((yyloc), args, nullptr, (yyvsp[0].node), false);
-								auto *blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
-
-								callnode->mArglist = linkNextNode(callnode->mArglist, blocklit);
-								(yyval.node) = callnode;
-
-							} else goto notoptimized1;
+						
+						auto* var = allocNode<PyrVarDefNode>((yylsp[-3]), (yyvsp[-3].slotNode), nullptr, ReadWriteAccessor::Private);
+						auto* args = allocNode<PyrArgListNode>((yylsp[-3]), var, nullptr, nullptr);
+						auto *block = allocNode<PyrBlockNode>((yylsp[-3]), args, nullptr, (yyvsp[0].node), false);
+						auto *blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
+						if (auto* call = tryCast<PyrCallNode>((yyvsp[-1].node)); call && call->mSelector->mSlot.getSymbol() == s_series) {
+								call->mSelector->mSlot = PyrSlot::make(getsym("forSeries"));
+								call->mArglist = linkNextNode(call->mArglist, blocklit);
+								(yyval.node) = call;
 						} else {
-							notoptimized1:
-							PyrSlot slot;
-							SetSymbol(&slot, getsym("do"));
-							auto* selectornode = allocNode<PyrSlotNode>((yyloc), slot);
-
-							auto* var = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-3].slotNode), nullptr, ReadWriteAccessor::Private);
-							auto* args = allocNode<PyrArgListNode>((yyloc), var, nullptr, nullptr);
-							auto *block = allocNode<PyrBlockNode>((yyloc), args, nullptr, (yyvsp[0].node), false);
-							auto *blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
-
-							PyrParseNode* args2 = linkNextNode(exprseq, blocklit);
-							(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args2, nullptr);
+							auto* selectornode = allocNode<PyrSlotNode>((yylsp[-1]), PyrSlot::make(getsym("do")));
+							(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkNextNode((yyvsp[-1].node), blocklit), nullptr);
 						}
 					}
-#line 2820 "lang11d_tab.cpp"
+#line 2801 "lang11d_tab.cpp"
     break;
 
   case 86: /* qual: name name LEFTARROW exprseq nextqual  */
-#line 489 "lang11d"
+#line 470 "lang11d"
                                         {
-						// later should check if exprseq is a series and optimize it to for loop
-						PyrParseNode *exprseq = (yyvsp[-1].node);
-						if (exprseq->mClassno == pn_CallNode) {
-							PyrCallNode *callnode = assertCast<PyrCallNode>(exprseq);
-							if (slotRawSymbol(&callnode->mSelector->mSlot) == s_series) {
-								SetSymbol(&callnode->mSelector->mSlot, getsym("forSeries"));
+						auto* call = tryCast<PyrCallNode>((yyvsp[-1].node));
+						const auto is_series = call ? (call->mSelector->mSlot.getSymbol() == s_series) : false;
 
-								auto* var1 = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-4].slotNode), nullptr, ReadWriteAccessor::Private);
-								auto* var2 = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-3].slotNode), nullptr, ReadWriteAccessor::Private);
-								auto* vars = linkNextNode(var1, var2);
-								auto* args = allocNode<PyrArgListNode>((yyloc), vars, nullptr, nullptr);
-								auto *block = allocNode<PyrBlockNode>((yyloc), args, nullptr, (yyvsp[0].node), false);
-								auto *blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
+						auto* var1 = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-4].slotNode), nullptr, ReadWriteAccessor::Private);
+						auto* var2 = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-3].slotNode), nullptr, ReadWriteAccessor::Private);
+						auto* args = allocNode<PyrArgListNode>((yyloc), linkNextNode(var1, var2), nullptr, nullptr);
+						auto *block = allocNode<PyrBlockNode>((yyloc), args, nullptr, (yyvsp[0].node), false);
+						auto *blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
 
-								callnode->mArglist = linkNextNode(callnode->mArglist, blocklit);
-								(yyval.node) = callnode;
-
-							} else goto notoptimized2;
+						if (auto* call = tryCast<PyrCallNode>((yyvsp[-2].slotNode)); call && call->mSelector->mSlot.getSymbol() == s_series) {
+							call->mSelector->mSlot = PyrSlot::make(getsym("forSeries"));
+							call->mArglist = linkNextNode(call->mArglist, blocklit);
+							(yyval.node) = call;
 						} else {
-							notoptimized2:
-							PyrSlot slot;
-							SetSymbol(&slot, getsym("do"));
-							PyrSlotNode* selectornode = allocNode<PyrSlotNode>((yyloc), slot);
-
-							auto* var1 = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-4].slotNode), nullptr, ReadWriteAccessor::Private);
-							auto* var2 = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-3].slotNode), nullptr, ReadWriteAccessor::Private);
-							auto* vars = linkNextNode(var1, var2);
-							auto* args = allocNode<PyrArgListNode>((yyloc), vars, nullptr, nullptr);
-							auto *block = allocNode<PyrBlockNode>((yyloc), args, nullptr, (yyvsp[0].node), false);
-							auto *blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
-
-							PyrParseNode* args2 = linkNextNode(exprseq, blocklit);
-							(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args2, nullptr);
+							auto* selectornode = allocNode<PyrSlotNode>((yylsp[-2]), PyrSlot::make(getsym("do")));
+							(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkNextNode((yyvsp[-1].node), blocklit), nullptr);
 						}
 					}
-#line 2861 "lang11d_tab.cpp"
+#line 2825 "lang11d_tab.cpp"
     break;
 
   case 87: /* qual: VAR name '=' exprseq nextqual  */
-#line 526 "lang11d"
+#line 490 "lang11d"
                                         {
 						PyrSlot slot = PyrSlot::make(s_value);
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), slot);
@@ -2869,106 +2833,102 @@ yyreduce:
 						auto* args = allocNode<PyrArgListNode>((yyloc), var, nullptr, nullptr);
 						auto *block = allocNode<PyrBlockNode>((yyloc), args, nullptr, (yyvsp[0].node), false);
 						auto *blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
-						auto* args2 = linkNextNode(blocklit, (yyvsp[-1].node));
-						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args2, nullptr);
+						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkNextNode(blocklit, (yyvsp[-1].node)), nullptr);
 					}
-#line 2876 "lang11d_tab.cpp"
+#line 2839 "lang11d_tab.cpp"
     break;
 
   case 88: /* qual: exprseq nextqual  */
-#line 537 "lang11d"
+#line 500 "lang11d"
                                         {
-						PyrSlotNode* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("if")));
-						PyrParseNode* block = allocNode<PyrBlockNode>((yyloc), nullptr, nullptr, (yyvsp[0].node), false);
-						PyrParseNode* blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
-						PyrParseNode* args2 = linkNextNode((yyvsp[-1].node), blocklit);
-						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args2, nullptr);
+						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("if")));
+						auto* block = allocNode<PyrBlockNode>((yyloc), nullptr, nullptr, (yyvsp[0].node), false);
+						auto* blocklit = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block), pn_PushLitNode);
+						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkNextNode((yyvsp[-1].node), blocklit), nullptr);
 					}
-#line 2888 "lang11d_tab.cpp"
+#line 2850 "lang11d_tab.cpp"
     break;
 
   case 89: /* qual: ':' ':' exprseq nextqual  */
-#line 545 "lang11d"
+#line 507 "lang11d"
                                         { (yyval.node) = allocNode<PyrDropNode>((yyloc), (yyvsp[-1].node), (yyvsp[0].node)); }
-#line 2894 "lang11d_tab.cpp"
+#line 2856 "lang11d_tab.cpp"
     break;
 
   case 90: /* qual: ':' WHILE exprseq nextqual  */
-#line 547 "lang11d"
+#line 509 "lang11d"
                                         {
-						PyrSlotNode* selectornode1 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("alwaysYield")));
-						PyrParseNode* pushnil = allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode);
-						PyrParseNode* yieldNil = allocNode<PyrCallNode>((yyloc), selectornode1, pushnil, nullptr);
-						PyrParseNode* block1 = allocNode<PyrBlockNode>((yyloc), nullptr, nullptr, yieldNil, false);
-						PyrParseNode* blocklit1 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block1), pn_PushLitNode);
-						PyrParseNode* block2 = allocNode<PyrBlockNode>((yyloc), nullptr, nullptr, (yyvsp[0].node), false);
-						PyrParseNode* blocklit2 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block2), pn_PushLitNode);
-						PyrParseNode* args2 = linkNextNode((yyvsp[-1].node), blocklit2);
-						PyrParseNode* args3 = linkNextNode(args2, blocklit1);
+						auto* selectornode1 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("alwaysYield")));
+						auto* pushnil = allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode);
+						auto* yieldNil = allocNode<PyrCallNode>((yyloc), selectornode1, pushnil, nullptr);
+						auto* block1 = allocNode<PyrBlockNode>((yyloc), nullptr, nullptr, yieldNil, false);
+						auto* blocklit1 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block1), pn_PushLitNode);
+						auto* block2 = allocNode<PyrBlockNode>((yyloc), nullptr, nullptr, (yyvsp[0].node), false);
+						auto* blocklit2 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>(block2), pn_PushLitNode);
 
-						PyrSlotNode* selectornode2 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("if")));
-						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode2, args3, nullptr);
+						auto* selectornode2 = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("if")));
+						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode2, linkAllNodes((yyvsp[-1].node), blocklit2, blocklit1), nullptr);
 					}
-#line 2913 "lang11d_tab.cpp"
+#line 2873 "lang11d_tab.cpp"
     break;
 
   case 97: /* expr1: '(' exprseq ')'  */
-#line 570 "lang11d"
+#line 529 "lang11d"
                                         {
 						PyrParseNode* node = (yyvsp[-1].node);
-						node->mParens = 1;
+						node->mParens = true; // This means  (((((1))))), will not count the brackets, but just indicates they exist.
 						node->mLocation = (yyloc); // make the location include the brackets.
 						(yyval.node) = (yyvsp[-1].node);
 					}
-#line 2924 "lang11d_tab.cpp"
+#line 2884 "lang11d_tab.cpp"
     break;
 
   case 98: /* expr1: '~' name  */
-#line 577 "lang11d"
+#line 536 "lang11d"
                                         {
 						auto* argnode = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode);
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_envirGet));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, argnode, nullptr);
 					}
-#line 2934 "lang11d_tab.cpp"
+#line 2894 "lang11d_tab.cpp"
     break;
 
   case 99: /* expr1: '[' arrayelems ']'  */
-#line 583 "lang11d"
+#line 542 "lang11d"
                                         { (yyval.node) = allocNode<PyrDynListNode>((yyloc), nullptr, (yyvsp[-1].node)); }
-#line 2940 "lang11d_tab.cpp"
+#line 2900 "lang11d_tab.cpp"
     break;
 
   case 100: /* expr1: '(' valrange2 ')'  */
-#line 585 "lang11d"
+#line 544 "lang11d"
                                         { (yyval.node) = (yyvsp[-1].node); }
-#line 2946 "lang11d_tab.cpp"
+#line 2906 "lang11d_tab.cpp"
     break;
 
   case 101: /* expr1: '(' ':' valrange3 ')'  */
-#line 587 "lang11d"
+#line 546 "lang11d"
                                         { (yyval.node) = (yyvsp[-1].node); }
-#line 2952 "lang11d_tab.cpp"
+#line 2912 "lang11d_tab.cpp"
     break;
 
   case 102: /* expr1: '(' dictslotlist ')'  */
-#line 589 "lang11d"
+#line 548 "lang11d"
                                         { (yyval.node) = allocNode<PyrDynDictNode>((yyloc), (yyvsp[-1].node)); }
-#line 2958 "lang11d_tab.cpp"
+#line 2918 "lang11d_tab.cpp"
     break;
 
   case 103: /* expr1: expr1 '[' arglist1 ']'  */
-#line 591 "lang11d"
+#line 550 "lang11d"
                                         {
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_at));
 						auto* args = linkNextNode((yyvsp[-3].node), (yyvsp[-1].node));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 2968 "lang11d_tab.cpp"
+#line 2928 "lang11d_tab.cpp"
     break;
 
   case 105: /* valrangex1: expr1 '[' arglist1 DOTDOT ']'  */
-#line 599 "lang11d"
+#line 558 "lang11d"
                                         {
 						const int arglen = nodeListLength((yyvsp[-2].node));
 						if (arglen > 2) {
@@ -2984,11 +2944,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_copyseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 2988 "lang11d_tab.cpp"
+#line 2948 "lang11d_tab.cpp"
     break;
 
   case 106: /* valrangex1: expr1 '[' DOTDOT exprseq ']'  */
-#line 615 "lang11d"
+#line 574 "lang11d"
                                         {
 						auto* nilnode1 = allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode);
 						auto* args = linkNextNode((yyvsp[-4].node), nilnode1);
@@ -2998,11 +2958,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_copyseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3002 "lang11d_tab.cpp"
+#line 2962 "lang11d_tab.cpp"
     break;
 
   case 107: /* valrangex1: expr1 '[' arglist1 DOTDOT exprseq ']'  */
-#line 625 "lang11d"
+#line 584 "lang11d"
                                         {
 						const int arglen = nodeListLength((yyvsp[-3].node));
 						if (arglen > 2) {
@@ -3019,11 +2979,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_copyseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3023 "lang11d_tab.cpp"
+#line 2983 "lang11d_tab.cpp"
     break;
 
   case 108: /* valrangeassign: expr1 '[' arglist1 DOTDOT ']' '=' expr  */
-#line 643 "lang11d"
+#line 602 "lang11d"
                                         {
 						const int arglen = nodeListLength((yyvsp[-4].node));
 						if (arglen > 2) {
@@ -3040,26 +3000,27 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_putseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3044 "lang11d_tab.cpp"
+#line 3004 "lang11d_tab.cpp"
     break;
 
   case 109: /* valrangeassign: expr1 '[' DOTDOT exprseq ']' '=' expr  */
-#line 660 "lang11d"
+#line 619 "lang11d"
                                         {
 						auto* args = linkAllNodes(
 							(yyvsp[-6].node),
 							allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode),
 							allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode),
 							(yyvsp[-3].node), 
-							(yyvsp[0].node));
+							(yyvsp[0].node)
+						);
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_putseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3059 "lang11d_tab.cpp"
+#line 3020 "lang11d_tab.cpp"
     break;
 
   case 110: /* valrangeassign: expr1 '[' arglist1 DOTDOT exprseq ']' '=' expr  */
-#line 671 "lang11d"
+#line 631 "lang11d"
                                         {
 						const int arglen = nodeListLength((yyvsp[-5].node));
 						if (arglen > 2) {
@@ -3076,11 +3037,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_putseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3080 "lang11d_tab.cpp"
+#line 3041 "lang11d_tab.cpp"
     break;
 
   case 111: /* valrangexd: expr '.' '[' arglist1 DOTDOT ']'  */
-#line 694 "lang11d"
+#line 654 "lang11d"
                                         {
 						PyrSlotNode* nilnode1, *nilnode2;
 						PyrSlot selectorSlot, nilSlot;
@@ -3102,25 +3063,26 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_copyseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3106 "lang11d_tab.cpp"
+#line 3067 "lang11d_tab.cpp"
     break;
 
   case 112: /* valrangexd: expr '.' '[' DOTDOT exprseq ']'  */
-#line 716 "lang11d"
+#line 676 "lang11d"
                                         {
 						auto* args = linkAllNodes(
 							(yyvsp[-5].node),
 							allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode),
 							allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode),
-							(yyvsp[-1].node));
+							(yyvsp[-1].node)
+						);
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_copyseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3120 "lang11d_tab.cpp"
+#line 3082 "lang11d_tab.cpp"
     break;
 
   case 113: /* valrangexd: expr '.' '[' arglist1 DOTDOT exprseq ']'  */
-#line 726 "lang11d"
+#line 687 "lang11d"
                                         {
 						const int arglen = nodeListLength((yyvsp[-3].node));
 						if (arglen > 2) {
@@ -3137,11 +3099,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_copyseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3141 "lang11d_tab.cpp"
+#line 3103 "lang11d_tab.cpp"
     break;
 
   case 114: /* valrangexd: expr '.' '[' arglist1 DOTDOT ']' '=' expr  */
-#line 743 "lang11d"
+#line 704 "lang11d"
                                         {
 						const int arglen = nodeListLength((yyvsp[-4].node));
 						if (arglen > 2) {
@@ -3158,11 +3120,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_putseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3162 "lang11d_tab.cpp"
+#line 3124 "lang11d_tab.cpp"
     break;
 
   case 115: /* valrangexd: expr '.' '[' DOTDOT exprseq ']' '=' expr  */
-#line 760 "lang11d"
+#line 721 "lang11d"
                                         {
 						auto* args = linkNextNode((yyvsp[-7].node), allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode));
 						args = linkNextNode(args, allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode));
@@ -3171,11 +3133,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_putseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3175 "lang11d_tab.cpp"
+#line 3137 "lang11d_tab.cpp"
     break;
 
   case 116: /* valrangexd: expr '.' '[' arglist1 DOTDOT exprseq ']' '=' expr  */
-#line 769 "lang11d"
+#line 730 "lang11d"
                                         {
 						const int arglen = nodeListLength((yyvsp[-5].node));
 						if (arglen > 2) {
@@ -3192,11 +3154,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_putseries));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3196 "lang11d_tab.cpp"
+#line 3158 "lang11d_tab.cpp"
     break;
 
   case 117: /* valrange2: exprseq DOTDOT  */
-#line 787 "lang11d"
+#line 748 "lang11d"
                                         {
 						// if this is not used in a 'do' or list comprehension, then should return an error.
 						auto* args = linkNextNode((yyvsp[-1].node), allocNode<PyrSlotNode>((yylsp[0]), PyrSlot{}, pn_PushLitNode));
@@ -3204,11 +3166,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_series));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3208 "lang11d_tab.cpp"
+#line 3170 "lang11d_tab.cpp"
     break;
 
   case 118: /* valrange2: DOTDOT exprseq  */
-#line 795 "lang11d"
+#line 756 "lang11d"
                                         {
 						auto* args = linkAllNodes(
 							allocNode<PyrSlotNode>((yylsp[-1]), PyrSlot::make<int>(0), pn_PushLitNode),
@@ -3218,41 +3180,41 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_series));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3222 "lang11d_tab.cpp"
+#line 3184 "lang11d_tab.cpp"
     break;
 
   case 119: /* valrange2: exprseq DOTDOT exprseq  */
-#line 805 "lang11d"
+#line 766 "lang11d"
                                         {
 						auto* args = linkAllNodes((yyvsp[-2].node), allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode), (yyvsp[0].node));
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_series));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3232 "lang11d_tab.cpp"
+#line 3194 "lang11d_tab.cpp"
     break;
 
   case 120: /* valrange2: exprseq ',' exprseq DOTDOT exprseq  */
-#line 811 "lang11d"
+#line 772 "lang11d"
                                         {
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_series));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkAllNodes((yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node)), nullptr);
 					}
-#line 3241 "lang11d_tab.cpp"
+#line 3203 "lang11d_tab.cpp"
     break;
 
   case 121: /* valrange2: exprseq ',' exprseq DOTDOT  */
-#line 816 "lang11d"
+#line 777 "lang11d"
                                         {
 						// if this is not used in a 'do' or list comprehension, then should return an error.
 						auto* args = linkAllNodes((yyvsp[-3].node), (yyvsp[-1].node), allocNode<PyrSlotNode>((yyloc), PyrSlot{}, pn_PushLitNode));
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_series));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3252 "lang11d_tab.cpp"
+#line 3214 "lang11d_tab.cpp"
     break;
 
   case 122: /* valrange3: DOTDOT exprseq  */
-#line 824 "lang11d"
+#line 785 "lang11d"
                                         {
 						auto* args = linkAllNodes(
 							allocNode<PyrSlotNode>((yylsp[-1]), PyrSlot::make<int>(0), pn_PushLitNode),
@@ -3262,11 +3224,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("seriesIter")));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3266 "lang11d_tab.cpp"
+#line 3228 "lang11d_tab.cpp"
     break;
 
   case 123: /* valrange3: exprseq DOTDOT  */
-#line 834 "lang11d"
+#line 795 "lang11d"
                                         {
 						auto* args = linkAllNodes(
 							(yyvsp[-1].node),
@@ -3276,11 +3238,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("seriesIter")));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3280 "lang11d_tab.cpp"
+#line 3242 "lang11d_tab.cpp"
     break;
 
   case 124: /* valrange3: exprseq DOTDOT exprseq  */
-#line 845 "lang11d"
+#line 806 "lang11d"
                                         {
 						auto* args = linkAllNodes(
 							(yyvsp[-2].node),
@@ -3290,11 +3252,11 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("seriesIter")));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3294 "lang11d_tab.cpp"
+#line 3256 "lang11d_tab.cpp"
     break;
 
   case 125: /* valrange3: exprseq ',' exprseq DOTDOT  */
-#line 855 "lang11d"
+#line 816 "lang11d"
                                         {
 						auto* args = linkAllNodes(
 							(yyvsp[-3].node),
@@ -3304,35 +3266,35 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("seriesIter")));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3308 "lang11d_tab.cpp"
+#line 3270 "lang11d_tab.cpp"
     break;
 
   case 126: /* valrange3: exprseq ',' exprseq DOTDOT exprseq  */
-#line 865 "lang11d"
+#line 826 "lang11d"
                                         {
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(getsym("seriesIter")));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkAllNodes((yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node)), nullptr);
 					}
-#line 3317 "lang11d_tab.cpp"
+#line 3279 "lang11d_tab.cpp"
     break;
 
   case 130: /* expr: CLASSNAME  */
-#line 873 "lang11d"
+#line 834 "lang11d"
                                             { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushNameNode); }
-#line 3323 "lang11d_tab.cpp"
+#line 3285 "lang11d_tab.cpp"
     break;
 
   case 131: /* expr: expr '.' '[' arglist1 ']'  */
-#line 875 "lang11d"
+#line 836 "lang11d"
                                         {
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_at));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkNextNode((yyvsp[-4].node), (yyvsp[-1].node)), nullptr);
 					}
-#line 3332 "lang11d_tab.cpp"
+#line 3294 "lang11d_tab.cpp"
     break;
 
   case 132: /* expr: '`' expr  */
-#line 880 "lang11d"
+#line 841 "lang11d"
                                         {
 						auto* args = linkNextNode(
 							allocNode<PyrSlotNode>((yylsp[-1]), PyrSlot::make(s_ref), pn_PushNameNode),
@@ -3341,43 +3303,43 @@ yyreduce:
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_new));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3345 "lang11d_tab.cpp"
+#line 3307 "lang11d_tab.cpp"
     break;
 
   case 133: /* expr: expr binop2 adverb expr  */
-#line 889 "lang11d"
+#line 850 "lang11d"
                                         {
 						(yyvsp[-3].node)->mNext = (yyvsp[0].node);
 						(yyvsp[0].node)->mNext = (yyvsp[-1].node);
 						(yyval.node) = allocNode<PyrBinopCallNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[-3].node));
 					}
-#line 3355 "lang11d_tab.cpp"
+#line 3317 "lang11d_tab.cpp"
     break;
 
   case 134: /* expr: name '=' expr  */
-#line 895 "lang11d"
+#line 856 "lang11d"
                                         { (yyval.node) = allocNode<PyrAssignNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[0].node)); }
-#line 3361 "lang11d_tab.cpp"
+#line 3323 "lang11d_tab.cpp"
     break;
 
   case 135: /* expr: '~' name '=' expr  */
-#line 897 "lang11d"
+#line 858 "lang11d"
                                         {
 						auto* args = linkNextNode((yyvsp[-2].slotNode)->changeLiteralType(pn_PushLitNode), (yyvsp[0].node));
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_envirPut));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, args, nullptr);
 					}
-#line 3371 "lang11d_tab.cpp"
+#line 3333 "lang11d_tab.cpp"
     break;
 
   case 136: /* expr: expr '.' name '=' expr  */
-#line 903 "lang11d"
+#line 864 "lang11d"
                                         { (yyval.node) = allocNode<PyrSetterNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[-4].node), (yyvsp[0].node)); }
-#line 3377 "lang11d_tab.cpp"
+#line 3339 "lang11d_tab.cpp"
     break;
 
   case 137: /* expr: name '(' arglist1 optkeyarglist ')' '=' expr  */
-#line 905 "lang11d"
+#line 866 "lang11d"
                                         {
 						if ((yyvsp[-3].node) != nullptr) {
 							error("Setter method called with keyword arguments.\n");
@@ -3386,711 +3348,711 @@ yyreduce:
 						}
 						(yyval.node) = allocNode<PyrSetterNode>((yyloc), (yyvsp[-6].slotNode), (yyvsp[-4].node), (yyvsp[0].node));
 					}
-#line 3390 "lang11d_tab.cpp"
+#line 3352 "lang11d_tab.cpp"
     break;
 
   case 138: /* expr: '#' mavars '=' expr  */
-#line 914 "lang11d"
+#line 875 "lang11d"
                                         { (yyval.node) = allocNode<PyrMultiAssignNode>((yyloc), (yyvsp[-2].multiAssignListNode), (yyvsp[0].node)); }
-#line 3396 "lang11d_tab.cpp"
+#line 3358 "lang11d_tab.cpp"
     break;
 
   case 139: /* expr: expr1 '[' arglist1 ']' '=' expr  */
-#line 916 "lang11d"
+#line 877 "lang11d"
                                         {
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_put));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkAllNodes((yyvsp[-5].node), (yyvsp[-3].node), (yyvsp[0].node)), nullptr);
 					}
-#line 3405 "lang11d_tab.cpp"
+#line 3367 "lang11d_tab.cpp"
     break;
 
   case 140: /* expr: expr '.' '[' arglist1 ']' '=' expr  */
-#line 921 "lang11d"
+#line 882 "lang11d"
                                         {
 						auto* selectornode = allocNode<PyrSlotNode>((yyloc), PyrSlot::make(s_put));
 						(yyval.node) = allocNode<PyrCallNode>((yyloc), selectornode, linkAllNodes((yyvsp[-6].node), (yyvsp[-3].node), (yyvsp[0].node)), nullptr);
 					}
-#line 3414 "lang11d_tab.cpp"
+#line 3376 "lang11d_tab.cpp"
     break;
 
   case 141: /* adverb: %empty  */
-#line 926 "lang11d"
+#line 887 "lang11d"
                                   { (yyval.node) = nullptr; }
-#line 3420 "lang11d_tab.cpp"
+#line 3382 "lang11d_tab.cpp"
     break;
 
   case 142: /* adverb: '.' name  */
-#line 927 "lang11d"
+#line 888 "lang11d"
                                            { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3426 "lang11d_tab.cpp"
+#line 3388 "lang11d_tab.cpp"
     break;
 
   case 143: /* adverb: '.' integer  */
-#line 928 "lang11d"
+#line 889 "lang11d"
                                               { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3432 "lang11d_tab.cpp"
+#line 3394 "lang11d_tab.cpp"
     break;
 
   case 144: /* adverb: '.' '(' exprseq ')'  */
-#line 929 "lang11d"
+#line 890 "lang11d"
                                                       { (yyval.node) = (yyvsp[-1].node); }
-#line 3438 "lang11d_tab.cpp"
+#line 3400 "lang11d_tab.cpp"
     break;
 
   case 146: /* exprn: exprn ';' expr  */
-#line 933 "lang11d"
+#line 894 "lang11d"
                                         { (yyval.node) = allocNode<PyrDropNode>((yyloc), (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3444 "lang11d_tab.cpp"
+#line 3406 "lang11d_tab.cpp"
     break;
 
   case 148: /* arrayelems: %empty  */
-#line 937 "lang11d"
+#line 898 "lang11d"
                                  { (yyval.node) = nullptr; }
-#line 3450 "lang11d_tab.cpp"
+#line 3412 "lang11d_tab.cpp"
     break;
 
   case 149: /* arrayelems: arrayelems1 optcomma  */
-#line 938 "lang11d"
+#line 899 "lang11d"
                                                        { (yyval.node) = (yyvsp[-1].node); }
-#line 3456 "lang11d_tab.cpp"
+#line 3418 "lang11d_tab.cpp"
     break;
 
   case 151: /* arrayelems1: exprseq ':' exprseq  */
-#line 942 "lang11d"
+#line 903 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3462 "lang11d_tab.cpp"
+#line 3424 "lang11d_tab.cpp"
     break;
 
   case 152: /* arrayelems1: KEYBINOP exprseq  */
-#line 944 "lang11d"
+#line 905 "lang11d"
                                         { (yyval.node) = linkNextNode( (yyvsp[-1].slotNode)->changeLiteralType(pn_PushLitNode), (yyvsp[0].node)); }
-#line 3468 "lang11d_tab.cpp"
+#line 3430 "lang11d_tab.cpp"
     break;
 
   case 153: /* arrayelems1: arrayelems1 ',' exprseq  */
-#line 946 "lang11d"
+#line 907 "lang11d"
                                                 { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3474 "lang11d_tab.cpp"
+#line 3436 "lang11d_tab.cpp"
     break;
 
   case 154: /* arrayelems1: arrayelems1 ',' KEYBINOP exprseq  */
-#line 948 "lang11d"
+#line 909 "lang11d"
                                         { (yyval.node) = linkAllNodes((yyvsp[-3].node), (yyvsp[-1].slotNode)->changeLiteralType(pn_PushLitNode), (yyvsp[0].node)); }
-#line 3480 "lang11d_tab.cpp"
+#line 3442 "lang11d_tab.cpp"
     break;
 
   case 155: /* arrayelems1: arrayelems1 ',' exprseq ':' exprseq  */
-#line 950 "lang11d"
+#line 911 "lang11d"
                                         { (yyval.node) = linkAllNodes((yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3486 "lang11d_tab.cpp"
+#line 3448 "lang11d_tab.cpp"
     break;
 
   case 157: /* arglist1: arglist1 ',' exprseq  */
-#line 954 "lang11d"
+#line 915 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3492 "lang11d_tab.cpp"
+#line 3454 "lang11d_tab.cpp"
     break;
 
   case 158: /* arglistv1: '*' exprseq  */
-#line 957 "lang11d"
+#line 918 "lang11d"
                                         { (yylsp[0]) = (yyloc); (yyval.node) = (yyvsp[0].node); }
-#line 3498 "lang11d_tab.cpp"
+#line 3460 "lang11d_tab.cpp"
     break;
 
   case 159: /* arglistv1: arglist1 ',' '*' exprseq  */
-#line 959 "lang11d"
+#line 920 "lang11d"
                                                 { (yyval.node) = linkNextNode((yyvsp[-3].node), (yyvsp[0].node)); }
-#line 3504 "lang11d_tab.cpp"
+#line 3466 "lang11d_tab.cpp"
     break;
 
   case 161: /* keyarglist1: keyarglist1 ',' keyarg  */
-#line 963 "lang11d"
+#line 924 "lang11d"
                                                 { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3510 "lang11d_tab.cpp"
+#line 3472 "lang11d_tab.cpp"
     break;
 
   case 162: /* keyarg: KEYBINOP exprseq  */
-#line 966 "lang11d"
+#line 927 "lang11d"
                                         { (yyval.node) = allocNode<PyrPushKeyArgNode>((yyloc), (yyvsp[-1].slotNode), (yyvsp[0].node)); }
-#line 3516 "lang11d_tab.cpp"
+#line 3478 "lang11d_tab.cpp"
     break;
 
   case 163: /* optkeyarglist: optcomma  */
-#line 968 "lang11d"
+#line 929 "lang11d"
                            { (yyval.node) = nullptr; }
-#line 3522 "lang11d_tab.cpp"
+#line 3484 "lang11d_tab.cpp"
     break;
 
   case 164: /* optkeyarglist: ',' keyarglist1 optcomma  */
-#line 969 "lang11d"
+#line 930 "lang11d"
                                                            { (yyval.node) = (yyvsp[-1].node); }
-#line 3528 "lang11d_tab.cpp"
+#line 3490 "lang11d_tab.cpp"
     break;
 
   case 165: /* mavars: nameList  */
-#line 972 "lang11d"
+#line 933 "lang11d"
                                         { (yyval.multiAssignListNode) = allocNode<PyrMultiAssignVarListNode>((yyloc), (yyvsp[0].slotNode), nullptr); }
-#line 3534 "lang11d_tab.cpp"
+#line 3496 "lang11d_tab.cpp"
     break;
 
   case 166: /* mavars: nameList ELLIPSIS name  */
-#line 974 "lang11d"
+#line 935 "lang11d"
                                         { (yyval.multiAssignListNode) = allocNode<PyrMultiAssignVarListNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[0].slotNode)); }
-#line 3540 "lang11d_tab.cpp"
+#line 3502 "lang11d_tab.cpp"
     break;
 
   case 168: /* nameList: nameList ',' name  */
-#line 978 "lang11d"
+#line 939 "lang11d"
                                         { (yyval.slotNode) = linkNextNode((yyvsp[-2].slotNode), (yyvsp[0].slotNode)); }
-#line 3546 "lang11d_tab.cpp"
+#line 3508 "lang11d_tab.cpp"
     break;
 
   case 169: /* slotliteral: integer  */
-#line 980 "lang11d"
+#line 941 "lang11d"
                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3552 "lang11d_tab.cpp"
+#line 3514 "lang11d_tab.cpp"
     break;
 
   case 170: /* slotliteral: floatp  */
-#line 981 "lang11d"
+#line 942 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3558 "lang11d_tab.cpp"
+#line 3520 "lang11d_tab.cpp"
     break;
 
   case 171: /* slotliteral: ASCII  */
-#line 982 "lang11d"
+#line 943 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3564 "lang11d_tab.cpp"
+#line 3526 "lang11d_tab.cpp"
     break;
 
   case 172: /* slotliteral: STRING  */
-#line 983 "lang11d"
+#line 944 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3570 "lang11d_tab.cpp"
+#line 3532 "lang11d_tab.cpp"
     break;
 
   case 173: /* slotliteral: SYMBOL  */
-#line 984 "lang11d"
+#line 945 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3576 "lang11d_tab.cpp"
+#line 3538 "lang11d_tab.cpp"
     break;
 
   case 174: /* slotliteral: TRUEOBJ  */
-#line 985 "lang11d"
+#line 946 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3582 "lang11d_tab.cpp"
+#line 3544 "lang11d_tab.cpp"
     break;
 
   case 175: /* slotliteral: FALSEOBJ  */
-#line 986 "lang11d"
+#line 947 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3588 "lang11d_tab.cpp"
+#line 3550 "lang11d_tab.cpp"
     break;
 
   case 176: /* slotliteral: NILOBJ  */
-#line 987 "lang11d"
+#line 948 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3594 "lang11d_tab.cpp"
+#line 3556 "lang11d_tab.cpp"
     break;
 
   case 177: /* slotliteral: listlit  */
-#line 988 "lang11d"
+#line 949 "lang11d"
                                                 { (yyval.node) = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>((yyvsp[0].node)), pn_LiteralNode); }
-#line 3600 "lang11d_tab.cpp"
+#line 3562 "lang11d_tab.cpp"
     break;
 
   case 178: /* blockliteral: block  */
-#line 990 "lang11d"
+#line 951 "lang11d"
                         { (yyval.node) = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>((yyvsp[0].node)), pn_PushLitNode); }
-#line 3606 "lang11d_tab.cpp"
+#line 3568 "lang11d_tab.cpp"
     break;
 
   case 179: /* pushname: name  */
-#line 992 "lang11d"
+#line 953 "lang11d"
                                { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushNameNode); }
-#line 3612 "lang11d_tab.cpp"
+#line 3574 "lang11d_tab.cpp"
     break;
 
   case 180: /* pushliteral: integer  */
-#line 994 "lang11d"
+#line 955 "lang11d"
                                         { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3618 "lang11d_tab.cpp"
+#line 3580 "lang11d_tab.cpp"
     break;
 
   case 181: /* pushliteral: floatp  */
-#line 995 "lang11d"
+#line 956 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3624 "lang11d_tab.cpp"
+#line 3586 "lang11d_tab.cpp"
     break;
 
   case 182: /* pushliteral: ASCII  */
-#line 996 "lang11d"
+#line 957 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3630 "lang11d_tab.cpp"
+#line 3592 "lang11d_tab.cpp"
     break;
 
   case 183: /* pushliteral: STRING  */
-#line 997 "lang11d"
+#line 958 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3636 "lang11d_tab.cpp"
+#line 3598 "lang11d_tab.cpp"
     break;
 
   case 184: /* pushliteral: SYMBOL  */
-#line 998 "lang11d"
+#line 959 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3642 "lang11d_tab.cpp"
+#line 3604 "lang11d_tab.cpp"
     break;
 
   case 185: /* pushliteral: TRUEOBJ  */
-#line 999 "lang11d"
+#line 960 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3648 "lang11d_tab.cpp"
+#line 3610 "lang11d_tab.cpp"
     break;
 
   case 186: /* pushliteral: FALSEOBJ  */
-#line 1000 "lang11d"
+#line 961 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3654 "lang11d_tab.cpp"
+#line 3616 "lang11d_tab.cpp"
     break;
 
   case 187: /* pushliteral: NILOBJ  */
-#line 1001 "lang11d"
+#line 962 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_PushLitNode); }
-#line 3660 "lang11d_tab.cpp"
+#line 3622 "lang11d_tab.cpp"
     break;
 
   case 188: /* pushliteral: listlit  */
-#line 1002 "lang11d"
+#line 963 "lang11d"
                                                 { (yyval.node) = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>((yyvsp[0].node)), pn_PushLitNode); }
-#line 3666 "lang11d_tab.cpp"
+#line 3628 "lang11d_tab.cpp"
     break;
 
   case 189: /* listliteral: integer  */
-#line 1004 "lang11d"
+#line 965 "lang11d"
                                         { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode);}
-#line 3672 "lang11d_tab.cpp"
+#line 3634 "lang11d_tab.cpp"
     break;
 
   case 190: /* listliteral: floatp  */
-#line 1005 "lang11d"
+#line 966 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3678 "lang11d_tab.cpp"
+#line 3640 "lang11d_tab.cpp"
     break;
 
   case 191: /* listliteral: ASCII  */
-#line 1006 "lang11d"
+#line 967 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3684 "lang11d_tab.cpp"
+#line 3646 "lang11d_tab.cpp"
     break;
 
   case 192: /* listliteral: STRING  */
-#line 1007 "lang11d"
+#line 968 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3690 "lang11d_tab.cpp"
+#line 3652 "lang11d_tab.cpp"
     break;
 
   case 193: /* listliteral: SYMBOL  */
-#line 1008 "lang11d"
+#line 969 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3696 "lang11d_tab.cpp"
+#line 3658 "lang11d_tab.cpp"
     break;
 
   case 194: /* listliteral: name  */
-#line 1009 "lang11d"
+#line 970 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3702 "lang11d_tab.cpp"
+#line 3664 "lang11d_tab.cpp"
     break;
 
   case 195: /* listliteral: TRUEOBJ  */
-#line 1010 "lang11d"
+#line 971 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3708 "lang11d_tab.cpp"
+#line 3670 "lang11d_tab.cpp"
     break;
 
   case 196: /* listliteral: FALSEOBJ  */
-#line 1011 "lang11d"
+#line 972 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3714 "lang11d_tab.cpp"
+#line 3676 "lang11d_tab.cpp"
     break;
 
   case 197: /* listliteral: NILOBJ  */
-#line 1012 "lang11d"
+#line 973 "lang11d"
                                                 { (yyval.node) = (yyvsp[0].slotNode)->changeLiteralType(pn_LiteralNode); }
-#line 3720 "lang11d_tab.cpp"
+#line 3682 "lang11d_tab.cpp"
     break;
 
   case 198: /* listliteral: listlit2  */
-#line 1013 "lang11d"
+#line 974 "lang11d"
                                                 { (yyval.node) = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>((yyvsp[0].node)), pn_LiteralNode); }
-#line 3726 "lang11d_tab.cpp"
+#line 3688 "lang11d_tab.cpp"
     break;
 
   case 199: /* listliteral: dictlit2  */
-#line 1014 "lang11d"
+#line 975 "lang11d"
                                             { (yyval.node) = allocNode<PyrSlotNode>((yyloc), PyrSlot::make<void*>((yyvsp[0].node)), pn_LiteralNode); }
-#line 3732 "lang11d_tab.cpp"
+#line 3694 "lang11d_tab.cpp"
     break;
 
   case 200: /* block: '{' argdecls funcvardecls funcbody '}'  */
-#line 1017 "lang11d"
+#line 978 "lang11d"
                                         { (yyval.node) = allocNode<PyrBlockNode>((yyloc), (yyvsp[-3].argListNode), (yyvsp[-2].varListNode), (yyvsp[-1].node), false); }
-#line 3738 "lang11d_tab.cpp"
+#line 3700 "lang11d_tab.cpp"
     break;
 
   case 201: /* block: BEGINCLOSEDFUNC argdecls funcvardecls funcbody '}'  */
-#line 1019 "lang11d"
+#line 980 "lang11d"
                                         { (yyval.node) = allocNode<PyrBlockNode>((yyloc), (yyvsp[-3].argListNode), (yyvsp[-2].varListNode), (yyvsp[-1].node), true); }
-#line 3744 "lang11d_tab.cpp"
+#line 3706 "lang11d_tab.cpp"
     break;
 
   case 202: /* funcvardecls: %empty  */
-#line 1022 "lang11d"
+#line 983 "lang11d"
                          { (yyval.varListNode) = nullptr; }
-#line 3750 "lang11d_tab.cpp"
+#line 3712 "lang11d_tab.cpp"
     break;
 
   case 203: /* funcvardecls: funcvardecls funcvardecl  */
-#line 1024 "lang11d"
+#line 985 "lang11d"
                                         { (yyval.varListNode) = linkNextNode((yyvsp[-1].varListNode), (yyvsp[0].varListNode)); }
-#line 3756 "lang11d_tab.cpp"
+#line 3718 "lang11d_tab.cpp"
     break;
 
   case 205: /* funcvardecls1: funcvardecls1 funcvardecl  */
-#line 1028 "lang11d"
+#line 989 "lang11d"
                                         { (yyval.varListNode) = linkNextNode((yyvsp[-1].varListNode), (yyvsp[0].varListNode)); }
-#line 3762 "lang11d_tab.cpp"
+#line 3724 "lang11d_tab.cpp"
     break;
 
   case 206: /* funcvardecl: VAR vardeflist ';'  */
-#line 1031 "lang11d"
+#line 992 "lang11d"
                                         { (yyval.varListNode) = allocNode<PyrVarListNode>((yyloc), (yyvsp[-1].varDefNode), varLocal); }
-#line 3768 "lang11d_tab.cpp"
+#line 3730 "lang11d_tab.cpp"
     break;
 
   case 207: /* argdecls: %empty  */
-#line 1033 "lang11d"
+#line 994 "lang11d"
                                  { (yyval.argListNode) = nullptr; }
-#line 3774 "lang11d_tab.cpp"
+#line 3736 "lang11d_tab.cpp"
     break;
 
   case 208: /* argdecls: ARG vardeflist ';'  */
-#line 1035 "lang11d"
+#line 996 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-1].varDefNode), nullptr, nullptr); }
-#line 3780 "lang11d_tab.cpp"
+#line 3742 "lang11d_tab.cpp"
     break;
 
   case 209: /* argdecls: ARG vardeflist0 ELLIPSIS name ';'  */
-#line 1037 "lang11d"
+#line 998 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-3].varDefNode), (yyvsp[-1].slotNode), nullptr); }
-#line 3786 "lang11d_tab.cpp"
+#line 3748 "lang11d_tab.cpp"
     break;
 
   case 210: /* argdecls: ARG vardeflist0 ELLIPSIS name ',' name ';'  */
-#line 1039 "lang11d"
+#line 1000 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-5].varDefNode), (yyvsp[-3].slotNode), (yyvsp[-1].slotNode)); }
-#line 3792 "lang11d_tab.cpp"
+#line 3754 "lang11d_tab.cpp"
     break;
 
   case 211: /* argdecls: '|' slotdeflist '|'  */
-#line 1041 "lang11d"
+#line 1002 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-1].varDefNode), nullptr, nullptr); }
-#line 3798 "lang11d_tab.cpp"
+#line 3760 "lang11d_tab.cpp"
     break;
 
   case 212: /* argdecls: '|' slotdeflist0 ELLIPSIS name '|'  */
-#line 1043 "lang11d"
+#line 1004 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-3].varDefNode), (yyvsp[-1].slotNode), nullptr); }
-#line 3804 "lang11d_tab.cpp"
+#line 3766 "lang11d_tab.cpp"
     break;
 
   case 213: /* argdecls: '|' slotdeflist0 ELLIPSIS name ',' name '|'  */
-#line 1045 "lang11d"
+#line 1006 "lang11d"
                                     { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-5].varDefNode), (yyvsp[-3].slotNode), (yyvsp[-1].slotNode)); }
-#line 3810 "lang11d_tab.cpp"
+#line 3772 "lang11d_tab.cpp"
     break;
 
   case 214: /* argdecls1: ARG vardeflist ';'  */
-#line 1048 "lang11d"
+#line 1009 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-1].varDefNode), nullptr, nullptr); }
-#line 3816 "lang11d_tab.cpp"
+#line 3778 "lang11d_tab.cpp"
     break;
 
   case 215: /* argdecls1: ARG vardeflist0 ELLIPSIS name ';'  */
-#line 1050 "lang11d"
+#line 1011 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-3].varDefNode), (yyvsp[-1].slotNode), nullptr); }
-#line 3822 "lang11d_tab.cpp"
+#line 3784 "lang11d_tab.cpp"
     break;
 
   case 216: /* argdecls1: ARG vardeflist0 ELLIPSIS name ',' name ';'  */
-#line 1052 "lang11d"
+#line 1013 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-5].varDefNode), (yyvsp[-3].slotNode), (yyvsp[-1].slotNode)); }
-#line 3828 "lang11d_tab.cpp"
+#line 3790 "lang11d_tab.cpp"
     break;
 
   case 217: /* argdecls1: '|' slotdeflist '|'  */
-#line 1054 "lang11d"
+#line 1015 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-1].varDefNode), nullptr, nullptr); }
-#line 3834 "lang11d_tab.cpp"
+#line 3796 "lang11d_tab.cpp"
     break;
 
   case 218: /* argdecls1: '|' slotdeflist0 ELLIPSIS name '|'  */
-#line 1056 "lang11d"
+#line 1017 "lang11d"
                                         { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-3].varDefNode), (yyvsp[-1].slotNode), nullptr); }
-#line 3840 "lang11d_tab.cpp"
+#line 3802 "lang11d_tab.cpp"
     break;
 
   case 219: /* argdecls1: '|' slotdeflist0 ELLIPSIS name ',' name '|'  */
-#line 1058 "lang11d"
+#line 1019 "lang11d"
                                     { (yyval.argListNode) = allocNode<PyrArgListNode>((yyloc), (yyvsp[-5].varDefNode), (yyvsp[-3].slotNode), (yyvsp[-1].slotNode)); }
-#line 3846 "lang11d_tab.cpp"
+#line 3808 "lang11d_tab.cpp"
     break;
 
   case 221: /* constdeflist: constdeflist optcomma constdef  */
-#line 1063 "lang11d"
+#line 1023 "lang11d"
                                         { (yyval.varDefNode) = linkNextNode((yyvsp[-2].varDefNode), (yyvsp[0].varDefNode)); }
-#line 3852 "lang11d_tab.cpp"
+#line 3814 "lang11d_tab.cpp"
     break;
 
   case 222: /* constdef: rspec name '=' slotliteral  */
-#line 1066 "lang11d"
+#line 1026 "lang11d"
                                         { (yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[0].node), (yyvsp[-3].rwAccessor)); }
-#line 3858 "lang11d_tab.cpp"
+#line 3820 "lang11d_tab.cpp"
     break;
 
   case 223: /* slotdeflist0: %empty  */
-#line 1068 "lang11d"
+#line 1028 "lang11d"
                          { (yyval.varDefNode) = nullptr; }
-#line 3864 "lang11d_tab.cpp"
+#line 3826 "lang11d_tab.cpp"
     break;
 
   case 226: /* slotdeflist: slotdeflist optcomma slotdef  */
-#line 1073 "lang11d"
+#line 1033 "lang11d"
                                         { (yyval.varDefNode) = linkNextNode((yyvsp[-2].varDefNode), (yyvsp[0].varDefNode)); }
-#line 3870 "lang11d_tab.cpp"
+#line 3832 "lang11d_tab.cpp"
     break;
 
   case 227: /* slotdef: name  */
-#line 1076 "lang11d"
+#line 1036 "lang11d"
                                         { (yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[0].slotNode), nullptr, ReadWriteAccessor::Private); }
-#line 3876 "lang11d_tab.cpp"
+#line 3838 "lang11d_tab.cpp"
     break;
 
   case 228: /* slotdef: name optequal slotliteral  */
-#line 1078 "lang11d"
+#line 1038 "lang11d"
                                         { (yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[0].node), ReadWriteAccessor::Private); }
-#line 3882 "lang11d_tab.cpp"
+#line 3844 "lang11d_tab.cpp"
     break;
 
   case 229: /* slotdef: name optequal '(' exprseq ')'  */
-#line 1080 "lang11d"
+#line 1040 "lang11d"
                                         {
 						PyrParseNode* node = (yyvsp[-1].node);
 						node->mParens = 1;
 						(yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-4].slotNode), node, ReadWriteAccessor::Private);
 					}
-#line 3892 "lang11d_tab.cpp"
+#line 3854 "lang11d_tab.cpp"
     break;
 
   case 230: /* vardeflist0: %empty  */
-#line 1086 "lang11d"
+#line 1046 "lang11d"
                           { (yyval.varDefNode) = nullptr; }
-#line 3898 "lang11d_tab.cpp"
+#line 3860 "lang11d_tab.cpp"
     break;
 
   case 233: /* vardeflist: vardeflist ',' vardef  */
-#line 1091 "lang11d"
+#line 1051 "lang11d"
                                         { (yyval.varDefNode) = linkNextNode((yyvsp[-2].varDefNode), (yyvsp[0].varDefNode)); }
-#line 3904 "lang11d_tab.cpp"
+#line 3866 "lang11d_tab.cpp"
     break;
 
   case 234: /* vardef: name  */
-#line 1094 "lang11d"
+#line 1054 "lang11d"
                                         { (yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[0].slotNode), nullptr, ReadWriteAccessor::Private); }
-#line 3910 "lang11d_tab.cpp"
+#line 3872 "lang11d_tab.cpp"
     break;
 
   case 235: /* vardef: name '=' expr  */
-#line 1096 "lang11d"
+#line 1056 "lang11d"
                                         { (yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[0].node), ReadWriteAccessor::Private); }
-#line 3916 "lang11d_tab.cpp"
+#line 3878 "lang11d_tab.cpp"
     break;
 
   case 236: /* vardef: name '(' exprseq ')'  */
-#line 1098 "lang11d"
+#line 1058 "lang11d"
                                         {
 						PyrParseNode* node = (yyvsp[-1].node);
 						node->mParens = 1;
 						(yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-3].slotNode), node, ReadWriteAccessor::Private);
 					}
-#line 3926 "lang11d_tab.cpp"
+#line 3888 "lang11d_tab.cpp"
     break;
 
   case 237: /* dictslotdef: exprseq ':' exprseq  */
-#line 1105 "lang11d"
+#line 1065 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3932 "lang11d_tab.cpp"
+#line 3894 "lang11d_tab.cpp"
     break;
 
   case 238: /* dictslotdef: KEYBINOP exprseq  */
-#line 1107 "lang11d"
+#line 1067 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-1].slotNode)->changeLiteralType(pn_PushLitNode), (yyvsp[0].node)); }
-#line 3938 "lang11d_tab.cpp"
+#line 3900 "lang11d_tab.cpp"
     break;
 
   case 240: /* dictslotlist1: dictslotlist1 ',' dictslotdef  */
-#line 1112 "lang11d"
+#line 1072 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3944 "lang11d_tab.cpp"
+#line 3906 "lang11d_tab.cpp"
     break;
 
   case 241: /* dictslotlist: %empty  */
-#line 1114 "lang11d"
+#line 1074 "lang11d"
                          { (yyval.node) = nullptr; }
-#line 3950 "lang11d_tab.cpp"
+#line 3912 "lang11d_tab.cpp"
     break;
 
   case 244: /* rwslotdeflist: rwslotdeflist ',' rwslotdef  */
-#line 1119 "lang11d"
+#line 1079 "lang11d"
                                         { (yyval.varDefNode) = linkNextNode((yyvsp[-2].varDefNode), (yyvsp[0].varDefNode)); }
-#line 3956 "lang11d_tab.cpp"
+#line 3918 "lang11d_tab.cpp"
     break;
 
   case 245: /* rwslotdef: rwspec name  */
-#line 1122 "lang11d"
+#line 1082 "lang11d"
                                         { (yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[0].slotNode), nullptr, (yyvsp[-1].rwAccessor)); }
-#line 3962 "lang11d_tab.cpp"
+#line 3924 "lang11d_tab.cpp"
     break;
 
   case 246: /* rwslotdef: rwspec name '=' slotliteral  */
-#line 1124 "lang11d"
+#line 1084 "lang11d"
                                         { (yyval.varDefNode) = allocNode<PyrVarDefNode>((yyloc), (yyvsp[-2].slotNode), (yyvsp[0].node), (yyvsp[-3].rwAccessor)); }
-#line 3968 "lang11d_tab.cpp"
+#line 3930 "lang11d_tab.cpp"
     break;
 
   case 247: /* dictlit2: '(' litdictslotlist ')'  */
-#line 1127 "lang11d"
+#line 1087 "lang11d"
                                         { (yyval.node) = allocNode<PyrLitDictNode>((yyloc), (yyvsp[-1].node)); }
-#line 3974 "lang11d_tab.cpp"
+#line 3936 "lang11d_tab.cpp"
     break;
 
   case 248: /* litdictslotdef: listliteral ':' listliteral  */
-#line 1130 "lang11d"
+#line 1090 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3980 "lang11d_tab.cpp"
+#line 3942 "lang11d_tab.cpp"
     break;
 
   case 249: /* litdictslotdef: KEYBINOP listliteral  */
-#line 1132 "lang11d"
+#line 1092 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-1].slotNode)->changeLiteralType(pn_PushLitNode), (yyvsp[0].node)); }
-#line 3986 "lang11d_tab.cpp"
+#line 3948 "lang11d_tab.cpp"
     break;
 
   case 251: /* litdictslotlist1: litdictslotlist1 ',' litdictslotdef  */
-#line 1136 "lang11d"
+#line 1096 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 3992 "lang11d_tab.cpp"
+#line 3954 "lang11d_tab.cpp"
     break;
 
   case 252: /* litdictslotlist: %empty  */
-#line 1138 "lang11d"
+#line 1098 "lang11d"
                          { (yyval.node) = nullptr; }
-#line 3998 "lang11d_tab.cpp"
+#line 3960 "lang11d_tab.cpp"
     break;
 
   case 254: /* listlit: '#' '[' literallistc ']'  */
-#line 1144 "lang11d"
+#line 1102 "lang11d"
                                         { (yyval.node) = allocNode<PyrLitListNode>((yyloc), nullptr, (yyvsp[-1].node)); }
-#line 4004 "lang11d_tab.cpp"
+#line 3966 "lang11d_tab.cpp"
     break;
 
   case 255: /* listlit: '#' CLASSNAME '[' literallistc ']'  */
-#line 1146 "lang11d"
+#line 1104 "lang11d"
                                                 { (yyval.node) = allocNode<PyrLitListNode>((yyloc), (yyvsp[-3].slotNode), (yyvsp[-1].node)); }
-#line 4010 "lang11d_tab.cpp"
+#line 3972 "lang11d_tab.cpp"
     break;
 
   case 256: /* listlit2: '[' literallistc ']'  */
-#line 1149 "lang11d"
+#line 1107 "lang11d"
                                         { (yyval.node) = allocNode<PyrLitListNode>((yyloc), nullptr, (yyvsp[-1].node)); }
-#line 4016 "lang11d_tab.cpp"
+#line 3978 "lang11d_tab.cpp"
     break;
 
   case 257: /* listlit2: CLASSNAME '[' literallistc ']'  */
-#line 1151 "lang11d"
+#line 1109 "lang11d"
                                         { (yyval.node) = allocNode<PyrLitListNode>((yyloc), (yyvsp[-3].slotNode), (yyvsp[-1].node)); }
-#line 4022 "lang11d_tab.cpp"
+#line 3984 "lang11d_tab.cpp"
     break;
 
   case 258: /* literallistc: %empty  */
-#line 1153 "lang11d"
+#line 1111 "lang11d"
                          { (yyval.node) = nullptr; }
-#line 4028 "lang11d_tab.cpp"
+#line 3990 "lang11d_tab.cpp"
     break;
 
   case 261: /* literallist1: literallist1 ',' listliteral  */
-#line 1158 "lang11d"
+#line 1116 "lang11d"
                                         { (yyval.node) = linkNextNode((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 4034 "lang11d_tab.cpp"
+#line 3996 "lang11d_tab.cpp"
     break;
 
   case 262: /* rwspec: %empty  */
-#line 1160 "lang11d"
+#line 1118 "lang11d"
                                   { (yyval.rwAccessor) = ReadWriteAccessor::Private; }
-#line 4040 "lang11d_tab.cpp"
+#line 4002 "lang11d_tab.cpp"
     break;
 
   case 263: /* rwspec: '<'  */
-#line 1161 "lang11d"
+#line 1119 "lang11d"
                                       { (yyval.rwAccessor) = ReadWriteAccessor::Read; }
-#line 4046 "lang11d_tab.cpp"
+#line 4008 "lang11d_tab.cpp"
     break;
 
   case 264: /* rwspec: READWRITEVAR  */
-#line 1162 "lang11d"
+#line 1120 "lang11d"
                                                { (yyval.rwAccessor) = ReadWriteAccessor::ReadWrite; }
-#line 4052 "lang11d_tab.cpp"
+#line 4014 "lang11d_tab.cpp"
     break;
 
   case 265: /* rwspec: '>'  */
-#line 1163 "lang11d"
+#line 1121 "lang11d"
                                       { (yyval.rwAccessor) = ReadWriteAccessor::Write; }
-#line 4058 "lang11d_tab.cpp"
+#line 4020 "lang11d_tab.cpp"
     break;
 
   case 266: /* rspec: %empty  */
-#line 1165 "lang11d"
+#line 1123 "lang11d"
                                  { (yyval.rwAccessor) = ReadWriteAccessor::Private; }
-#line 4064 "lang11d_tab.cpp"
+#line 4026 "lang11d_tab.cpp"
     break;
 
   case 267: /* rspec: '<'  */
-#line 1166 "lang11d"
+#line 1124 "lang11d"
                                       { (yyval.rwAccessor) = ReadWriteAccessor::Read; }
-#line 4070 "lang11d_tab.cpp"
+#line 4032 "lang11d_tab.cpp"
     break;
 
   case 269: /* integer: '-' INTEGER  */
-#line 1170 "lang11d"
+#line 1128 "lang11d"
                                         {
 						const auto v = (yyvsp[0].slotNode)->mSlot.getInt();
 						(yyvsp[0].slotNode)->mSlot = PyrSlot::make(-v);
 						(yyval.slotNode) = (yyvsp[0].slotNode);
 					}
-#line 4080 "lang11d_tab.cpp"
+#line 4042 "lang11d_tab.cpp"
     break;
 
   case 271: /* floatr: '-' SC_FLOAT  */
-#line 1178 "lang11d"
+#line 1136 "lang11d"
                                         {
 						const double v = (yyvsp[0].slotNode)->mSlot.getDouble();
 						(yyvsp[0].slotNode)->mSlot = PyrSlot::make(-v);
 						(yyval.slotNode) = (yyvsp[0].slotNode);
 					}
-#line 4090 "lang11d_tab.cpp"
+#line 4052 "lang11d_tab.cpp"
     break;
 
   case 273: /* accidental: '-' ACCIDENTAL  */
-#line 1186 "lang11d"
+#line 1144 "lang11d"
                                         {
 						const double in = (yyvsp[0].slotNode)->mSlot.getDouble();
 						const double intval = floor(in + 0.5);
@@ -4098,47 +4060,47 @@ yyreduce:
 						(yyvsp[0].slotNode)->mSlot = PyrSlot::make(-intval + fracval);
 						(yyval.slotNode) = (yyvsp[0].slotNode);
 					}
-#line 4102 "lang11d_tab.cpp"
+#line 4064 "lang11d_tab.cpp"
     break;
 
   case 276: /* floatp: floatr PIE  */
-#line 1198 "lang11d"
+#line 1155 "lang11d"
                                         {
 						(yyvsp[-1].slotNode)->mSlot = PyrSlot::make((yyvsp[-1].slotNode)->mSlot.getDouble() * pi);
 						(yyvsp[-1].slotNode)->mLocation = (yyloc);
 						(yyval.slotNode) = (yyvsp[-1].slotNode);
 					}
-#line 4112 "lang11d_tab.cpp"
+#line 4074 "lang11d_tab.cpp"
     break;
 
   case 277: /* floatp: integer PIE  */
-#line 1204 "lang11d"
+#line 1161 "lang11d"
                                         {
 						(yyvsp[-1].slotNode)->mSlot = PyrSlot::make((yyvsp[-1].slotNode)->mSlot.getInt() * pi);
 						(yyvsp[-1].slotNode)->mLocation = (yyloc);
 						(yyval.slotNode) = (yyvsp[-1].slotNode);
 					}
-#line 4122 "lang11d_tab.cpp"
+#line 4084 "lang11d_tab.cpp"
     break;
 
   case 279: /* floatp: '-' PIE  */
-#line 1211 "lang11d"
+#line 1168 "lang11d"
                                         {
 						(yyvsp[0].slotNode)->mSlot = PyrSlot::make(-pi);
 						(yyvsp[0].slotNode)->mLocation = (yyloc);
 						(yyval.slotNode) = (yyvsp[0].slotNode);
 					}
-#line 4132 "lang11d_tab.cpp"
+#line 4094 "lang11d_tab.cpp"
     break;
 
   case 292: /* curryArg: CURRYARG  */
-#line 1220 "lang11d"
+#line 1177 "lang11d"
                                    { (yyval.node) = allocNode<PyrCurryArgNode>((yyloc)); }
-#line 4138 "lang11d_tab.cpp"
+#line 4100 "lang11d_tab.cpp"
     break;
 
 
-#line 4142 "lang11d_tab.cpp"
+#line 4104 "lang11d_tab.cpp"
 
       default: break;
     }

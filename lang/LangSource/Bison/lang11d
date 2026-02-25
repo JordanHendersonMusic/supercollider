@@ -440,86 +440,50 @@ nextqual		: %empty
 					{
 						// innermost part
 						const int action = popls(&generatorStack);
-						PyrParseNode* expr = (PyrParseNode*)popls(&generatorStack);
-						switch (action) {
-							case 1 : 
-								$$ = allocNode<PyrCallNode>(@$, allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("yield"))), expr, nullptr);
-								break;
-							case 2 : 
-								$$ = expr; 
-								break;
-						}
+						auto* expr = (PyrParseNode*)popls(&generatorStack);
+						if (action == 1) 
+							$$ = allocNode<PyrCallNode>(@$, allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("yield"))), expr, nullptr);
+						else if (action == 2)
+							$$ = expr; 
+						// if action is neither, then what?
 					}
 				| ',' qual { $$ = $2; };
 
 qual			: name LEFTARROW exprseq nextqual
 					{
 						// later should check if exprseq is a series and optimize it to for loop
-						PyrParseNode *exprseq = $3;
-						if (exprseq->mClassno == pn_CallNode) {
-							PyrCallNode *callnode = assertCast<PyrCallNode>(exprseq);
-							if (slotRawSymbol(&callnode->mSelector->mSlot) == s_series) {
-								SetSymbol(&callnode->mSelector->mSlot, getsym("forSeries"));
-
-								auto* var = allocNode<PyrVarDefNode>(@$, $1, nullptr, ReadWriteAccessor::Private);
-								auto* args = allocNode<PyrArgListNode>(@$, var, nullptr, nullptr);
-								auto *block = allocNode<PyrBlockNode>(@$, args, nullptr, $4, false);
-								auto *blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
-
-								callnode->mArglist = linkNextNode(callnode->mArglist, blocklit);
-								$$ = callnode;
-
-							} else goto notoptimized1;
+						
+						auto* var = allocNode<PyrVarDefNode>(@1, $1, nullptr, ReadWriteAccessor::Private);
+						auto* args = allocNode<PyrArgListNode>(@1, var, nullptr, nullptr);
+						auto *block = allocNode<PyrBlockNode>(@1, args, nullptr, $4, false);
+						auto *blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
+						if (auto* call = tryCast<PyrCallNode>($3); call && call->mSelector->mSlot.getSymbol() == s_series) {
+								call->mSelector->mSlot = PyrSlot::make(getsym("forSeries"));
+								call->mArglist = linkNextNode(call->mArglist, blocklit);
+								$$ = call;
 						} else {
-							notoptimized1:
-							PyrSlot slot;
-							SetSymbol(&slot, getsym("do"));
-							auto* selectornode = allocNode<PyrSlotNode>(@$, slot);
-
-							auto* var = allocNode<PyrVarDefNode>(@$, $1, nullptr, ReadWriteAccessor::Private);
-							auto* args = allocNode<PyrArgListNode>(@$, var, nullptr, nullptr);
-							auto *block = allocNode<PyrBlockNode>(@$, args, nullptr, $4, false);
-							auto *blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
-
-							PyrParseNode* args2 = linkNextNode(exprseq, blocklit);
-							$$ = allocNode<PyrCallNode>(@$, selectornode, args2, nullptr);
+							auto* selectornode = allocNode<PyrSlotNode>(@3, PyrSlot::make(getsym("do")));
+							$$ = allocNode<PyrCallNode>(@$, selectornode, linkNextNode($3, blocklit), nullptr);
 						}
 					}
 				| name name LEFTARROW exprseq nextqual
 					{
-						// later should check if exprseq is a series and optimize it to for loop
-						PyrParseNode *exprseq = $4;
-						if (exprseq->mClassno == pn_CallNode) {
-							PyrCallNode *callnode = assertCast<PyrCallNode>(exprseq);
-							if (slotRawSymbol(&callnode->mSelector->mSlot) == s_series) {
-								SetSymbol(&callnode->mSelector->mSlot, getsym("forSeries"));
+						auto* call = tryCast<PyrCallNode>($4);
+						const auto is_series = call ? (call->mSelector->mSlot.getSymbol() == s_series) : false;
 
-								auto* var1 = allocNode<PyrVarDefNode>(@$, $1, nullptr, ReadWriteAccessor::Private);
-								auto* var2 = allocNode<PyrVarDefNode>(@$, $2, nullptr, ReadWriteAccessor::Private);
-								auto* vars = linkNextNode(var1, var2);
-								auto* args = allocNode<PyrArgListNode>(@$, vars, nullptr, nullptr);
-								auto *block = allocNode<PyrBlockNode>(@$, args, nullptr, $5, false);
-								auto *blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
+						auto* var1 = allocNode<PyrVarDefNode>(@$, $1, nullptr, ReadWriteAccessor::Private);
+						auto* var2 = allocNode<PyrVarDefNode>(@$, $2, nullptr, ReadWriteAccessor::Private);
+						auto* args = allocNode<PyrArgListNode>(@$, linkNextNode(var1, var2), nullptr, nullptr);
+						auto *block = allocNode<PyrBlockNode>(@$, args, nullptr, $5, false);
+						auto *blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
 
-								callnode->mArglist = linkNextNode(callnode->mArglist, blocklit);
-								$$ = callnode;
-
-							} else goto notoptimized2;
+						if (auto* call = tryCast<PyrCallNode>($3); call && call->mSelector->mSlot.getSymbol() == s_series) {
+							call->mSelector->mSlot = PyrSlot::make(getsym("forSeries"));
+							call->mArglist = linkNextNode(call->mArglist, blocklit);
+							$$ = call;
 						} else {
-							notoptimized2:
-							PyrSlot slot;
-							SetSymbol(&slot, getsym("do"));
-							PyrSlotNode* selectornode = allocNode<PyrSlotNode>(@$, slot);
-
-							auto* var1 = allocNode<PyrVarDefNode>(@$, $1, nullptr, ReadWriteAccessor::Private);
-							auto* var2 = allocNode<PyrVarDefNode>(@$, $2, nullptr, ReadWriteAccessor::Private);
-							auto* vars = linkNextNode(var1, var2);
-							auto* args = allocNode<PyrArgListNode>(@$, vars, nullptr, nullptr);
-							auto *block = allocNode<PyrBlockNode>(@$, args, nullptr, $5, false);
-							auto *blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
-
-							PyrParseNode* args2 = linkNextNode(exprseq, blocklit);
-							$$ = allocNode<PyrCallNode>(@$, selectornode, args2, nullptr);
+							auto* selectornode = allocNode<PyrSlotNode>(@3, PyrSlot::make(getsym("do")));
+							$$ = allocNode<PyrCallNode>(@$, selectornode, linkNextNode($4, blocklit), nullptr);
 						}
 					}
 				| VAR name '=' exprseq nextqual
@@ -530,35 +494,30 @@ qual			: name LEFTARROW exprseq nextqual
 						auto* args = allocNode<PyrArgListNode>(@$, var, nullptr, nullptr);
 						auto *block = allocNode<PyrBlockNode>(@$, args, nullptr, $5, false);
 						auto *blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
-						auto* args2 = linkNextNode(blocklit, $4);
-						$$ = allocNode<PyrCallNode>(@$, selectornode, args2, nullptr);
+						$$ = allocNode<PyrCallNode>(@$, selectornode, linkNextNode(blocklit, $4), nullptr);
 					}
 				| exprseq nextqual
 					{
-						PyrSlotNode* selectornode = allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("if")));
-						PyrParseNode* block = allocNode<PyrBlockNode>(@$, nullptr, nullptr, $2, false);
-						PyrParseNode* blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
-						PyrParseNode* args2 = linkNextNode($1, blocklit);
-						$$ = allocNode<PyrCallNode>(@$, selectornode, args2, nullptr);
+						auto* selectornode = allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("if")));
+						auto* block = allocNode<PyrBlockNode>(@$, nullptr, nullptr, $2, false);
+						auto* blocklit = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block), pn_PushLitNode);
+						$$ = allocNode<PyrCallNode>(@$, selectornode, linkNextNode($1, blocklit), nullptr);
 					}
 				| ':' ':' exprseq nextqual
 					{ $$ = allocNode<PyrDropNode>(@$, $3, $4); }
 				| ':' WHILE exprseq nextqual
 					{
-						PyrSlotNode* selectornode1 = allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("alwaysYield")));
-						PyrParseNode* pushnil = allocNode<PyrSlotNode>(@$, PyrSlot{}, pn_PushLitNode);
-						PyrParseNode* yieldNil = allocNode<PyrCallNode>(@$, selectornode1, pushnil, nullptr);
-						PyrParseNode* block1 = allocNode<PyrBlockNode>(@$, nullptr, nullptr, yieldNil, false);
-						PyrParseNode* blocklit1 = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block1), pn_PushLitNode);
-						PyrParseNode* block2 = allocNode<PyrBlockNode>(@$, nullptr, nullptr, $4, false);
-						PyrParseNode* blocklit2 = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block2), pn_PushLitNode);
-						PyrParseNode* args2 = linkNextNode($3, blocklit2);
-						PyrParseNode* args3 = linkNextNode(args2, blocklit1);
+						auto* selectornode1 = allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("alwaysYield")));
+						auto* pushnil = allocNode<PyrSlotNode>(@$, PyrSlot{}, pn_PushLitNode);
+						auto* yieldNil = allocNode<PyrCallNode>(@$, selectornode1, pushnil, nullptr);
+						auto* block1 = allocNode<PyrBlockNode>(@$, nullptr, nullptr, yieldNil, false);
+						auto* blocklit1 = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block1), pn_PushLitNode);
+						auto* block2 = allocNode<PyrBlockNode>(@$, nullptr, nullptr, $4, false);
+						auto* blocklit2 = allocNode<PyrSlotNode>(@$, PyrSlot::make<void*>(block2), pn_PushLitNode);
 
-						PyrSlotNode* selectornode2 = allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("if")));
-						$$ = allocNode<PyrCallNode>(@$, selectornode2, args3, nullptr);
+						auto* selectornode2 = allocNode<PyrSlotNode>(@$, PyrSlot::make(getsym("if")));
+						$$ = allocNode<PyrCallNode>(@$, selectornode2, linkAllNodes($3, blocklit2, blocklit1), nullptr);
 					};
-
 
 expr1			: pushliteral
 				| blockliteral
@@ -569,7 +528,7 @@ expr1			: pushliteral
 				| '(' exprseq ')'
 					{
 						PyrParseNode* node = $2;
-						node->mParens = 1;
+						node->mParens = true; // This means  (((((1))))), will not count the brackets, but just indicates they exist.
 						node->mLocation = @$; // make the location include the brackets.
 						$$ = $2;
 					}
@@ -663,7 +622,8 @@ valrangeassign 	: expr1 '[' arglist1 DOTDOT ']' '=' expr
 							allocNode<PyrSlotNode>(@$, PyrSlot{}, pn_PushLitNode),
 							allocNode<PyrSlotNode>(@$, PyrSlot{}, pn_PushLitNode),
 							$4, 
-							$7);
+							$7
+						);
 						auto* selectornode = allocNode<PyrSlotNode>(@$, PyrSlot::make(s_putseries));
 						$$ = allocNode<PyrCallNode>(@$, selectornode, args, nullptr);
 					}
@@ -718,7 +678,8 @@ valrangexd		: expr '.' '[' arglist1 DOTDOT ']'
 							$1,
 							allocNode<PyrSlotNode>(@$, PyrSlot{}, pn_PushLitNode),
 							allocNode<PyrSlotNode>(@$, PyrSlot{}, pn_PushLitNode),
-							$5);
+							$5
+						);
 						auto* selectornode = allocNode<PyrSlotNode>(@$, PyrSlot::make(s_copyseries));
 						$$ = allocNode<PyrCallNode>(@$, selectornode, args, nullptr);
 					}
@@ -1057,7 +1018,6 @@ argdecls1		: ARG vardeflist ';'
 				| '|' slotdeflist0 ELLIPSIS name ',' name '|'
 				    { $$ = allocNode<PyrArgListNode>(@$, $2, $4, $6); };
 
-
 constdeflist	: constdef
 				| constdeflist optcomma constdef
 					{ $$ = linkNextNode($1, $3); } ;
@@ -1138,8 +1098,6 @@ litdictslotlist1: litdictslotdef
 litdictslotlist	: %empty { $$ = nullptr; }
 				| litdictslotlist1 optcomma;
 
-
-
 listlit			: '#' '[' literallistc ']'
 					{ $$ = allocNode<PyrLitListNode>(@$, nullptr, $3); }
 				| '#' CLASSNAME  '[' literallistc ']'
@@ -1190,7 +1148,6 @@ accidental 		: ACCIDENTAL
 						$2->mSlot = PyrSlot::make(-intval + fracval);
 						$$ = $2;
 					};
-
 
 floatp			: floatr
 				| accidental

@@ -251,6 +251,7 @@ TestParserRules : UnitTest {
 			[ 1, 3, 15, 21, 45, 55, 91, 105, 153, 171 ]
 		);
 
+		// testing side effects, don't remove postln.
 		this.assertEquals(
 			all {: z, x <- (1..20), var z = (x*x-x) div: 2, :: [x,z].postln, z.even },
 			[0, 6, 10, 28, 36, 66, 78, 120, 136, 190]
