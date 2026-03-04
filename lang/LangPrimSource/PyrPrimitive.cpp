@@ -2727,7 +2727,7 @@ void switchToThread(VMGlobals* g, PyrThread* newthread, int oldstate, int* numAr
     SetRaw(&newthread->sp, (void*)nullptr);
     SetNil(&newthread->receiver);
 
-    SetRaw(&newthread->state, tRunning);
+    SetRaw(&newthread->state, static_cast<int>(tRunning));
 
 
     // set new environment
@@ -3092,7 +3092,7 @@ int prRoutineReset(struct VMGlobals* g, int numArgsPushed) {
     state = slotRawInt(&thread->state);
     // post("->prRoutineReset %d\n", state);
     if (state == tSuspended) {
-        SetRaw(&thread->state, tInit);
+        SetRaw(&thread->state, static_cast<int>(tInit));
         slotRawObject(&thread->stack)->size = 0;
         SetNil(&thread->method);
         SetNil(&thread->block);
@@ -3104,7 +3104,7 @@ int prRoutineReset(struct VMGlobals* g, int numArgsPushed) {
         SetRaw(&thread->numpop, 0);
         SetNil(&thread->parent);
     } else if (state == tDone) {
-        SetRaw(&thread->state, tInit);
+        SetRaw(&thread->state, static_cast<int>(tInit));
         slotRawObject(&thread->stack)->size = 0;
         SetNil(&thread->method);
         SetNil(&thread->block);
@@ -3143,7 +3143,7 @@ int prRoutineStop(struct VMGlobals* g, int numArgsPushed) {
 
     if (state == tSuspended || state == tInit) {
         SetNil(&g->thread->terminalValue);
-        SetRaw(&thread->state, tDone);
+        SetRaw(&thread->state, static_cast<int>(tDone));
         slotRawObject(&thread->stack)->size = 0;
     } else if (state == tDone) {
         // do nothing

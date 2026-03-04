@@ -1,6 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <cstdint>
 #include <sys/types.h>
+#include <type_traits>
 
 #include "PyrSlot.h"
 #include "PyrObject.h"
@@ -162,4 +163,23 @@ BOOST_AUTO_TEST_CASE(bool_test) {
     BOOST_TEST(false_slot.isFalse());
     BOOST_TEST(!true_slot.isFalse());
     BOOST_TEST(!false_slot.isTrue());
+}
+
+
+// We can't test this simply, but these should hold.
+// If anyone comes up with a good way to check that code *doesn't* compile, do let me know! (Jordan)
+// These look like they should be static_asserts with std::is_invokable_v, but even when I wrap it, it won't work.
+// When we get c++20, we can make the PyrSlot constructor constexpr, and this can be used as a NTTP and SFINAE can be
+// used in a static assert.
+BOOST_AUTO_TEST_CASE(should_not_compile) {
+    const auto a = PyrSlot::make(std::int64_t {});
+    const auto b = PyrSlot::make(std::uint64_t {});
+    const auto c = PyrSlot::make(std::uint8_t {});
+    const auto d = PyrSlot::make(std::string {});
+
+    // check pointers don't turn to void*.
+    const std::int64_t i {};
+    const auto e = PyrSlot::make(&i);
+    // This is fine! Just be explicit.
+    const auto f = PyrSlot::make((void*)&i);
 }
