@@ -30,7 +30,6 @@
 #include <QtCore/qmath.h>
 
 #include <cmath>
-#include <qvariant.h>
 
 QC_DECLARE_QWIDGET_FACTORY(QcGraph);
 
@@ -182,7 +181,7 @@ void QcGraph::setCurves(const QVariantList& curves) {
         const QVariant& data = curves[i];
         QcGraphElement::CurveType type;
         double curvature;
-        if (data.typeId() == QMetaType::Int) {
+        if (data.type() == QVariant::Int) {
             type = (QcGraphElement::CurveType)data.toInt();
             curvature = 0.0;
         } else {

@@ -413,7 +413,7 @@ bool QWidgetProxy::interpretKeyEvent(QObject* o, QEvent* e, QList<QVariant>& arg
 #endif
     {
         QString text(ke->text());
-        if (text.size())
+        if (text.count())
             character = text[0];
     }
 
@@ -478,7 +478,7 @@ bool QWidgetProxy::interpretDragEvent(QObject* o, QEvent* e, QList<QVariant>& ar
         if (!internal)
             interpretMimeData(data, args);
     } else {
-        QPoint pos = dnd->position().toPoint();
+        QPoint pos = dnd->pos();
         args << pos.x() << pos.y();
     }
 
