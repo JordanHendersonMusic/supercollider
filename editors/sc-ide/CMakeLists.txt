@@ -583,3 +583,8 @@ endif()
 if (LINUX)
   install( PROGRAMS SuperColliderIDE.desktop  DESTINATION "share/applications")
 endif()
+
+
+set_property(TARGET SuperCollider PROPERTY FOLDER Main)
+set_property(TARGET libscide PROPERTY FOLDER Libs)
+set_property(TARGET update_ide_translations PROPERTY FOLDER Util)

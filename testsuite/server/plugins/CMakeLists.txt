@@ -19,6 +19,7 @@ foreach(test_file ${plugin_tests})
         ${CMAKE_SOURCE_DIR}/include/plugin_interface
     )
 
+    set_property(TARGET ${test_name} PROPERTY FOLDER Test/Plugin/C_API)
     # C plugins cannot be built for Supernova (yet)
     if (NOT ${test_name} STREQUAL c_api_test)
         add_library(${test_name}_supernova MODULE ${test_file})
@@ -39,3 +40,5 @@ set_target_properties(testlib PROPERTIES
 )
 target_link_libraries(shared_lib_test PRIVATE testlib)
 target_link_libraries(shared_lib_test_supernova PRIVATE testlib)
+set_property(TARGET testlib PROPERTY FOLDER Test/Plugin/C_API)
+  set_property(TARGET shared_lib_test_supernova PROPERTY FOLDER Test/Supernova)

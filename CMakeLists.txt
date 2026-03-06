@@ -20,6 +20,9 @@ endif()
 
 message(STATUS "SuperCollider Version: ${SC_VERSION}")
 message(STATUS "Building from ${GIT_REF_TYPE} ${GIT_BRANCH_OR_TAG}, commit hash is ${GIT_COMMIT_HASH}")
+
+# Stops CTest from generating a bunch of targets we don't care about.
+set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 include(CTest)
 enable_testing()
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
@@ -49,6 +52,7 @@ CONFIGURE_FILE(
 
 ADD_CUSTOM_TARGET(uninstall
   "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+set_property(TARGET uninstall PROPERTY FOLDER Util)
 
 # identify target architecture
 if(WIN32)

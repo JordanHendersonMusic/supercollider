@@ -40,4 +40,6 @@ foreach(test ${simple_tests})
   endif()
 
   add_test(${test_name}_run ${EXECUTABLE_OUTPUT_PATH}/${test_name})
+
+  set_property(TARGET ${test_name} PROPERTY FOLDER Test/Supernova)
 endforeach(test)

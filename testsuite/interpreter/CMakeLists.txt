@@ -29,4 +29,5 @@ foreach(test ${test_sources})
 	)
 
   add_test(interpreter_${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
+  set_property(TARGET ${test_name} PROPERTY FOLDER Test/Interpreter)
 endforeach(test)

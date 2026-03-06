@@ -176,6 +176,8 @@ set( EXAMPLE_OSC OFF )
 
 if(SC_HIDAPI)
     add_subdirectory(hidapi)
+	set_property(TARGET hidapi_parser PROPERTY FOLDER Libs)
+	set_property(TARGET hidapi PROPERTY FOLDER Libs)
     message(STATUS "Building with HID support")
 else()
     message(STATUS "HID support disabled")

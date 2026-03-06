@@ -288,3 +288,6 @@ endif()
 if(UNIX AND NOT APPLE)
     target_compile_definitions(libsupernova PUBLIC "SC_PLUGIN_DIR=\"${LINUX_SC_PLUGIN_DIR}\"")
 endif()
+
+set_property(TARGET supernova PROPERTY FOLDER Main)
+set_property(TARGET libsupernova PROPERTY FOLDER Libs)
