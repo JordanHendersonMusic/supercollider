@@ -15,6 +15,6 @@ target_link_libraries(scsynth_test libscsynth boost_test)
 if (PTHREADS_FOUND)
     target_link_libraries(scsynth_test ${PTHREADS_LIBRARIES})
 endif()
-add_test(scsynth_test_run ${EXECUTABLE_OUTPUT_PATH}/scsynth_test)
+add_test(scsynth__test_run scsynth_test)
 
 set_property(TARGET scsynth_test PROPERTY FOLDER Test/scsynth)
