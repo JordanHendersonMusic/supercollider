@@ -585,6 +585,5 @@ if (LINUX)
 endif()
 
 
-set_property(TARGET SuperCollider PROPERTY FOLDER Main)
 set_property(TARGET libscide PROPERTY FOLDER Libs)
 set_property(TARGET update_ide_translations PROPERTY FOLDER Util)

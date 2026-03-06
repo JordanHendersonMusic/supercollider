@@ -459,4 +459,3 @@ else()
 endif()
 
 set_property(TARGET libsclang PROPERTY FOLDER Libs)
-set_property(TARGET sclang PROPERTY FOLDER Main)
