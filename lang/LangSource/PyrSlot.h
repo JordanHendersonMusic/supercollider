@@ -604,3 +604,15 @@ bool postString(PyrSlot* slot, char* str);
 template <typename numeric_type> inline void setSlotVal(PyrSlot* slot, numeric_type value) noexcept;
 template <> inline void setSlotVal<int>(PyrSlot* slot, int value) noexcept { SetInt(slot, value); }
 template <> inline void setSlotVal<double>(PyrSlot* slot, double value) noexcept { SetFloat(slot, value); }
+
+
+inline void replaceNotNil(PyrSlot* dest, PyrSlot src) {
+    if (!src.isNil())
+        *dest = src;
+}
+
+inline void replaceNotNil(PyrSlot* dest, PyrSlot* src_begin, PyrSlot* src_end) {
+    assert(src_begin <= src_end);
+    for (auto it = src_begin; it < src_end; ++it, ++dest)
+        replaceNotNil(dest, *it);
+}

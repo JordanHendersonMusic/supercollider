@@ -23,6 +23,7 @@
 #include "PyrInterpreter.h"
 #include "PyrPrimitive.h"
 #include "PyrListPrim.h"
+#include "PyrSlot.h"
 #include "PyrSymbol.h"
 #include "GC.h"
 #include "PredefinedSymbols.h"
@@ -166,11 +167,11 @@ lookup_again:
         if (numKeyArgsPushed > 0)
             applyKeywords();
         g->sp -= numArgsPushed - 1; // Remove all args but the receiver.
-        const auto classIndex = methodRaw->specialIndex; // Zero is index of the first argument.
-        if (classIndex < numArgsPushed)
-            slotCopy(g->sp, g->sp + classIndex);
+        const auto argIndex = methodRaw->specialIndex; // Zero is index of the first argument.
+        if (argIndex < numArgsPushed && !(g->sp + argIndex)->isNil())
+            slotCopy(g->sp, g->sp + argIndex);
         else
-            slotCopy(g->sp, &slotRawObject(&method->prototypeFrame)->slots[classIndex]);
+            slotCopy(g->sp, &slotRawObject(&method->prototypeFrame)->slots[argIndex]);
         return;
     }
 
@@ -410,9 +411,22 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
         return std::nullopt;
     };
 
+    // Put defaults on the stack first.
+    std::copy(proto->slots, proto->slots + methNumNormArgs, outCallFrameStack);
+
+    // Override defaults with envir, if provided.
+    if (optionalEnvirLookup)
+        // ident dicts can't have nil inside them, so no need to check the default.
+        for (auto i = 0; i < methNumNormArgs; ++i) {
+            PyrSlot keyslot;
+            SetSymbol(&keyslot, methArgNames[i]);
+            identDict_lookupNonNil(optionalEnvirLookup, &keyslot, calcHash(&keyslot), &outCallFrameStack[i]);
+        }
+
     // Number that will actually be pushed to resulting call frame.
     const auto numNormalArgsAdded = std::min<uint32>(numNormalSuppliedArgs, methNumNormArgs);
-    std::copy(pushedArgs, pushedArgs + numNormalArgsAdded, outCallFrameStack);
+    // Replace arguments if they are not nil.
+    replaceNotNil(outCallFrameStack, pushedArgs, pushedArgs + numNormalArgsAdded);
 
     if (numNormalSuppliedArgs > methNumNormArgs && methHasVarArg) {
         // Too many args.
@@ -421,19 +435,6 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
         variableArgumentsArray = newPyrArray(g->gc, size, 0, false);
         variableArgumentsArray->size = size;
         std::copy(pushedArgs + numNormalArgsAdded, pushedArgs + numNormalSuppliedArgs, variableArgumentsArray->slots);
-
-    } else if (numNormalSuppliedArgs < methNumNormArgs) {
-        // Too few args, push defaults.
-        std::copy(proto->slots + numNormalArgsAdded, proto->slots + methNumNormArgs,
-                  outCallFrameStack + numNormalArgsAdded);
-
-        // This is the only case where the optional environment is used to lookup arguments.
-        if (optionalEnvirLookup)
-            for (auto i = numNormalArgsAdded; i < methNumNormArgs; ++i) {
-                PyrSlot keyslot;
-                SetSymbol(&keyslot, methArgNames[i]);
-                identDict_lookupNonNil(optionalEnvirLookup, &keyslot, calcHash(&keyslot), &outCallFrameStack[i]);
-            }
     }
 
     // Deal with the keywords.
@@ -443,7 +444,13 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
 
         // If found in method.
         if (const auto argIndex = findKeywordArgIndex(argKeyword); argIndex.has_value()) {
-            outCallFrameStack[*argIndex] = *argValue;
+            if (argValue->isNil())
+                // Put it back to the default value. Passing nil is the same as saying, reset to default.
+                // It is important to use the proto default here in the case of a previous positional arguments being
+                // present and having overriden the value.
+                *(outCallFrameStack + *argIndex) = proto->slots[*argIndex];
+            else
+                *(outCallFrameStack + *argIndex) = *argValue;
 
             // SC docs show that in the case of colliding args, the last one added should always be the result.
             if (*argIndex < numNormalArgsAdded) {

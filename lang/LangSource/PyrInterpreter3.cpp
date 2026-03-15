@@ -2276,7 +2276,7 @@ HOT void Interpret(VMGlobals* g) {
             case methReturnArg:
                 sp -= numArgsPushed - 1;
                 index = methraw->specialIndex; // zero is index of the first argument
-                if (index < numArgsPushed)
+                if (index < numArgsPushed && !(sp + index)->isNil())
                     slotCopy(sp, sp + index);
                 else
                     slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
@@ -2393,7 +2393,7 @@ HOT void Interpret(VMGlobals* g) {
                 sp = g->sp;
                 sp -= numArgsPushed - 1;
                 index = methraw->specialIndex; // zero is index of the first argument
-                if (index < numArgsPushed) {
+                if (index < numArgsPushed && !(sp + index)->isNil()) {
                     slotCopy(sp, sp + index);
                 } else {
                     slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);

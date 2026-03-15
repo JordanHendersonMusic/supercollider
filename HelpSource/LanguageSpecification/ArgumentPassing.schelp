@@ -1,0 +1,48 @@
+title:: Argument Passing
+summary:: How arguments are passed to function/methods
+categories:: LanguageSpecification
+
+SuperCollider supports positional arguments, keyword arguments, environmental argument lookup, and default arguments.
+These features all combine to sometimes create confusing results. 
+This document provides the rules for how one can expect these conflicts to be ressolved.
+
+section:: Nil and defaults
+
+One major source of confusion is what code::nil:: means at the call sight.
+
+In previous SuperCollider versions the behaviour changed depending on subtle things like the syntax used to declare default argument values. 
+This has since been removed, now code::nil:: has a precise meaning...
+
+code::nil:: means to reset the argument to the default value. If no default value is provided, this is code::nil:: itself.
+
+Here are some examples.
+
+code::
+f = { |a = 1| a };
+
+f.(); // 1
+
+f.(10); // 10
+f.(a: 10); // 10
+
+f.(nil) // 1
+f.(a: nil) // 1
+
+f.(10, a: nil) // 1 - also posts warning about argument collision
+::
+
+
+This must hold true regardless of how the default argument is declared or internally evaluated.
+
+
+section:: Argument Collisions
+
+When positional arguments (arguments without keywords) and keyword arguments collide, the right most argument is the final value.
+
+code::
+f = { |a = 1| a };
+f.(10, a: nil, a: 20, a: 11) // 11
+::
+
+To break this example down: first code::a:: is set to the default of code::1::, then to code::10::, followed by returning to code::1:: as code::nil:: resets to the default, before setting to code::20::, followed by code::11::.
+Ultimately, this means all but the final keyword assignment is irrelevent and the code should just be code::f.(a: 11):: or code::f.(11)::.
