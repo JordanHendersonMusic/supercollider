@@ -19,6 +19,7 @@
 */
 
 #include "PyrMessage.h"
+#include "PyrKernel.h"
 #include "PyrPrimitiveProto.h"
 #include "PyrInterpreter.h"
 #include "PyrPrimitive.h"
@@ -433,8 +434,12 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
     } else {
         size_t i { 0 };
         for (PyrSlot* it { pushedArgs }; it < (pushedArgs + numNormalArgsAdded); ++it, ++i) {
-            if (it->isNil() && !proto->slots[i].isNil())
-                v_errors::PassingNilToLiteralInitArg::print_error();
+            if (it->isNil() && !proto->slots[i].isNil()) {
+                auto m = callFrame->method.getPyrObjType<PyrMethod>();
+                v_errors::PassingNilToLiteralInitArg::print_error(
+                    m->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
+                    callFrame->method.getPyrObjType<PyrMethod>()->name.getSymbol()->name);
+            }
             outCallFrameStack[i] = *it;
         }
     }
@@ -465,8 +470,12 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
                 else
                     *(outCallFrameStack + *argIndex) = *argValue;
             } else {
-                if (argValue->isNil() && !proto->slots[*argIndex].isNil())
-                    v_errors::PassingNilToLiteralInitArg::print_error();
+                if (argValue->isNil() && !proto->slots[*argIndex].isNil()) {
+                    auto m = callFrame->method.getPyrObjType<PyrMethod>();
+                    v_errors::PassingNilToLiteralInitArg::print_error(
+                        m->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
+                        callFrame->method.getPyrObjType<PyrMethod>()->name.getSymbol()->name);
+                }
                 *(outCallFrameStack + *argIndex) = *argValue;
             }
 

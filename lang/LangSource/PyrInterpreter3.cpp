@@ -2287,7 +2287,9 @@ HOT void Interpret(VMGlobals* g) {
                     auto protoframe = meth->prototypeFrame.getPyrObjType<PyrObject>();
                     if (index < numArgsPushed) {
                         if (sp[index].isNil() && !protoframe->slots[index].isNil())
-                            v_errors::PassingNilToLiteralInitArg::print_error();
+                            v_errors::PassingNilToLiteralInitArg::print_error(
+                                meth->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
+                                meth->name.getSymbol()->name);
                         slotCopy(sp, sp + index);
                     } else {
                         slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
@@ -2415,7 +2417,9 @@ HOT void Interpret(VMGlobals* g) {
                     auto protoframe = meth->prototypeFrame.getPyrObjType<PyrObject>();
                     if (index < numArgsPushed) {
                         if (sp[index].isNil() && !protoframe->slots[index].isNil())
-                            v_errors::PassingNilToLiteralInitArg::print_error();
+                            v_errors::PassingNilToLiteralInitArg::print_error(
+                                meth->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
+                                meth->name.getSymbol()->name);
                         slotCopy(sp, sp + index);
                     } else {
                         slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
