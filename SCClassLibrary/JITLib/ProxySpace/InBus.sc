@@ -310,11 +310,11 @@ Monitor {
 		this.playNToBundle(bundle, outs, amps, ins, vol, fadeTime, group, addAction, multi: multi)
 	}
 
-	newGroupToBundle { | bundle, target, addAction=(\addToTail) |
+	newGroupToBundle { | bundle, target, addAction |
 		target = target.asGroup;
 		group = Group.basicNew(target.server);
 		group.isPlaying = true;
-		bundle.add(group.newMsg(target, addAction));
+		bundle.add(group.newMsg(target, addAction ?? {\addToTail}));
 		NodeWatcher.register(group);
 	}
 
