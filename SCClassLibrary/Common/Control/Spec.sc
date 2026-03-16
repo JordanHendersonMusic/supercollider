@@ -41,8 +41,9 @@ ControlSpec : Spec {
 	var <minval, <maxval, <warp, <step, <>default, <>units, >grid;
 	var <clipLo, <clipHi;
 
-	*new { arg minval = (0.0), maxval = (1.0), warp = ('lin'), step = (0.0), default, units, grid;
-		^super.newCopyArgs(minval, maxval, warp, step, default ? minval, units ? "", grid).init
+	*new { arg minval, maxval, warp, step, default, units, grid;
+		// In version 3.16, these args can simply be `args minval = 0.0`, including `default = minval`.
+		^super.newCopyArgs(minval ?? {0.0}, maxval ?? {1.0}, warp ?? {'lin'}, step ?? {0.0}, default ?? {minval}, units ?? {""}, grid).init
 	}
 
 	*newFrom { arg similar;

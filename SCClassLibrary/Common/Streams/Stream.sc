@@ -337,13 +337,14 @@ PauseStream : Stream {
 
 	isPlaying { ^stream.notNil }
 
-	play { arg argClock, doReset = (false), quant;
+	play { arg argClock, doReset, quant;
 		// check 'quant' first, before changing any state variables
 		// if there is an error, this object should be unaffected
 		var tempClock = argClock ? clock ? TempoClock.default;
 		var time = quant.asQuant.nextTimeOnGrid(tempClock);
 
 		if (stream.notNil, { "already playing".postln; ^this });
+		doReset = doReset ?? { false };
 		if (doReset, { this.reset });
 		clock = tempClock;
 		streamHasEnded = false;
@@ -560,13 +561,14 @@ EventStreamPlayer : PauseStream {
 
 	asEventStreamPlayer { ^this }
 
-	play { arg argClock, doReset = (false), quant;
+	play { arg argClock, doReset, quant;
 		// check 'quant' first, before changing any state variables
 		// if there is an error, this object should be unaffected
 		var tempClock = argClock ? clock ? TempoClock.default;
 		var time = quant.asQuant.nextTimeOnGrid(tempClock);
 
 		if (stream.notNil, { "already playing".postln; ^this });
+		doReset = doReset ?? { false };
 		if (doReset, { this.reset });
 		clock = tempClock;
 		streamHasEnded = false;

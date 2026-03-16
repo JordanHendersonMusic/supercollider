@@ -219,13 +219,15 @@ Env {
 		^releaseNode.notNil
 	}
 
-	asMultichannelSignal { arg length = 400, class = (Signal);
+	asMultichannelSignal { arg length = 400, class;
 		var multiChannelArray = this.asMultichannelArray;
 		var channelCount = multiChannelArray.size;
 
 		var totalDur = this.totalDuration;
 
 		length = max(length, levels.size);
+
+		class = class ?? {Signal};
 
 		^multiChannelArray.collect { |chan|
 			var signal, ratio;

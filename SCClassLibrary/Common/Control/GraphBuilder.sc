@@ -20,8 +20,8 @@ GraphBuilder {
 		})
 	}
 
-	*makeFadeEnv { arg fadeTime = (0.02);
-		var dt = NamedControl.kr(\fadeTime, fadeTime);
+	*makeFadeEnv { arg fadeTime;
+		var dt = NamedControl.kr(\fadeTime, fadeTime ?? {0.02});
 		var gate = NamedControl.kr(\gate, 1.0);
 		var startVal = (dt <= 0);
 

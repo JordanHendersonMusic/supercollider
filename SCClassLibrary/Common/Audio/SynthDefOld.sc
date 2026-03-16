@@ -165,11 +165,12 @@ SynthDefOld : SynthDef {
 
 + Object {
 
-	writeDefFileOld { arg name, dir, overwrite = (true);
+	writeDefFileOld { arg name, dir, overwrite;
 
 		StartUp.defer { // make sure the synth defs are written to the right path
 			var file;
 			dir = dir ? SynthDef.synthDefDir;
+			overwrite = overwrite ? true;
 			if (name.isNil) { Error("missing SynthDef file name").throw } {
 				name = dir +/+ name ++ ".scsyndef";
 				if(overwrite or: { pathMatch(name).isEmpty })

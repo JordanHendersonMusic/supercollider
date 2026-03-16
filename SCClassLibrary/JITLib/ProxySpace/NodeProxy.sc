@@ -187,8 +187,9 @@ NodeProxy : BusPlug {
 
 
 
-	putAll { | list, index = (0), channelOffset = 0 |
+	putAll { | list, index, channelOffset = 0 |
 		channelOffset = channelOffset.asArray;
+		index = index ?? {0};
 		if(index.isSequenceableCollection) {
 			max(list.size, index.size).do { |i|
 				this.put(index.wrapAt(i), list.wrapAt(i), channelOffset.wrapAt(i))
