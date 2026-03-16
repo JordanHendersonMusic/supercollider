@@ -306,7 +306,7 @@ Buffer {
 	}
 
 	// risky without wait
-	getToFloatArray { arg index = 0, count = -1, wait = 0.01, timeout = 3, action;
+	getToFloatArray { arg index = 0, count, wait = 0.01, timeout = 3, action;
 		var refcount, array, pos, getsize, resp, done = false;
 
 		pos = index = index.asInteger;
