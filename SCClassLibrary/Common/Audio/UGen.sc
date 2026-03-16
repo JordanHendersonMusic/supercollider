@@ -64,17 +64,17 @@ UGen : AbstractFunction {
 	}
 	exprange { arg lo = 0.01, hi = 1.0;
 		^if (this.signalRange == \bipolar) {
-			this.linexp(-1, 1, lo, hi, nil)
+			this.linexp(-1, 1, lo, hi, \none)
 		} {
-			this.linexp(0, 1, lo, hi, nil)
+			this.linexp(0, 1, lo, hi, \none)
 		};
 	}
 
 	curverange { arg lo = 0.00, hi = 1.0, curve = -4;
 		^if (this.signalRange == \bipolar) {
-			this.lincurve(-1, 1, lo, hi, curve, nil)
+			this.lincurve(-1, 1, lo, hi, curve, \none)
 		} {
-			this.lincurve(0, 1, lo, hi, curve, nil)
+			this.lincurve(0, 1, lo, hi, curve, \none)
 		};
 	}
 
@@ -189,6 +189,9 @@ UGen : AbstractFunction {
 			},
 			\max, {
 				^this.min(max);
+			},
+			\none, {
+				^this;
 			}
 		);
 		^this
