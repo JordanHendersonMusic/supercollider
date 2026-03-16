@@ -169,12 +169,26 @@ lookup_again:
         if (numKeyArgsPushed > 0)
             applyKeywords();
         g->sp -= numArgsPushed - 1; // Remove all args but the receiver.
-        const auto argIndex = methodRaw->specialIndex; // Zero is index of the first argument.
-        if (argIndex < numArgsPushed && !(g->sp + argIndex)->isNil())
-            slotCopy(g->sp, g->sp + argIndex);
-        else
-            slotCopy(g->sp, &slotRawObject(&method->prototypeFrame)->slots[argIndex]);
-        return;
+
+        const auto index = methodRaw->specialIndex; // Zero is index of the first argument.
+
+        if constexpr (v_errors::PassingNilToLiteralInitArg::do_new()) {
+            if (index < numArgsPushed && !(g->sp + index)->isNil())
+                slotCopy(g->sp, g->sp + index);
+            else
+                slotCopy(g->sp, &slotRawObject(&g->method->prototypeFrame)->slots[index]);
+        } else {
+            auto protoframe = g->method->prototypeFrame.getPyrObjType<PyrObject>();
+            if (index < numArgsPushed) {
+                if (g->sp[index].isNil() && !protoframe->slots[index].isNil())
+                    v_errors::PassingNilToLiteralInitArg::print_error(
+                        g->method->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
+                        g->method->name.getSymbol()->name);
+                slotCopy(g->sp, g->sp + index);
+            } else {
+                slotCopy(g->sp, &slotRawObject(&g->method->prototypeFrame)->slots[index]);
+            }
+        }
     }
 
     case methReturnInstVar: { // Return instance variable.
