@@ -427,8 +427,9 @@ UnitTestResult {
 
 	var <testClass, <testMethod, <message, <details, <debug;
 
-	*new { |testClass, testMethod, message = "", details, debug|
-		^super.newCopyArgs(testClass ? this, testMethod ? thisMethod, message, details, debug)
+	*new { |testClass, testMethod, message, details, debug|
+		// In version 3.16 this can simply be |message = ""|.
+		^super.newCopyArgs(testClass ? this, testMethod ? thisMethod, message ?? {""}, details, debug)
 	}
 
 	report { |brief=false|

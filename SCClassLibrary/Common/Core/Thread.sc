@@ -18,8 +18,9 @@ Thread : Stream {
 	var <executingPath, <oldExecutingPath;
 	var rescheduledTime;
 
-	*new { arg func, stackSize = (512);
-		^super.new.init(func, stackSize)
+	*new { arg func, stackSize;
+		// In version 3.16 this can simply be `arg stackSize = 512`;
+		^super.new.init(func, stackSize ?? { 512 })
 	}
 	init { arg argFunc, argStackSize = 512;
 		_Thread_Init
