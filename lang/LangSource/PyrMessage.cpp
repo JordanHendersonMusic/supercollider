@@ -29,6 +29,7 @@
 #include "PredefinedSymbols.h"
 #include "PyrObjectProto.h"
 #include "SCBase.h"
+#include "VersionedErrors.h"
 
 #include <optional>
 #include <csetjmp>
@@ -425,8 +426,18 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
 
     // Number that will actually be pushed to resulting call frame.
     const auto numNormalArgsAdded = std::min<uint32>(numNormalSuppliedArgs, methNumNormArgs);
-    // Replace arguments if they are not nil.
-    replaceNotNil(outCallFrameStack, pushedArgs, pushedArgs + numNormalArgsAdded);
+
+    if constexpr (v_errors::PassingNilToLiteralInitArg::do_new()) {
+        // Replace arguments if they are not nil.
+        replaceNotNil(outCallFrameStack, pushedArgs, pushedArgs + numNormalArgsAdded);
+    } else {
+        size_t i { 0 };
+        for (PyrSlot* it { pushedArgs }; it < (pushedArgs + numNormalArgsAdded); ++it, ++i) {
+            if (it->isNil() && !proto->slots[i].isNil())
+                v_errors::PassingNilToLiteralInitArg::print_error();
+            outCallFrameStack[i] = *it;
+        }
+    }
 
     if (numNormalSuppliedArgs > methNumNormArgs && methHasVarArg) {
         // Too many args.
@@ -444,13 +455,20 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
 
         // If found in method.
         if (const auto argIndex = findKeywordArgIndex(argKeyword); argIndex.has_value()) {
-            if (argValue->isNil())
-                // Put it back to the default value. Passing nil is the same as saying, reset to default.
-                // It is important to use the proto default here in the case of a previous positional arguments being
-                // present and having overriden the value.
-                *(outCallFrameStack + *argIndex) = proto->slots[*argIndex];
-            else
+            // Found keyword.
+            if constexpr (v_errors::PassingNilToLiteralInitArg::do_new()) {
+                // Passing nil is the same as saying, reset to default.
+                // It is important to use the proto default here in the case of a previous positional arguments
+                // being present and having overriden the value.
+                if (argValue->isNil())
+                    *(outCallFrameStack + *argIndex) = proto->slots[*argIndex];
+                else
+                    *(outCallFrameStack + *argIndex) = *argValue;
+            } else {
+                if (argValue->isNil() && !proto->slots[*argIndex].isNil())
+                    v_errors::PassingNilToLiteralInitArg::print_error();
                 *(outCallFrameStack + *argIndex) = *argValue;
+            }
 
             // SC docs show that in the case of colliding args, the last one added should always be the result.
             if (*argIndex < numNormalArgsAdded) {

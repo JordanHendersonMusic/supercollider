@@ -40,6 +40,8 @@
 #include <signal.h>
 #include "SpecialSelectorsOperatorsAndClasses.h"
 
+#include "VersionedErrors.h"
+
 #include <float.h>
 #define kBigBigFloat DBL_MAX
 #define kSmallSmallFloat DBL_MIN
@@ -2276,10 +2278,21 @@ HOT void Interpret(VMGlobals* g) {
             case methReturnArg:
                 sp -= numArgsPushed - 1;
                 index = methraw->specialIndex; // zero is index of the first argument
-                if (index < numArgsPushed && !(sp + index)->isNil())
-                    slotCopy(sp, sp + index);
-                else
-                    slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
+                if constexpr (v_errors::PassingNilToLiteralInitArg::do_new()) {
+                    if (index < numArgsPushed && !(sp + index)->isNil())
+                        slotCopy(sp, sp + index);
+                    else
+                        slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
+                } else {
+                    auto protoframe = meth->prototypeFrame.getPyrObjType<PyrObject>();
+                    if (index < numArgsPushed) {
+                        if (sp[index].isNil() && !protoframe->slots[index].isNil())
+                            v_errors::PassingNilToLiteralInitArg::print_error();
+                        slotCopy(sp, sp + index);
+                    } else {
+                        slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
+                    }
+                }
                 break;
 
             case methReturnInstVar:
@@ -2393,10 +2406,20 @@ HOT void Interpret(VMGlobals* g) {
                 sp = g->sp;
                 sp -= numArgsPushed - 1;
                 index = methraw->specialIndex; // zero is index of the first argument
-                if (index < numArgsPushed && !(sp + index)->isNil()) {
-                    slotCopy(sp, sp + index);
+                if constexpr (v_errors::PassingNilToLiteralInitArg::do_new()) {
+                    if (index < numArgsPushed && !(sp + index)->isNil())
+                        slotCopy(sp, sp + index);
+                    else
+                        slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
                 } else {
-                    slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
+                    auto protoframe = meth->prototypeFrame.getPyrObjType<PyrObject>();
+                    if (index < numArgsPushed) {
+                        if (sp[index].isNil() && !protoframe->slots[index].isNil())
+                            v_errors::PassingNilToLiteralInitArg::print_error();
+                        slotCopy(sp, sp + index);
+                    } else {
+                        slotCopy(sp, &slotRawObject(&meth->prototypeFrame)->slots[index]);
+                    }
                 }
                 break;
 
