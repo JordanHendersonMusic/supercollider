@@ -449,10 +449,14 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
         size_t i { 0 };
         for (PyrSlot* it { pushedArgs }; it < (pushedArgs + numNormalArgsAdded); ++it, ++i) {
             if (it->isNil() && !proto->slots[i].isNil()) {
-                auto m = callFrame->method.getPyrObjType<PyrMethod>();
-                v_errors::PassingNilToLiteralInitArg::print_error(
-                    m->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
-                    callFrame->method.getPyrObjType<PyrMethod>()->name.getSymbol()->name);
+                if (isMethod) {
+                    auto m = callFrame->method.getPyrObjType<PyrMethod>();
+                    v_errors::PassingNilToLiteralInitArg::print_error(
+                        m->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
+                        callFrame->method.getPyrObjType<PyrMethod>()->name.getSymbol()->name);
+                } else {
+                    v_errors::PassingNilToLiteralInitArg::print_error("Function", "value");
+                }
             }
             outCallFrameStack[i] = *it;
         }
@@ -485,10 +489,14 @@ void prepareArgsForExecute(VMGlobals* g, PyrBlock* block, PyrFrame* callFrame, s
                     *(outCallFrameStack + *argIndex) = *argValue;
             } else {
                 if (argValue->isNil() && !proto->slots[*argIndex].isNil()) {
-                    auto m = callFrame->method.getPyrObjType<PyrMethod>();
-                    v_errors::PassingNilToLiteralInitArg::print_error(
-                        m->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
-                        callFrame->method.getPyrObjType<PyrMethod>()->name.getSymbol()->name);
+                    if (isMethod) {
+                        auto m = callFrame->method.getPyrObjType<PyrMethod>();
+                        v_errors::PassingNilToLiteralInitArg::print_error(
+                            m->ownerclass.getPyrObjType<PyrClass>()->name.getSymbol()->name,
+                            callFrame->method.getPyrObjType<PyrMethod>()->name.getSymbol()->name);
+                    } else {
+                        v_errors::PassingNilToLiteralInitArg::print_error("Function", "value");
+                    }
                 }
                 *(outCallFrameStack + *argIndex) = *argValue;
             }
