@@ -351,6 +351,22 @@ void PostWindow::wheelEvent(QWheelEvent* e) {
 #endif
 }
 
+void PostWindow::mousePressEvent(QMouseEvent* e) {
+    clickedAnchor = (e->button() & Qt::LeftButton) ? anchorAt(e->pos()) : QString();
+    QPlainTextEdit::mousePressEvent(e);
+}
+
+void PostWindow::mouseReleaseEvent(QMouseEvent* e) {
+    // Make sure that the release event was over the same anchor it started on.
+    if (e->button() & Qt::LeftButton && !clickedAnchor.isEmpty() && anchorAt(e->pos()) == clickedAnchor) {
+        QUrl url { clickedAnchor };
+        auto command =
+            QString("PostWindowURLHandler(\"") + url.scheme() + QString("\", \"") + clickedAnchor + QString("\");");
+        emit handleClickedURL(command, true);
+    }
+    QPlainTextEdit::mouseReleaseEvent(e);
+}
+
 void PostWindow::focusOutEvent(QFocusEvent* event) {
     if (event->reason() == Qt::TabFocusReason)
         MainWindow::instance()->focusCodeEditor();
@@ -424,5 +440,6 @@ void PostDocklet::onFloatingChanged(bool floating) {
     if (floating)
         dockWidget()->resize(dockWidget()->size() - QSize(1, 1));
 }
+
 
 } // namespace ScIDE

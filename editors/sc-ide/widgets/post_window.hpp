@@ -62,21 +62,9 @@ public:
     QSize minimumSizeHint() const { return QSize(50, 50); }
     QString symbolUnderCursor();
 
-    void mousePressEvent(QMouseEvent* e) override {
-        clickedAnchor = (e->button() & Qt::LeftButton) ? anchorAt(e->pos()) : QString();
-        QPlainTextEdit::mousePressEvent(e);
-    }
+    void mousePressEvent(QMouseEvent* e) override;
 
-    void mouseReleaseEvent(QMouseEvent* e) override {
-        // Make sure that the release event was over the same anchor it started on.
-        if (e->button() & Qt::LeftButton && !clickedAnchor.isEmpty() && anchorAt(e->pos()) == clickedAnchor) {
-            QUrl url { clickedAnchor };
-            auto command =
-                QString("PostWindowURLHandler(\"") + url.scheme() + QString("\", \"") + clickedAnchor + QString("\");");
-            emit handleClickedURL(command, true);
-        }
-        QPlainTextEdit::mouseReleaseEvent(e);
-    }
+    void mouseReleaseEvent(QMouseEvent* e) override;
 
 
 signals:
