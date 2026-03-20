@@ -409,6 +409,7 @@ inline void compileNode(PyrParseNode* node, PyrSlot* result, bool onTailBranch) 
 
 void initParseNodes();
 
+PyrSlotNode* newPyrSlotNode(PyrSlot slot);
 PyrSlotNode* newPyrSlotNode(PyrSlot* slot);
 PyrCurryArgNode* newPyrCurryArgNode();
 PyrClassNode* newPyrClassNode(PyrSlotNode* className, PyrSlotNode* superClassName, PyrVarListNode* varlists,

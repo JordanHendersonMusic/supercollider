@@ -21,10 +21,9 @@
 
 #pragma once
 
-#include "PyrSlot.h"
 #include "PyrSymbol.h"
 #include "SC_Export.h"
-#include "SCBase.h"
+#include "SCBase.h" // MAX_PATH
 #include <filesystem>
 
 extern int charno, lineno, linepos;
@@ -81,6 +80,7 @@ void unput0(int c);
 void finiLexer();
 bool startLexer(char* filename);
 void startLexerCmdLine(char* textbuf, int textbuflen);
+void start_lexer_for_testing_class_lib(PyrSymbol* file_name_with_src);
 int yylex();
 void yyerror(const char* s);
 void fatal();
@@ -112,7 +112,6 @@ extern bool compilingCmdLine;
 extern bool compilingCmdLineErrorWindow;
 extern bool compiledOK;
 
-#define MAXYYLEN 81920
 
 extern int gNumCompiledFiles;
 extern int gClassCompileOrderNum;
@@ -122,7 +121,6 @@ extern char curfilename[PATH_MAX];
 extern int runcount;
 
 extern const char* binopchars;
-extern char yytext[MAXYYLEN];
 extern char curfilename[PATH_MAX];
 
 extern int yylen;

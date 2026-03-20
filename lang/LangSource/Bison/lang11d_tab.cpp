@@ -681,12 +681,12 @@ static const yytype_int16 yyrline[] =
     1342,  1346,  1350,  1356,  1360,  1364,  1368,  1372,  1379,  1380,
     1384,  1388,  1389,  1392,  1393,  1397,  1399,  1401,  1409,  1410,
     1413,  1414,  1418,  1420,  1422,  1430,  1432,  1439,  1440,  1444,
-    1445,  1448,  1449,  1453,  1455,  1479,  1481,  1485,  1487,  1491,
-    1492,  1495,  1496,  1500,  1501,  1503,  1505,  1509,  1510,  1514,
-    1515,  1524,  1525,  1534,  1535,  1546,  1549,  1550,  1551,  1557,
-    1565,  1572,  1581,  1582,  1585,  1588,  1591,  1594,  1597,  1600,
-    1603,  1606,  1609,  1612,  1613,  1614,  1615,  1616,  1617,  1618,
-    1619,  1622,  1625,  1626,  1629
+    1445,  1448,  1449,  1453,  1455,  1459,  1461,  1465,  1467,  1471,
+    1472,  1475,  1476,  1480,  1481,  1483,  1485,  1489,  1490,  1494,
+    1495,  1504,  1505,  1514,  1515,  1526,  1529,  1530,  1531,  1537,
+    1545,  1552,  1561,  1562,  1565,  1568,  1571,  1574,  1577,  1580,
+    1583,  1586,  1589,  1592,  1593,  1594,  1595,  1596,  1597,  1598,
+    1599,  1602,  1605,  1606,  1609
 };
 #endif
 
@@ -4243,85 +4243,85 @@ yyreduce:
     break;
 
   case 245: /* listlit: '#' '[' literallistc ']'  */
-#line 1480 "lang11d"
+#line 1460 "lang11d"
                                 { yyval = (intptr_t)newPyrLitListNode(0, (PyrParseNode*)yyvsp[-1]); }
 #line 4249 "lang11d_tab.cpp"
     break;
 
   case 246: /* listlit: '#' classname '[' literallistc ']'  */
-#line 1482 "lang11d"
+#line 1462 "lang11d"
                                 { yyval = (intptr_t)newPyrLitListNode((PyrParseNode*)yyvsp[-3], (PyrParseNode*)yyvsp[-1]); }
 #line 4255 "lang11d_tab.cpp"
     break;
 
   case 247: /* listlit2: '[' literallistc ']'  */
-#line 1486 "lang11d"
+#line 1466 "lang11d"
                                 { yyval = (intptr_t)newPyrLitListNode(0, (PyrParseNode*)yyvsp[-1]); }
 #line 4261 "lang11d_tab.cpp"
     break;
 
   case 248: /* listlit2: classname '[' literallistc ']'  */
-#line 1488 "lang11d"
+#line 1468 "lang11d"
                                 { yyval = (intptr_t)newPyrLitListNode((PyrParseNode*)yyvsp[-3], (PyrParseNode*)yyvsp[-1]); }
 #line 4267 "lang11d_tab.cpp"
     break;
 
   case 249: /* literallistc: %empty  */
-#line 1491 "lang11d"
+#line 1471 "lang11d"
                   { yyval = 0; }
 #line 4273 "lang11d_tab.cpp"
     break;
 
   case 252: /* literallist1: literallist1 ',' listliteral  */
-#line 1497 "lang11d"
+#line 1477 "lang11d"
                                         { yyval = (intptr_t)linkNextNode((PyrParseNode*)yyvsp[-2], (PyrParseNode*)yyvsp[0]); }
 #line 4279 "lang11d_tab.cpp"
     break;
 
   case 253: /* rwspec: %empty  */
-#line 1500 "lang11d"
+#line 1480 "lang11d"
            { yyval = rwPrivate; }
 #line 4285 "lang11d_tab.cpp"
     break;
 
   case 254: /* rwspec: '<'  */
-#line 1502 "lang11d"
+#line 1482 "lang11d"
                         { yyval = rwReadOnly; }
 #line 4291 "lang11d_tab.cpp"
     break;
 
   case 255: /* rwspec: READWRITEVAR  */
-#line 1504 "lang11d"
+#line 1484 "lang11d"
                         { yyval = rwReadWrite; }
 #line 4297 "lang11d_tab.cpp"
     break;
 
   case 256: /* rwspec: '>'  */
-#line 1506 "lang11d"
+#line 1486 "lang11d"
                         { yyval = rwWriteOnly; }
 #line 4303 "lang11d_tab.cpp"
     break;
 
   case 257: /* rspec: %empty  */
-#line 1509 "lang11d"
+#line 1489 "lang11d"
            { yyval = rwPrivate; }
 #line 4309 "lang11d_tab.cpp"
     break;
 
   case 258: /* rspec: '<'  */
-#line 1511 "lang11d"
+#line 1491 "lang11d"
                         { yyval = rwReadOnly; }
 #line 4315 "lang11d_tab.cpp"
     break;
 
   case 259: /* integer: INTEGER  */
-#line 1514 "lang11d"
+#line 1494 "lang11d"
                   { yyval = zzval; }
 #line 4321 "lang11d_tab.cpp"
     break;
 
   case 260: /* integer: '-' INTEGER  */
-#line 1516 "lang11d"
+#line 1496 "lang11d"
                         {
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)zzval;
@@ -4332,13 +4332,13 @@ yyreduce:
     break;
 
   case 261: /* floatr: SC_FLOAT  */
-#line 1524 "lang11d"
+#line 1504 "lang11d"
                    { yyval = zzval; }
 #line 4338 "lang11d_tab.cpp"
     break;
 
   case 262: /* floatr: '-' SC_FLOAT  */
-#line 1526 "lang11d"
+#line 1506 "lang11d"
                         {
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)zzval;
@@ -4349,13 +4349,13 @@ yyreduce:
     break;
 
   case 263: /* accidental: ACCIDENTAL  */
-#line 1534 "lang11d"
+#line 1514 "lang11d"
                         { yyval = zzval; }
 #line 4355 "lang11d_tab.cpp"
     break;
 
   case 264: /* accidental: '-' ACCIDENTAL  */
-#line 1536 "lang11d"
+#line 1516 "lang11d"
                                 {
 					PyrSlotNode *node;
 					double intval, fracval;
@@ -4369,13 +4369,13 @@ yyreduce:
     break;
 
   case 265: /* pie: PIE  */
-#line 1546 "lang11d"
+#line 1526 "lang11d"
                       { yyval = zzval; }
 #line 4375 "lang11d_tab.cpp"
     break;
 
   case 268: /* floatp: floatr pie  */
-#line 1552 "lang11d"
+#line 1532 "lang11d"
                         {
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)yyvsp[-1];
@@ -4385,7 +4385,7 @@ yyreduce:
     break;
 
   case 269: /* floatp: integer pie  */
-#line 1558 "lang11d"
+#line 1538 "lang11d"
                         {
 				PyrSlotNode *node;
 				double ival;
@@ -4397,7 +4397,7 @@ yyreduce:
     break;
 
   case 270: /* floatp: pie  */
-#line 1566 "lang11d"
+#line 1546 "lang11d"
                         {
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)zzval;
@@ -4408,7 +4408,7 @@ yyreduce:
     break;
 
   case 271: /* floatp: '-' pie  */
-#line 1573 "lang11d"
+#line 1553 "lang11d"
                         {
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)zzval;
@@ -4419,128 +4419,128 @@ yyreduce:
     break;
 
   case 272: /* name: NAME  */
-#line 1581 "lang11d"
+#line 1561 "lang11d"
                        { yyval = zzval; }
 #line 4425 "lang11d_tab.cpp"
     break;
 
   case 273: /* name: WHILE  */
-#line 1582 "lang11d"
+#line 1562 "lang11d"
                                 { yyval = zzval; }
 #line 4431 "lang11d_tab.cpp"
     break;
 
   case 274: /* classname: CLASSNAME  */
-#line 1585 "lang11d"
+#line 1565 "lang11d"
                                     { yyval = zzval; }
 #line 4437 "lang11d_tab.cpp"
     break;
 
   case 275: /* primname: PRIMITIVENAME  */
-#line 1588 "lang11d"
+#line 1568 "lang11d"
                                         { yyval = zzval; }
 #line 4443 "lang11d_tab.cpp"
     break;
 
   case 276: /* trueobj: TRUEOBJ  */
-#line 1591 "lang11d"
+#line 1571 "lang11d"
                           { yyval = zzval; }
 #line 4449 "lang11d_tab.cpp"
     break;
 
   case 277: /* falseobj: FALSEOBJ  */
-#line 1594 "lang11d"
+#line 1574 "lang11d"
                            { yyval = zzval; }
 #line 4455 "lang11d_tab.cpp"
     break;
 
   case 278: /* nilobj: NILOBJ  */
-#line 1597 "lang11d"
+#line 1577 "lang11d"
                          { yyval = zzval; }
 #line 4461 "lang11d_tab.cpp"
     break;
 
   case 279: /* ascii: ASCII  */
-#line 1600 "lang11d"
+#line 1580 "lang11d"
                         { yyval = zzval; }
 #line 4467 "lang11d_tab.cpp"
     break;
 
   case 280: /* symbol: SYMBOL  */
-#line 1603 "lang11d"
+#line 1583 "lang11d"
                          { yyval = zzval; }
 #line 4473 "lang11d_tab.cpp"
     break;
 
   case 281: /* string: STRING  */
-#line 1606 "lang11d"
+#line 1586 "lang11d"
                          { yyval = zzval; }
 #line 4479 "lang11d_tab.cpp"
     break;
 
   case 282: /* pseudovar: PSEUDOVAR  */
-#line 1609 "lang11d"
+#line 1589 "lang11d"
                             { yyval = zzval; }
 #line 4485 "lang11d_tab.cpp"
     break;
 
   case 283: /* binop: BINOP  */
-#line 1612 "lang11d"
+#line 1592 "lang11d"
                 { yyval = zzval; }
 #line 4491 "lang11d_tab.cpp"
     break;
 
   case 284: /* binop: READWRITEVAR  */
-#line 1613 "lang11d"
+#line 1593 "lang11d"
                                { yyval = zzval; }
 #line 4497 "lang11d_tab.cpp"
     break;
 
   case 285: /* binop: '<'  */
-#line 1614 "lang11d"
+#line 1594 "lang11d"
                        { yyval = zzval; }
 #line 4503 "lang11d_tab.cpp"
     break;
 
   case 286: /* binop: '>'  */
-#line 1615 "lang11d"
+#line 1595 "lang11d"
                        { yyval = zzval; }
 #line 4509 "lang11d_tab.cpp"
     break;
 
   case 287: /* binop: '-'  */
-#line 1616 "lang11d"
+#line 1596 "lang11d"
                        { yyval = zzval; }
 #line 4515 "lang11d_tab.cpp"
     break;
 
   case 288: /* binop: '*'  */
-#line 1617 "lang11d"
+#line 1597 "lang11d"
                        { yyval = zzval; }
 #line 4521 "lang11d_tab.cpp"
     break;
 
   case 289: /* binop: '+'  */
-#line 1618 "lang11d"
+#line 1598 "lang11d"
                        { yyval = zzval; }
 #line 4527 "lang11d_tab.cpp"
     break;
 
   case 290: /* binop: '|'  */
-#line 1619 "lang11d"
+#line 1599 "lang11d"
                        { yyval = zzval; }
 #line 4533 "lang11d_tab.cpp"
     break;
 
   case 291: /* keybinop: KEYBINOP  */
-#line 1622 "lang11d"
+#line 1602 "lang11d"
                     { yyval = zzval; }
 #line 4539 "lang11d_tab.cpp"
     break;
 
   case 294: /* curryarg: CURRYARG  */
-#line 1629 "lang11d"
-                    { yyval = zzval; }
+#line 1609 "lang11d"
+                    { yyval =(intptr_t)newPyrCurryArgNode(); }
 #line 4545 "lang11d_tab.cpp"
     break;
 

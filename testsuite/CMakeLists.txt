@@ -1,3 +1,5 @@
 add_subdirectory(server)
 add_subdirectory(sclang)
 add_subdirectory(interpreter)
+add_subdirectory(lexer/boost_unit_tests)
+add_subdirectory(lexer/fuzz)

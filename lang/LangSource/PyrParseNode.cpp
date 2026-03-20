@@ -349,9 +349,10 @@ void PyrCurryArgNode::compile(PyrSlot* result) {
     }
 }
 
-PyrSlotNode* newPyrSlotNode(PyrSlot* slot) {
+PyrSlotNode* newPyrSlotNode(PyrSlot* slot) { return newPyrSlotNode(*slot); }
+PyrSlotNode* newPyrSlotNode(PyrSlot slot) {
     PyrSlotNode* node = ALLOCNODE(PyrSlotNode);
-    node->mSlot = *slot;
+    node->mSlot = slot;
     return node;
 }
 

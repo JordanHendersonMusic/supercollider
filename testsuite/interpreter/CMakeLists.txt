@@ -1,5 +1,6 @@
 set(test_sources
 	slot.cpp
+	bison_lexer.cpp
 )
 
 foreach(test ${test_sources})
