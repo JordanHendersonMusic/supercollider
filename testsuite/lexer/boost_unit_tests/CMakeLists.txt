@@ -1,6 +1,7 @@
 set(test_sources 
 	lexer_test.cpp
 	a_b.cpp
+	unicode_tests.cpp
 )
 
 foreach(test ${test_sources})

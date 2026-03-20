@@ -160,7 +160,7 @@ inline std::tuple<CodePoint, std::uint8_t> char_sequence_to_codepoint(const char
         const auto chigh = static_cast<CodePoint>(c[pos]);
         const auto cmid = static_cast<CodePoint>(c[pos + 1]);
         const auto clow = static_cast<CodePoint>(c[pos + 2]);
-        return { ((chigh & 0b00001111) << 14) | ((cmid & 0b00111111) << 6) | (clow & 0b00111111), 3 };
+        return { ((chigh & 0b00001111) << 12) | ((cmid & 0b00111111) << 6) | (clow & 0b00111111), 3 };
     }
     if (u < 0b1111'1000) { // four bytes
         if (pos + 3 >= len)
@@ -169,7 +169,7 @@ inline std::tuple<CodePoint, std::uint8_t> char_sequence_to_codepoint(const char
         const auto cmid = static_cast<CodePoint>(c[pos + 1]);
         const auto cmid2 = static_cast<CodePoint>(c[pos + 2]);
         const auto clow = static_cast<CodePoint>(c[pos + 3]);
-        return { ((chigh & 0b00001111) << 18) | ((cmid2 & 0b00001111) << 14) | ((cmid & 0b00111111) << 6)
+        return { ((chigh & 0b00001111) << 18) | ((cmid & 0b00111111) << 12) | ((cmid2 & 0b00111111) << 6)
                      | (clow & 0b00111111),
                  4 };
     }
