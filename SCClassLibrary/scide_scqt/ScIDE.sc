@@ -459,7 +459,7 @@ PostWindowURLHandler {
 	}
 
 	*prDefault { |url|
-		" PostWindowURLHandler does not know how to handle the URL '%'".format(url).warn.postln
+		"PostWindowURLHandler does not know how to handle the URL '%'".format(url).warn
 	}
 }
 
