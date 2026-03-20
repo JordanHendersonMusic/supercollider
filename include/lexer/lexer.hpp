@@ -386,8 +386,8 @@ struct TypeAndLocationAction {
 // Helpers used in main lexer function
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static constexpr std::array<CodePoint, 13> binary_operator_characters { '!', '@', '%', '&', '*', '-', '+',
-                                                                        '=', '|', '<', '>', '?', '/' };
+static constexpr std::array<CodePoint, 13> binary_operator_ascii_characters { '!', '@', '%', '&', '*', '-', '+',
+                                                                              '=', '|', '<', '>', '?', '/' };
 
 namespace details {
 
@@ -428,9 +428,18 @@ constexpr inline bool is_continuing_identifier(CodePoint c) {
 }
 
 constexpr inline bool is_binary_operator_character(CodePoint c) {
-    for (CodePoint b : binary_operator_characters)
+    for (CodePoint b : binary_operator_ascii_characters)
         if (b == c)
             return true;
+
+    // Mathematical operators
+    if (c >= 0x2200 && c <= 0x22FF)
+        return true;
+
+    // Mathematical supplementary operators
+    if (c >= 0x2A00 && c <= 0x2Aff)
+        return true;
+
     return false;
 }
 

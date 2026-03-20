@@ -140,6 +140,10 @@ Collection {
 		this.do {|item2| if (item1 === item2) {^true} };
 		^false
 	}
+
+	∋ { |item1| ^this.includes(item1) }
+	∌ { |item1| ^(this ∋ item1).not }
+
 	includesEqual { | item1 |
 		this.do {|item2| if (item1 == item2) {^true} };
 		^false
@@ -270,6 +274,10 @@ Collection {
 		this.do {|elem, i| if (function.value(elem, i).not) { ^false } }
 		^true;
 	}
+
+	∀ { |function| ^this.every(function) }
+	∃ { |f| ^this.any(f) } 
+
 	sum { | function |
 		var sum = 0;
 		if (function.isNil) { // optimized version if no function
