@@ -19,6 +19,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include "SCBase.h"
 #include "PyrLexer.h"
 #include "PyrSlot.h"
 #include "PyrSymbol.h"
@@ -75,7 +76,12 @@ PyrSlot process_accidental_cents(const char* s);
 PyrSlot process_accidental_steps(const char* s);
 
 double compileStartTime;
-int gNumCompiledFiles;
+int gNumCompiledFiles { 0 };
+
+extern PyrClass* gClassList;
+ClassDependancy** gClassCompileOrder;
+int gClassCompileOrderNum { 0 };
+int gClassCompileOrderSize = 1000;
 
 namespace fs = std::filesystem;
 using DirName = SC_Filesystem::DirName;
@@ -84,18 +90,16 @@ PyrSymbol* gCompilingFileSym = nullptr;
 VMGlobals* gCompilingVMGlobals = nullptr;
 static fs::path gCompileDir;
 
+
 bool gShowWarnings = false;
 LongStack closedFuncCharNo;
 LongStack generatorStack;
 int lastClosedFuncCharNo = 0;
 
-const char* binopchars = "!@%&*-+=|<>?/";
 fs::path currfilename;
 std::string printingCurrfilename; // for error reporting
 
-int lexCmdLine = 0;
 bool compilingCmdLine = false;
-bool compilingCmdLineErrorWindow = false;
 
 // TODO: replace with yylval
 intptr_t zzval;
@@ -103,12 +107,12 @@ intptr_t zzval;
 // TODO: replace with yyloc
 int lineno, charno, linepos;
 int* linestarts;
-int maxlinestarts;
+int maxlinestarts { 0 };
 
 // This is the text of the source file currently being tokenized.
-char* text;
-int textlen;
-int textpos;
+char* text { nullptr };
+int textlen { 0 };
+int textpos { 0 };
 // I don't know what these do.
 int errLineOffset, errCharPosOffset;
 int parseFailed = 0;
@@ -272,9 +276,6 @@ constexpr inline int str_to_int(const char* str, size_t n, int base) {
     return z;
 }
 
-extern int lastClosedFuncCharNo;
-inline yytokentype operator""_yyt(char c) { return static_cast<yytokentype>(c); }
-inline yytokentype operator""_yyt(unsigned long long c) { return static_cast<yytokentype>(c); }
 struct BisonSemAction {
 public:
     BisonSemAction(const char* source): source(source) {};
@@ -583,9 +584,9 @@ void scan_for_end() {
         out = lex::lexer(s.char_stream, s.action);
     } while (out.type != TokenType::End && out.type != TokenType::BadToken && !out.is_error);
 
-    if (out.slot) {
+    if (out.slot)
         zzval = (intptr_t)newPyrSlotNode(*out.slot);
-    }
+
 
     parseFailed = out.is_error ? 1 : 0;
 
@@ -607,9 +608,10 @@ int yylex() {
     GlobalBisonLexerState& s = *global_bison_lexer_state;
 
     const auto mutate_global_state_for_return = [&](const BisonSemAction::Output& o) -> int {
-        if (o.slot) {
+        // If you set this to 0 when not in use, the parse will segfault.
+        // TODO: use yylval.
+        if (o.slot)
             zzval = (intptr_t)newPyrSlotNode(*o.slot);
-        }
 
         parseFailed = o.is_error ? 1 : 0;
 
@@ -636,77 +638,72 @@ int yylex() {
 
     BisonSemAction::Output out = lex::lexer(s.char_stream, s.action);
 
-    if (out.type == TokenType::Interpret) {
-        lexCmdLine = 2;
-    }
+    if (out.type != TokenType::StringLine)
+        return mutate_global_state_for_return(out);
 
-    if (out.type == TokenType::StringLine) {
-        std::string str {};
-        str.reserve(128);
+    std::string str {};
+    str.reserve(128);
 
-        auto prev = out;
-        while (true) {
-            if (out.type != TokenType::StringLine) {
-                assert(!s.cached.has_value());
-                s.cached = std::move(out); // save for next time.
+    auto prev = out;
+    while (true) {
+        if (out.type != TokenType::StringLine) {
+            assert(!s.cached.has_value());
+            s.cached = std::move(out); // save for next time.
 
-                // This is the one case in the whole lexer where we currently have to alloc using the GC.
-                // This would be much better pushed into the compiler.
-                const int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
-                auto sc_str = newPyrString(gMainVMGlobals->gc, str.c_str(), flags, false);
-                zzval = (intptr_t)newPyrSlotNode(PyrSlot::make(sc_str));
-                parseFailed = prev.is_error ? 1 : 0;
+            // This is the one case in the whole lexer where we currently have to alloc using the GC.
+            // This would be much better pushed into the compiler.
+            const int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+            auto sc_str = newPyrString(gMainVMGlobals->gc, str.c_str(), flags, false);
+            zzval = (intptr_t)newPyrSlotNode(PyrSlot::make(sc_str));
+            parseFailed = prev.is_error ? 1 : 0;
 
-                // Yes it reads from the end point only. Very odd. Causes many issues.
-                textpos = prev.range.end.absolute;
-                lineno = prev.range.end.lineNumber + 1; // zero indexed to 1
-                linepos = s.char_stream.line_start(prev.range.end);
-                charno = prev.range.end.offsetInLine;
-                if (maxlinestarts < prev.range.end.lineNumber) {
-                    maxlinestarts += maxlinestarts;
-                    linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
-                }
-                linestarts[lineno] = linepos;
-                return STRING;
+            // Yes it reads from the end point only. Very odd. Causes many issues.
+            textpos = prev.range.end.absolute;
+            lineno = prev.range.end.lineNumber + 1; // zero indexed to 1
+            linepos = s.char_stream.line_start(prev.range.end);
+            charno = prev.range.end.offsetInLine;
+            if (maxlinestarts < prev.range.end.lineNumber) {
+                maxlinestarts += maxlinestarts;
+                linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
             }
-            auto range = out.range;
-            // This is dodgy, we are dropping the quotes here.
-            // Again, once this is in the compilation phase, this becomes nice.
-            range.begin.absolute += 1;
-            range.end.absolute -= 1;
-
-            bool escaped = false;
-            for (auto [b, e] = s.char_stream.source_range(range); b < e; ++b) {
-                if (*b == '\\' && !escaped) {
-                    escaped = true;
-                    continue;
-                }
-
-                if (escaped) {
-                    if (*b == 'n')
-                        str += '\n';
-                    else if (*b == 'r')
-                        str += '\r';
-                    else if (*b == 't')
-                        str += '\t';
-                    else if (*b == 'f')
-                        str += '\f';
-                    else if (*b == 'v')
-                        str += '\v';
-                    else
-                        str += *b;
-                    escaped = false;
-                } else {
-                    str += *b;
-                }
-            }
-
-            prev = out;
-            out = lex::lexer(s.char_stream, s.action);
+            linestarts[lineno] = linepos;
+            return STRING;
         }
-    }
+        auto range = out.range;
+        // This is dodgy, we are dropping the quotes here.
+        // Again, once this is in the compilation phase, this becomes nice.
+        range.begin.absolute += 1;
+        range.end.absolute -= 1;
 
-    return mutate_global_state_for_return(out);
+        bool escaped = false;
+        for (auto [b, e] = s.char_stream.source_range(range); b < e; ++b) {
+            if (*b == '\\' && !escaped) {
+                escaped = true;
+                continue;
+            }
+
+            if (escaped) {
+                if (*b == 'n')
+                    str += '\n';
+                else if (*b == 'r')
+                    str += '\r';
+                else if (*b == 't')
+                    str += '\t';
+                else if (*b == 'f')
+                    str += '\f';
+                else if (*b == 'v')
+                    str += '\v';
+                else
+                    str += *b;
+                escaped = false;
+            } else {
+                str += *b;
+            }
+        }
+
+        prev = out;
+        out = lex::lexer(s.char_stream, s.action);
+    }
 }
 
 PyrSlot process_accidental_cents(const char* s) {
@@ -934,13 +931,10 @@ void buildDepTree() {
     // postfl("<-buildDepTree\n"); fflush(stdout);
 }
 
-extern PyrClass* gClassList;
-
-ClassDependancy** gClassCompileOrder;
-int gClassCompileOrderNum = 0;
-int gClassCompileOrderSize = 1000;
 
 void compileDepTree();
+void traverseDepTree(ClassDependancy* classdep, int level);
+void compileClassExtensions();
 
 void traverseFullDepTree() {
     // postfl("->traverseFullDepTree\n"); fflush(stdout);
@@ -1242,6 +1236,8 @@ static void passOne_HandleMissingDirectory(const fs::path& dir) {
 }
 
 fs::path relativeToCompileDir(const fs::path& p) { return fs::relative(p, gCompileDir); }
+
+bool passOne_ProcessOneFile(const fs::path& path);
 
 /** \brief Determines whether the directory should be skipped during compilation.
  *
@@ -1616,7 +1612,6 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
 
     zzval = 0;
     parseFailed = 0;
-    lexCmdLine = 0;
     currfilename = fs::path(filename);
     printingCurrfilename = "file '" + SC_Codecvt::path_to_utf8_str(currfilename) + "'";
     maxlinestarts = 1000;
@@ -1632,7 +1627,7 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
     return true;
 }
 
-void start_lexer_for_testing_class_lib(PyrSymbol* file_name_with_src) {
+void startLexerForTestingClassLib(PyrSymbol* file_name_with_src) {
     text = file_name_with_src->u.source;
 
     textlen = strlen(text);
@@ -1648,7 +1643,6 @@ void start_lexer_for_testing_class_lib(PyrSymbol* file_name_with_src) {
     errCharPosOffset = 0;
 
     parseFailed = 0;
-    lexCmdLine = 0;
     currfilename = fs::path();
     printingCurrfilename = "file '" + SC_Codecvt::path_to_utf8_str(currfilename) + "'";
     maxlinestarts = 1000;
@@ -1684,7 +1678,6 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
     compilingCmdLine = true;
     zzval = 0;
     parseFailed = 0;
-    lexCmdLine = 1;
     currfilename = fs::path("interpreted text");
     printingCurrfilename = currfilename.string();
     maxlinestarts = 1000;

@@ -37,7 +37,7 @@ template <size_t N> void test(const char* txt, const std::array<yytokentype, N>&
     gCompilingFileSym = fileSym;
     gCompilingVMGlobals = nullptr;
 
-    start_lexer_for_testing_class_lib(fileSym);
+    startLexerForTestingClassLib(fileSym);
 
     size_t i { 0 };
     for (const auto& t : expected) {
