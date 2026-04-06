@@ -11,7 +11,7 @@ void compare_tokens(const char* text, bool print) {
     TokenOnlyAction action {};
 
     OldInfo old_i { 0, 0, 0 };
-    NewInfo new_i { TokenType::End, 0, 0 };
+    NewInfo new_i { TokenType::EndOfFile, 0, 0 };
     while (true) {
         if (old_i.end < new_i.end) {
             const auto old_t = old_lexer(old_state, false);
@@ -40,9 +40,9 @@ void compare_tokens(const char* text, bool print) {
             std::cout << '\n' << std::endl;
         }
 
-        if (old_i.type == YYEOF && new_i.type == TokenType::End)
+        if (old_i.type == YYEOF && new_i.type == TokenType::EndOfFile)
             break;
-        if (old_i.type == YYEOF || new_i.type == TokenType::End) {
+        if (old_i.type == YYEOF || new_i.type == TokenType::EndOfFile) {
             BOOST_TEST(false);
             break;
         }

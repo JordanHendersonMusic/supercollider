@@ -896,18 +896,13 @@ struct TokenOnlyAction {
         }
     }
 
-    template <TokenType type> Output end(SourceCodeRange loc) { return { type, loc }; };
-
-    template <TokenType type, typename... ARGS>
-    std::optional<Output> error(SourceCodeRange loc, const char* fmt, ARGS... args) {
+    template <TokenType type, typename Error> std::optional<Output> error(SourceCodeRange loc, Error&& error) {
         return { { type, loc } };
     }
-
-    template <typename... ARGS> void warn(SourceCodeRange loc, const char* fmt, ARGS... args) {}
 };
 
 
-bool tokens_equal(int o, TokenType n) {
+inline bool tokens_equal(int o, TokenType n) {
     if (o < 256)
         return o == static_cast<int>(n);
     if (o == NAME)
@@ -919,7 +914,7 @@ bool tokens_equal(int o, TokenType n) {
     if (o == ACCIDENTAL)
         return n == TokenType::AccidentalCents || n == TokenType::AccidentalSteps;
     if (o == SYMBOL)
-        return n == TokenType::Symbol || n == TokenType::SymbolQuote || n == TokenType::SymbolSlash;
+        return n == TokenType::SymbolQuote || n == TokenType::SymbolSlash;
     if (o == STRING)
         return n == TokenType::StringLine;
     if (o == ASCII)
@@ -953,11 +948,9 @@ bool tokens_equal(int o, TokenType n) {
     if (o == BEGINCLOSEDFUNC)
         return n == TokenType::BeginClosedFunction;
     if (o == BADTOKEN)
-        return n == TokenType::BadToken;
+        return is_error(n);
     if (o == INTERPRET)
         return n == TokenType::Interpret;
-    if (o == BEGINGENERATOR)
-        return n == TokenType::BeginGenerator;
     if (o == LEFTARROW)
         return n == TokenType::LeftArrow;
     if (o == WHILE)

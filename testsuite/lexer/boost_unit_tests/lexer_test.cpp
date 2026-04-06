@@ -30,11 +30,11 @@ void match(const char* text, const std::array<TokenType, N>& to_find, const std:
     }
 
     auto o = lexer(stream, action);
-    while (std::find(to_gobble.begin(), to_gobble.end(), o.type) != to_gobble.end() && o.type != TokenType::End) {
+    while (std::find(to_gobble.begin(), to_gobble.end(), o.type) != to_gobble.end() && o.type != TokenType::EndOfFile) {
         o = lexer(stream, action);
     }
 
-    BOOST_TEST(o.type == TokenType::End);
+    BOOST_TEST(o.type == TokenType::EndOfFile);
 }
 
 BOOST_AUTO_TEST_CASE(basic) {
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(basic) {
               TokenType::Space,       TokenType::NewLine,   '-'_tokentype,          TokenType::Float,
               TokenType::Space,       TokenType::Tab,       TokenType::Space,       TokenType::PrimitiveName,
               TokenType::Space,       TokenType::ClassName, TokenType::Space,       TokenType::KeywordBinaryOperator,
-              TokenType::SymbolSlash, '('_tokentype,        TokenType::Space,       TokenType::End,
+              TokenType::SymbolSlash, '('_tokentype,        TokenType::Space,       TokenType::EndOfFile,
           },
           std::array<TokenType, 0> {});
 

@@ -201,7 +201,6 @@ using TokenType = lex::TokenType;
     case TokenType::AccidentalCents:
         return ACCIDENTAL;
         //
-    case TokenType::Symbol:
     case TokenType::SymbolSlash:
     case TokenType::SymbolQuote:
         return SYMBOL;
@@ -240,12 +239,10 @@ using TokenType = lex::TokenType;
         return DOTDOT;
     case TokenType::BeginClosedFunction:
         return BEGINCLOSEDFUNC;
-    case TokenType::BadToken:
+    case TokenType::Unexpected:
         return BADTOKEN;
     case TokenType::Interpret:
         return INTERPRET;
-    case TokenType::BeginGenerator:
-        return BEGINGENERATOR;
     case TokenType::CurryArg:
         return CURRYARG;
     case TokenType::BinaryOperator:
@@ -296,10 +293,13 @@ public:
     };
 
     template <TokenType T> std::optional<Output> token(lex::SourceCodeRange loc) {
+        static_assert(!sc::lex::is_error(T));
+        if constexpr (T == TokenType::EndOfFile) {
+            return { { T, loc } };
+        }
+
         // Discard
-        if constexpr (T == TokenType::Comment || T == TokenType::MultiLineComment
-                      || T == TokenType::DocumentationComment || T == TokenType::NewLine || T == TokenType::Space
-                      || T == TokenType::Tab) {
+        if constexpr (sc::lex::is_whitespace(T) || sc::lex::is_comment(T)) {
             return std::nullopt;
         }
 
@@ -337,7 +337,7 @@ public:
         else if constexpr (T == ')'_tokentype || T == ']'_tokentype || T == '}'_tokentype) {
             if (bracket_stack.empty()) {
                 ::error("Incorrect brackets — bracket stack was empty.\n");
-                return { { TokenType::BadToken, loc } };
+                return { { TokenType::Unexpected, loc, {}, true } };
             }
             for (const auto& t : get_closing_brackets<T>()) {
                 if (bracket_stack.back().first == t) {
@@ -349,7 +349,7 @@ public:
             }
             ::error("Incorrect brackets — mismatch expected '%d' got %d.\n", static_cast<int>(T),
                     bracket_stack.back().first);
-            return { { TokenType::BadToken, loc } };
+            return { { TokenType::Unexpected, loc, {}, true } };
         }
 
 
@@ -437,25 +437,32 @@ public:
         else if constexpr (T == TokenType::AccidentalSteps)
             return { { TokenType::AccidentalSteps, loc, process_accidental_steps(fill_temp_buf(loc)) } };
 
-
         // default, empty
         else
             return { { T, loc } };
     }
 
 
-    // Note: you are NOT allowed to discard the end token, otherwise there would be an infinite loop.
-    template <TokenType type> Output end(lex::SourceCodeRange loc) { return { type, loc }; };
-
-    template <TokenType type, typename... ARGS>
-    std::optional<Output> error(lex::SourceCodeRange loc, const char* fmt, ARGS... args) {
-        ::error(fmt, std::forward<ARGS>(args)...);
+    template <TokenType type, typename Error> std::optional<Output> error(lex::SourceCodeRange loc, Error&& er) {
+        static_assert(sc::lex::is_error(type));
+        if constexpr (std::is_same_v<Error, sc::lex::errors::SymbolQuoteContainsNewLine>) {
+            ::error("Symbol with quotes cannot contain a new line.\n");
+        } else if constexpr (std::is_same_v<Error, sc::lex::errors::SymbolQuoteUnclosed>) {
+            ::error("Symbol with quotes was not closed.\n");
+        } else if constexpr (std::is_same_v<Error, sc::lex::errors::MissingExponent>) {
+            ::error("Number exponent was missing.\n");
+        } else if constexpr (std::is_same_v<Error, sc::lex::errors::StringUnclosed>) {
+            ::error("String was not closed.\n");
+        } else if constexpr (std::is_same_v<Error, sc::lex::errors::MultilineCommentUnclosed>) {
+            ::error("Multiline comment was not closed before the end of the file.\n");
+        } else if constexpr (std::is_same_v<Error, sc::lex::errors::InvalidUTF8>) {
+            ::error("Invalid UTF8, all supercollider source code must be valid utf8.\n");
+        } else if constexpr (std::is_same_v<Error, sc::lex::errors::UnexpectedCodePoint>) {
+            ::error("Unexpected token.\n");
+        }
         return { { type, loc, {}, true } };
     }
 
-    template <typename... ARGS> void warn(lex::SourceCodeRange loc, const char* fmt, ARGS... args) {
-        ::post(fmt, std::forward<ARGS>(args)...);
-    }
 
 private:
     std::string temp_buffer {};
@@ -516,7 +523,7 @@ private:
             return std::array<TokenType, 2> { '{'_tokentype, TokenType::BeginClosedFunction };
         else {
             assert(false);
-            return std::array<TokenType, 1> { TokenType::BadToken };
+            return std::array<TokenType, 1> { TokenType::Unexpected };
         }
     }
 };
@@ -564,7 +571,7 @@ bool scanForClosingBracket(char to_find) {
     while (true) {
         out = lex::lexer(s.char_stream, s.action);
 
-        if (out.type == TokenType::End || out.is_error) {
+        if (out.type == TokenType::EndOfFile || out.is_error) {
             mutate_global_state_for_return(out); // must do this!
             return false;
         }
@@ -582,7 +589,7 @@ void scan_for_end() {
     BisonSemAction::Output out;
     do {
         out = lex::lexer(s.char_stream, s.action);
-    } while (out.type != TokenType::End && out.type != TokenType::BadToken && !out.is_error);
+    } while (out.type != TokenType::EndOfFile && out.type != TokenType::Unexpected && !out.is_error);
 
     if (out.slot)
         zzval = (intptr_t)newPyrSlotNode(*out.slot);

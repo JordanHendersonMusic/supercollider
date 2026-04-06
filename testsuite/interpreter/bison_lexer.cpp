@@ -153,6 +153,7 @@ template <size_t N> void test_zzval(const char* txt, const std::array<std::tuple
                 break;
             };
             default:
+                // Printing not implemented yet.
                 BOOST_TEST_REQUIRE(false);
                 break;
             }
@@ -166,9 +167,11 @@ BOOST_AUTO_TEST_CASE(zzval_test) {
     gMainVMGlobals->symbolTable = new (ptr) SymbolTable(pyr_pool_runtime, 65536);
     gMainVMGlobals->gc = nullptr;
 
-    test_zzval(" \\abc 0.1",
-               std::array<std::tuple<yytokentype, PyrSlot>, 2> { {
+    test_zzval(" \\abc 0.1 12rABClass",
+               std::array<std::tuple<yytokentype, PyrSlot>, 4> { {
                    { SYMBOL, PyrSlot::make(getsym("abc")) },
                    { SC_FLOAT, PyrSlot::make(0.1) },
+                   { INTEGER, PyrSlot::make(131) },
+                   { CLASSNAME, PyrSlot::make(getsym("Class")) },
                } });
 }

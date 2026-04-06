@@ -1,11 +1,10 @@
 #pragma once
 
 #include <cassert>
-#include <cctype>
+#include <limits>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
-#include <stdexcept>
 #include <tuple>
 #include <array>
 #include <utility>
@@ -19,37 +18,82 @@ namespace sc::lex {
 
 /*
 
-To lexer SuperCollider source code, first you must setup a TokenStream, then you must define and create an Action.
+To lex SuperCollider source code, first you must setup a CodePointStream, then you must define and create an Action.
 These are then both passed by reference to lexer.
 
 The Action is in charge of creating semantic values, responding to warnings, and errors.
 The TypeAndLocationAction provided only returns the TokenType and the SourceCodeRange
 
-In the SuperCollider /lang there is an action the mutates global state to communicate with the Bison generated parser.
+In the SuperCollider lang there is an action the mutates global state to communicate with the Bison generated parser.
 You can also use this for code formatting and syntax highlighting.
 
 The lexer here does not do any processing of the semantic values, meaning for example, the strings are not escaped.
 This must happen elsewhere.
 Likewise, we do not join string lines together into one string.
-Bison requires these strings to be joined, this must happen by wrapping the main lexer function and concatenating the
-string lines.
 
 */
 
-// A range in some source code
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Here is the public api and documentation. Everything in the 'details' namespace is private, do not use.
+
+// Unicode code point
+using CodePoint = std::uint32_t;
+inline constexpr CodePoint ascii_to_codepoint(char c);
+
+// Location and range in source code and file.
+struct SourceCodeLocation;
 struct SourceCodeRange;
+struct FileCodeLocation;
+struct FileCodeRange;
 
 // The type of the token produced by the lexer.
 enum struct TokenType;
 
+// Helpers to identify tokens.
+constexpr inline bool is_error(TokenType t);
+constexpr inline bool is_whitespace(TokenType t);
+constexpr inline bool is_comment(TokenType t);
+constexpr inline bool is_identifier(TokenType t);
+constexpr inline bool is_integer(TokenType t);
+constexpr inline bool is_float(TokenType t);
+constexpr inline bool is_accidental(TokenType t);
+constexpr inline bool is_symbol(TokenType t);
+constexpr inline bool is_boolean(TokenType t);
+
 // Used to iterate through the source code.
 class CodePointStream;
+
+// Main lexer function.
+template <typename Action> auto lexer(CodePointStream& stream, Action& action) noexcept -> typename Action::Output;
+
+/*
+
+Actions take in a Token and SourceCodeRange and produce an optional.
+If the optional is empty, the lexer function skips this token, otherwise, it returns the output unwrapped.
+
+See TypeAndLocationAction for more documentation.
+
+struct ActionExample {
+    using Output = ...;  //
+
+    template <TokenType type> std::optional<Output> token(SourceCodeRange loc);
+    template <TokenType type, typename Error> std::optional<Output> error(SourceCodeRange loc, Error&& error);
+};
+*/
 
 // Used to produce output. Serves as an example action, you can define your own.
 struct TypeAndLocationAction;
 
-// Mutates the action with the output.
-template <typename Action> auto lexer(CodePointStream& stream, Action& action) -> typename Action::Output;
+namespace errors {
+struct SymbolQuoteContainsNewLine;
+struct SymbolQuoteUnclosed;
+struct MissingExponent;
+struct StringUnclose;
+struct MultilineCommentUnclosed;
+struct InvalidUTF8;
+struct UnexpectedCodePoint;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // details
@@ -57,16 +101,16 @@ template <typename Action> auto lexer(CodePointStream& stream, Action& action) -
 
 namespace details {
 
-template <typename CRTP> struct TextLocationPoint {
-    TextLocationPoint() = default;
-    constexpr TextLocationPoint(std::size_t absolute, std::size_t lineNumber, std::size_t offsetInLine) noexcept:
+template <typename CRTP> struct TextLocationLocation {
+    TextLocationLocation() = default;
+    constexpr TextLocationLocation(std::size_t absolute, std::size_t lineNumber, std::size_t offsetInLine) noexcept:
         absolute(absolute),
         lineNumber(lineNumber),
         offsetInLine(offsetInLine) {};
-    constexpr TextLocationPoint(TextLocationPoint&&) noexcept = default;
-    constexpr TextLocationPoint(const TextLocationPoint&) noexcept = default;
-    constexpr TextLocationPoint& operator=(TextLocationPoint&&) noexcept = default;
-    constexpr TextLocationPoint& operator=(const TextLocationPoint&) noexcept = default;
+    constexpr TextLocationLocation(TextLocationLocation&&) noexcept = default;
+    constexpr TextLocationLocation(const TextLocationLocation&) noexcept = default;
+    constexpr TextLocationLocation& operator=(TextLocationLocation&&) noexcept = default;
+    constexpr TextLocationLocation& operator=(const TextLocationLocation&) noexcept = default;
 
     [[nodiscard]] constexpr bool operator==(const CRTP& o) const noexcept { return tuple() == o.tuple(); }
     [[nodiscard]] constexpr auto tuple() const noexcept -> std::tuple<std::size_t, std::size_t, std::size_t> {
@@ -102,23 +146,21 @@ template <typename POINT> struct TextLocationRange {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Locations in source code snippets or files. Some C++ rigmarole is required to make them strong types.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-struct SourceCodePoint : public details::TextLocationPoint<SourceCodePoint> {
-    using TextLocationPoint::TextLocationPoint;
+struct SourceCodeLocation : public details::TextLocationLocation<SourceCodeLocation> {
+    using TextLocationLocation::TextLocationLocation;
 };
 
-struct FileCodePoint : public details::TextLocationPoint<FileCodePoint> {
-    using TextLocationPoint::TextLocationPoint;
+struct FileCodeLocation : public details::TextLocationLocation<FileCodeLocation> {
+    using TextLocationLocation::TextLocationLocation;
 };
 
-struct SourceCodeRange : details::TextLocationRange<SourceCodePoint> {
-    using TextLocationRange<SourceCodePoint>::TextLocationRange;
-    using TextLocationRange<SourceCodePoint>::operator=;
+struct SourceCodeRange : details::TextLocationRange<SourceCodeLocation> {
+    using TextLocationRange<SourceCodeLocation>::TextLocationRange;
+    using TextLocationRange<SourceCodeLocation>::operator=;
 };
-struct FileCodeRange : details::TextLocationRange<FileCodePoint> {
-    using TextLocationRange<FileCodePoint>::TextLocationRange;
-    using TextLocationRange<FileCodePoint>::operator=;
+struct FileCodeRange : details::TextLocationRange<FileCodeLocation> {
+    using TextLocationRange<FileCodeLocation>::TextLocationRange;
+    using TextLocationRange<FileCodeLocation>::operator=;
 };
 
 
@@ -126,13 +168,11 @@ struct FileCodeRange : details::TextLocationRange<FileCodePoint> {
 // Codepoint --- represents a unicode code point. T
 // Node: we do not work with graphemes, so all multicodepoint unicode must be handled by the logic in the lexer.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-using CodePoint = std::uint32_t;
+static constexpr CodePoint invalid_utf8_flag = std::numeric_limits<CodePoint>::max();
 
-class BadUTF8Input : std::runtime_error {
-    using std::runtime_error::runtime_error;
-};
-
-inline std::tuple<CodePoint, std::uint8_t> char_sequence_to_codepoint(const char* source, size_t pos, size_t len) {
+// Returns code point and number of utf8 bytes consumed
+inline std::tuple<CodePoint, std::uint8_t> char_sequence_to_codepoint(const char* source, size_t pos,
+                                                                      size_t len) noexcept {
     const auto* c = reinterpret_cast<const unsigned char*>(source);
     assert(pos < len);
 
@@ -142,20 +182,20 @@ inline std::tuple<CodePoint, std::uint8_t> char_sequence_to_codepoint(const char
         return { static_cast<CodePoint>(u), 1 };
 
     if (u < 0b1100'0000) {
-        throw BadUTF8Input { "bad utf8, unexpected continuation characters" };
+        return { invalid_utf8_flag, 1 };
     }
 
     if (u < 0b1110'0000) { // two bytes
         const auto chigh = static_cast<CodePoint>(c[pos]);
         if (pos + 1 >= len)
-            throw BadUTF8Input { "bad utf8, not enough bytes, expected 2" };
+            return { invalid_utf8_flag, len - pos };
 
         const auto clow = static_cast<CodePoint>(c[pos + 1]);
         return { ((chigh & 0b00111111) << 6) | (clow & 0b00111111), 2 };
     }
     if (u < 0b1111'0000) { // three bytes
         if (pos + 2 >= len)
-            throw BadUTF8Input { "bad utf8, not enough bytes, expected 3" };
+            return { invalid_utf8_flag, len - pos };
 
         const auto chigh = static_cast<CodePoint>(c[pos]);
         const auto cmid = static_cast<CodePoint>(c[pos + 1]);
@@ -164,7 +204,7 @@ inline std::tuple<CodePoint, std::uint8_t> char_sequence_to_codepoint(const char
     }
     if (u < 0b1111'1000) { // four bytes
         if (pos + 3 >= len)
-            throw BadUTF8Input { "bad utf8, not enough bytes, expected 4" };
+            return { invalid_utf8_flag, len - pos };
         const auto chigh = static_cast<CodePoint>(c[pos]);
         const auto cmid = static_cast<CodePoint>(c[pos + 1]);
         const auto cmid2 = static_cast<CodePoint>(c[pos + 2]);
@@ -173,11 +213,15 @@ inline std::tuple<CodePoint, std::uint8_t> char_sequence_to_codepoint(const char
                      | (clow & 0b00111111),
                  4 };
     }
-    throw BadUTF8Input { "bad utf8, characters outside of the accepted range" };
+
+    return { invalid_utf8_flag, 1 };
 }
 
-inline constexpr CodePoint char_to_codepoint(char c) { return static_cast<CodePoint>(c); }
 
+inline constexpr CodePoint ascii_to_codepoint(char c) {
+    assert(c >= 0 && c <= 127);
+    return static_cast<CodePoint>(c);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CodePointStream - Walks through source code.
@@ -188,7 +232,6 @@ inline constexpr CodePoint char_to_codepoint(char c) { return static_cast<CodePo
 // Annoyingly, it has state, because when in a command line context, the first token must be Interpret,
 //    call should_leave_cmd_initial to see if this should be returned.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 class CodePointStream {
     // The first time we enter cmd mode, we must return Interpret.
     enum struct Mode { ClassLibrary, CMDInitial, CMDContinue };
@@ -203,7 +246,7 @@ public:
     };
 
     CodePointStream(bool in_class_library, const char* source, size_t source_length,
-                    FileCodePoint source_start_in_file);
+                    FileCodeLocation source_start_in_file);
 
     CodePointStream() = delete;
     CodePointStream(CodePointStream&&) noexcept = default;
@@ -213,13 +256,13 @@ public:
 
 
     [[nodiscard]] FileCodeRange source_to_file(const SourceCodeRange& source) const;
-    [[nodiscard]] FileCodePoint source_to_file(const SourceCodePoint& source) const;
+    [[nodiscard]] FileCodeLocation source_to_file(const SourceCodeLocation& source) const;
 
     [[nodiscard]] std::tuple<const char*, const char*> source_range(const SourceCodeRange& range) const;
 
-    [[nodiscard]] std::tuple<SourceCodePoint, CodePoint> start_token();
+    [[nodiscard]] std::tuple<SourceCodeLocation, CodePoint> start_token();
 
-    [[nodiscard]] SourceCodePoint end_token() const;
+    [[nodiscard]] SourceCodeLocation end_token() const;
 
     // Must call this first. If true, then lexer should emit the Interpret token.
     // This mutates states, so repeated calls will return false.
@@ -237,7 +280,7 @@ public:
     template <size_t N> [[nodiscard]] Peek<N> peek_n() const;
 
     // Commits peek to the current token.
-    template <size_t N> SourceCodePoint advance_by_peek(Peek<N> peek);
+    template <size_t N> SourceCodeLocation advance_by_peek(Peek<N> peek);
 
     // Peeks, if equal to one of c, advances.
     // Usage: if (stream.peek_advance_if('.')) { ... consumed '.' ... };
@@ -247,17 +290,17 @@ public:
     [[nodiscard]] CodePoint advance_and_peek();
 
     // Null terminator is NEVER accepted here.
-    template <typename Predicate> SourceCodePoint advance_while(Predicate&& predicate);
+    template <typename Predicate> SourceCodeLocation advance_while(Predicate&& predicate);
     template <typename Predicate> size_t advance_while_count(Predicate&& predicate);
 
     // Does not clear the new line cache. Goes back to the beginning.
     void reset();
 
-    std::size_t line_start(SourceCodePoint p);
+    std::size_t line_start(SourceCodeLocation p);
 
 private:
-    FileCodePoint source_start_in_file; // Allows us to get the location in the file from the source code location.
-    SourceCodePoint next; // Iterator through code, points to the next not the current.
+    FileCodeLocation source_start_in_file; // Allows us to get the location in the file from the source code location.
+    SourceCodeLocation next; // Iterator through code, points to the next not the current.
     const char* source; // Text, may not be null terminated. Only access this inside read.
     size_t source_length; // Text length.
     // Cache of new line locations.
@@ -265,9 +308,9 @@ private:
     Mode mode;
 
     // Also returns the character size in bytes.
-    [[nodiscard]] std::tuple<CodePoint, std::uint8_t> read(size_t pos) const;
-    void increment_source_code_point(SourceCodePoint& p, CodePoint c, std::uint8_t sz) const;
-    void increment_source_code_point(SourceCodePoint& p, CodePoint c) const;
+    [[nodiscard]] std::tuple<CodePoint, std::uint8_t> read(size_t pos) const noexcept;
+    void increment_source_code_point(SourceCodeLocation& p, CodePoint c, std::uint8_t sz) const;
+    void increment_source_code_point(SourceCodeLocation& p, CodePoint c) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -277,82 +320,156 @@ private:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 enum struct TokenType : int {
-    End = 0,
+    EndOfFile = 0,
     // All the ascii characters are here, useful for literals, does not support unicode literals.
-    Name = 2048,
 
+    // Identifiers
+    Name = 1024,
+    ClassName,
+    PrimitiveName,
+
+    // Literals - ints
     Integer,
     IntegerRadix,
     Hexidecimal,
 
+    // Literals - floats
     Float,
     FloatRadix,
     FloatExponent,
+    Pi,
+    Inf,
 
+    // Literals - accidentals
     AccidentalSteps,
     AccidentalCents,
 
-    Symbol, // something internal like a variable or other identifer
+    // Literals - symbols
     SymbolSlash, //   \symbol
     SymbolQuote, // 'symbol literal'
 
-    Ascii,
+    // Literals - chars
+    Ascii, // character
 
-    ClassName,
-    While,
-    PrimitiveName,
-    LeftArrow,
-
-    Pi,
+    // Literals - booleans
     True,
     False,
-    Inf,
+
+    // Literals - nil
     Nil,
+
+    // Literals - string
+    StringLine,
+
+    // Keywords
+    While,
     Var,
     Arg,
     ClassVar,
     Const,
+
+    // Punctuation
+    LeftArrow,
+    ReadWriteVar,
     Ellipsis,
     DotDot,
-    BeginClosedFunction,
-    Interpret,
-    BeginGenerator,
     CurryArg,
+
+    // Operators
     BinaryOperator,
     KeywordBinaryOperator,
-    ReadWriteVar,
-    StringLine,
 
-    // These are the error types.
-    BadToken,
+    // Special
+    BeginClosedFunction,
+    Interpret,
 
-    // Commonly discarded go after here.
-    Space = 1048576,
+    // errors
+    Unexpected = 2048,
+    InvalidToken,
+    InvalidUTF8,
+
+    // white space
+    Space = 3072,
     NewLine,
     Tab,
-    Comment,
+
+    // comments
+    Comment = 4096,
     DocumentationComment,
     MultiLineComment,
 };
 
-inline bool is_error(TokenType t) { return t == TokenType::BadToken; }
+namespace details {
+template <typename... ARGS> constexpr inline bool matches(TokenType t, ARGS... args) { return ((t == args) || ...); }
+};
 
+constexpr inline bool is_error(TokenType t) {
+    const auto v { static_cast<int>(t) };
+    return 2048 <= v && v < 3072;
+}
+
+constexpr inline bool is_whitespace(TokenType t) {
+    const auto v { static_cast<int>(t) };
+    return 3072 <= v && v < 4096;
+}
+
+constexpr inline bool is_comment(TokenType t) {
+    const auto v { static_cast<int>(t) };
+    return 4096 <= v && v < 5120;
+}
+
+constexpr inline bool is_identifier(TokenType t) {
+    return details::matches(t, TokenType::Name, TokenType::PrimitiveName, TokenType::ClassName);
+}
+
+constexpr inline bool is_integer(TokenType t) {
+    return details::matches(t, TokenType::Integer, TokenType::IntegerRadix, TokenType::Hexidecimal);
+}
+
+constexpr inline bool is_float(TokenType t) {
+    return details::matches(t, TokenType::Float, TokenType::FloatRadix, TokenType::FloatExponent, TokenType::Pi,
+                            TokenType::Inf);
+}
+
+constexpr inline bool is_accidental(TokenType t) {
+    return details::matches(t, TokenType::AccidentalCents, TokenType::AccidentalSteps);
+}
+
+constexpr inline bool is_symbol(TokenType t) {
+    return details::matches(t, TokenType::SymbolQuote, TokenType::SymbolSlash);
+}
+
+constexpr inline bool is_boolean(TokenType t) { return details::matches(t, TokenType::True, TokenType::False); }
 
 namespace literals {
 inline constexpr TokenType operator""_tokentype(char c) { return static_cast<TokenType>(c); }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Semantic Action, used to do stuff.
-// The main lexer function takes in a template argument call Action which is in charge of emitting or discarding tokens.
-// Action::Output becomes the return type of lexer.
-// There must be four functions defined: token, end, error, and warn, their signatures can be seen in the example below.
+// Errors
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Provides an example implementation of the Action.
-// Note, extra error checking may take place inside of these methods, for example, bracket checking.
-// When creating your own action, you must define all of these methods.
-// The return type of empty, bracket, symbol, etc., define the return type of the main lexer function.
+namespace errors {
+
+struct SymbolQuoteContainsNewLine {};
+struct SymbolQuoteUnclosed {};
+
+struct MissingExponent {};
+
+struct StringUnclosed {};
+struct MultilineCommentUnclosed {};
+
+struct InvalidUTF8 {};
+struct UnexpectedCodePoint {};
+
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Semantic Action, used to do stuff.
+// The main lexer function takes in a template argument call Action which is in charge of emitting or discarding tokens.
+// `typename Action::Output` becomes the return type of lexer.
+// You cannot discard the EndOfFile token, ensure this returns a filled optional.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct TypeAndLocationAction {
     struct Output {
         TokenType type {};
@@ -362,22 +479,14 @@ struct TypeAndLocationAction {
     // Return std::nullopt to discard the token type.
     // Don't use template speicialisation as this isn't valid c++, instead use if constexpr.
     template <TokenType type> std::optional<Output> token(SourceCodeRange loc) {
-        static_assert(type != TokenType::BadToken);
+        static_assert(!is_error(type));
         return { { type, loc } };
     }
-
-    // The end of the stream, the type passed in here is always TokenType::End.
-    template <TokenType type> Output end(SourceCodeRange loc) { return { type, loc }; };
 
     // You are allowed to discard errors.
-    template <TokenType type, typename... ARGS>
-    std::optional<Output> error(SourceCodeRange loc, const char* fmt, ARGS... args) {
+    template <TokenType type, typename Error> std::optional<Output> error(SourceCodeRange loc, Error&& error) {
+        static_assert(is_error(type));
         return { { type, loc } };
-    }
-
-    // fmt is designed to be passed to sprintf along with the trailing arguments.
-    template <typename... ARGS> void warn(SourceCodeRange loc, const char* fmt, ARGS... args) {
-        // perhaps might post somewhere, or store a string some where.
     }
 };
 
@@ -385,36 +494,16 @@ struct TypeAndLocationAction {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Helpers used in main lexer function
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static constexpr std::array<CodePoint, 13> binary_operator_characters { '!', '@', '%', '&', '*', '-', '+',
-                                                                        '=', '|', '<', '>', '?', '/' };
-
 namespace details {
 
-template <size_t N> using CodePointArray = std::array<CodePoint, N>;
+constexpr inline bool is_newline(CodePoint c) { return c == '\n' || c == '\r'; }
 
-// Because we don't have std::string_view until 2020.
-struct StringMatcher {
-    const char* start;
-    template <size_t N> bool match(const char array[N]) const {
-        for (size_t i { 0 }; i < N; ++i) {
-            if (start[i] != array[i])
-                return false;
-        }
-        return true;
-    }
-};
-
-constexpr inline bool is_not_printable(CodePoint c) {
-    if (-128 < c && c < 128) {
-        const auto uc = static_cast<unsigned char>(c);
-        return !std::isprint(uc);
-    }
-    return false;
+constexpr inline bool is_space(CodePoint c) {
+    return c == ' ' || c == '\v' || c == '\f'
+        || c == 0x00a0 // This is the Ux00a0, no-break-space, often occurs when copying code from the web
+        ;
 }
 
-constexpr inline bool is_newline(CodePoint c) { return c == '\n' || c == '\r'; }
-constexpr inline bool is_space(CodePoint c) { return c == ' ' || c == '\v' || c == '\f'; }
 constexpr inline bool is_control_code(CodePoint c) { return (1 <= c && c <= 8) || (14 <= c && c <= 31) || c == 127; }
 constexpr inline bool is_lower(CodePoint c) { return 'a' <= c && c <= 'z'; }
 constexpr inline bool is_upper(CodePoint c) { return 'A' <= c && c <= 'Z'; }
@@ -428,23 +517,19 @@ constexpr inline bool is_continuing_identifier(CodePoint c) {
 }
 
 constexpr inline bool is_binary_operator_character(CodePoint c) {
+    constexpr std::array<CodePoint, 13> binary_operator_characters { '!', '@', '%', '&', '*', '-', '+',
+                                                                     '=', '|', '<', '>', '?', '/' };
     for (CodePoint b : binary_operator_characters)
         if (b == c)
             return true;
     return false;
 }
 
-#if defined(__clang__)
-// This could be fixed, but it is the old beheaviour --- besides, sc only works with int32s.
-// Only here to make the fuzz test be quite.
-__attribute__((no_sanitize("signed-integer-overflow")))
-#endif
-constexpr inline int
-str_to_int(const char* str, size_t n, int base) {
+constexpr inline int str_to_int_for_radix(const char* str, size_t n, int base) {
     // TODO: in future it would be nice to remove this from the lexer, it means changing the language to accept invalid
     // radixs at the lexing stage, but makes things context dependant.
-    int out = 0;
-    for (size_t i = 0; i < n; ++i) {
+    int out { 0 };
+    for (size_t i { 0 }; i < n; ++i) {
         const char c = *str++;
         if (c >= '0' && c <= '0' + std::min(10, base) - 1)
             out = out * base + c - '0';
@@ -456,8 +541,24 @@ str_to_int(const char* str, size_t n, int base) {
     return out;
 }
 
+
+template <size_t N> using CodePointArray = std::array<CodePoint, N>;
+
+// Because we don't have std::string_view until 2020.
+// Used to match on keywords
+struct StringMatcher {
+    const char* start;
+    template <size_t N> bool match(const char array[N]) const {
+        for (size_t i { 0 }; i < N; ++i) {
+            if (start[i] != array[i])
+                return false;
+        }
+        return true;
+    }
+};
+
 template <typename Action>
-decltype(auto) lexer_binary_operator(CodePointStream& stream, Action& action, SourceCodePoint token_start) {
+decltype(auto) lexer_binary_operator(CodePointStream& stream, Action& action, SourceCodeLocation token_start) {
     const auto end = stream.advance_while(is_binary_operator_character);
     const auto [str_b, str_e] = stream.source_range({ token_start, end });
     const auto sz = str_e - str_b;
@@ -496,14 +597,14 @@ decltype(auto) lexer_binary_operator(CodePointStream& stream, Action& action, So
 
 template <typename Action>
 decltype(auto) lexer_identifier_keybinop_curry_kw_etc(CodePointStream& stream, Action& action,
-                                                      SourceCodePoint token_start) {
+                                                      SourceCodeLocation token_start) {
     const auto end = stream.advance_while([](auto c) { return is_continuing_identifier(c); });
 
     // Note: this logic is a little odd, as it mean '_:' and '_asdf:' are keybinops, as is 'Foo:'.
-    // This is potentially a bug and might be better if this logic was moved down a couple of lines.
     // This explains why you need a space between child and parent class in class definitions.
     // Also means keywords can be keybinops, 'var:', 'pi:'.
-    // The only place these can be used is in Event: `( _: {|self, other| other } ) _: 1`
+    // The only place these can be used is in Event: `( _: {|self, other| other } ) _: 1`. This makes no sense for '_',
+    // but 'true:' and 'pi:' could be used somwhere.
     if (stream.peek_advance_if(':'))
         return action.template token<TokenType::KeywordBinaryOperator>({ token_start, stream.end_token() });
 
@@ -516,7 +617,7 @@ decltype(auto) lexer_identifier_keybinop_curry_kw_etc(CodePointStream& stream, A
     if (t_b[0] == '_')
         return action.template token<TokenType::PrimitiveName>(range);
 
-    if (is_start_of_class(char_to_codepoint(*t_b)))
+    if (is_start_of_class(ascii_to_codepoint(*t_b)))
         return action.template token<TokenType::ClassName>(range);
 
     const auto txt = StringMatcher { t_b };
@@ -552,7 +653,7 @@ decltype(auto) lexer_identifier_keybinop_curry_kw_etc(CodePointStream& stream, A
 }
 
 template <typename Action>
-decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodePoint token_start) {
+decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeLocation token_start) {
     const auto end_of_pre = stream.advance_while([](auto c) { return is_numeric(c); });
 
     const auto peek = stream.peek_n<2>();
@@ -561,7 +662,7 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeP
     case 'r': {
         const auto [radix_str_b, radix_str_e] = stream.source_range({ token_start, end_of_pre });
         stream.advance(); // drop 'r'
-        const int radix = str_to_int(radix_str_b, radix_str_e - radix_str_b, 10);
+        const int radix = str_to_int_for_radix(radix_str_b, radix_str_e - radix_str_b, 10);
         const auto offset10 = std::max<int>(0, std::min<int>(10, radix)) - 1;
         const auto offset36 = std::max<int>(0, std::min<int>(36, radix)) - 11;
 
@@ -594,18 +695,13 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeP
     case 'e':
         [[fallthrough]];
     case 'E':
-    exponent : {
+    exponent : { // This is the label for a goto, only used for floating point exponents.
         stream.advance(); // drop e
         const auto has_sign = stream.peek_advance_if('+', '-');
         const auto count = stream.advance_while_count([](auto c) { return is_numeric(c); });
-        if (!has_sign && count == 0)
-            return action.template error<TokenType::BadToken>(
-                { token_start, stream.end_token() },
-                "Must have digits [0-9] or either a [+|-] after the exponent 'e' and 'E'.\n");
-
-        if (has_sign && count == 0)
-            return action.template error<TokenType::BadToken>(
-                { token_start, stream.end_token() }, "Must have digits [0-9] after the sign [+|-] in a exponent.\n");
+        if (count == 0)
+            return action.template error<TokenType::InvalidToken>({ token_start, stream.end_token() },
+                                                                  errors::MissingExponent {});
 
         return action.template token<TokenType::FloatExponent>({ token_start, stream.end_token() });
     }
@@ -659,9 +755,9 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeP
 // Looks to the action to deduce its return type.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename Action> auto lexer(CodePointStream& stream, Action& action) -> typename Action::Output {
+template <typename Action> auto lexer(CodePointStream& stream, Action& action) noexcept -> typename Action::Output {
     using namespace details;
-    // Must return the Interpret token the first time we are called
+    // Must return the Interpret token the first time we are called if in interpret mode.
     if (stream.should_leave_cmd_initial()) {
         if (auto r = action.template token<TokenType::Interpret>({ stream.end_token(), stream.end_token() }))
             return *r;
@@ -673,8 +769,10 @@ discard_token : {
     const auto [token_start, c] = stream.start_token();
 
     // Will repeatedly return this as this doesn't mutate state.
-    if (c == 0)
-        return action.template end<TokenType::End>({ token_start, stream.end_token() });
+    if (c == 0) {
+        const auto r = action.template token<TokenType::EndOfFile>({ token_start, stream.end_token() });
+        return *r;
+    }
 
     if (is_newline(c)) {
         const auto end = stream.advance_while([](auto c) { return is_newline(c); });
@@ -701,9 +799,6 @@ discard_token : {
             goto discard_token;
     }
 
-
-    // Simple character literals
-    switch (c) {
 #define literal_case(c)                                                                                                \
     case (c):                                                                                                          \
         if (auto r = action.template token<static_cast<TokenType>((c))>({ token_start, stream.end_token() }))          \
@@ -711,7 +806,8 @@ discard_token : {
         else                                                                                                           \
             goto discard_token
 
-        //
+    // Simple character literals
+    switch (c) {
         literal_case('^');
         literal_case('~');
         literal_case(';');
@@ -724,10 +820,8 @@ discard_token : {
         literal_case(')');
         literal_case(']');
         literal_case('}');
-        //
-
-#undef literal_case
     }
+#undef literal_case
 
     if (c == '#') {
         if (stream.peek_advance_if('{')) {
@@ -774,8 +868,10 @@ discard_token : {
                 return true;
             });
             const auto delimit = stream.advance();
-            if (delimit == 0)
-                action.warn({ token_start, stream.end_token() }, "Unterminated mutliline comment.\n");
+            if (delimit == 0) {
+                action.template error<TokenType::InvalidToken>({ token_start, stream.end_token() },
+                                                               errors::MultilineCommentUnclosed {});
+            }
 
             if (auto r = action.template token<TokenType::MultiLineComment>({ token_start, stream.end_token() }))
                 return *r;
@@ -871,7 +967,8 @@ discard_token : {
         });
 
         if (stream.advance() != '"')
-            action.warn({ token_start, stream.end_token() }, "Unclosed String.\n");
+            action.template error<TokenType::InvalidToken>({ token_start, stream.end_token() },
+                                                           errors::StringUnclosed {});
 
         if (auto r = action.template token<TokenType::StringLine>({ token_start, stream.end_token() }))
             return *r;
@@ -882,7 +979,7 @@ discard_token : {
     // Symbol that begin with a '\'. Note: first character is used to alter what is acceptable in the following.
     if (c == '\\') {
         const auto first = stream.peek();
-        const SourceCodePoint end = [&]() {
+        const SourceCodeLocation end = [&]() {
             if (is_lower(first) || is_upper(first) || first == '_')
                 // Symbol began with alpha or underscore, therefore, can contain alpha, underscore, and numbers
                 return stream.advance_while(
@@ -917,12 +1014,12 @@ discard_token : {
         const auto next = stream.advance();
         const SourceCodeRange range { token_start, stream.end_token() };
         if (next == 0) {
-            if (auto r = action.template error<TokenType::BadToken>(range, "Symbol literal was not terminated."))
+            if (auto r = action.template error<TokenType::InvalidToken>(range, errors::SymbolQuoteUnclosed {}))
                 return *r;
             else
                 goto discard_token;
         } else if (is_newline(next)) {
-            if (auto r = action.template error<TokenType::BadToken>(range, "Symbol literal cannot contain a new line."))
+            if (auto r = action.template error<TokenType::InvalidToken>(range, errors::SymbolQuoteContainsNewLine {}))
                 return *r;
             else
                 goto discard_token;
@@ -937,16 +1034,23 @@ discard_token : {
     }
 
     // These are the control codes, throw them away!
-    // We might consider throwing an error here, as this really ought not to occur.
+    // We might consider generating an error here, as this really ought not to occur.
     if (is_control_code(c)) {
         stream.advance_while(is_control_code);
         goto discard_token;
     }
 
-    // This should not happen. Make sure all ascii has been handled above.
-    assert(c > 127);
+    if (c == invalid_utf8_flag) {
+        if (auto r = action.template error<TokenType::InvalidUTF8>({ token_start, stream.end_token() },
+                                                                   errors::InvalidUTF8 {}))
+            return *r;
+        else
+            goto discard_token;
+    }
 
-    if (auto r = action.template error<TokenType::BadToken>({ token_start, stream.end_token() }, "Unknown character\n"))
+
+    if (auto r = action.template error<TokenType::Unexpected>({ token_start, stream.end_token() },
+                                                              errors::UnexpectedCodePoint {}))
         return *r;
     else
         goto discard_token;
@@ -984,7 +1088,7 @@ inline constexpr bool CodePointStream::Peek<N>::operator==(std::array<CodePoint,
 };
 
 inline CodePointStream::CodePointStream(bool in_class_library, const char* source, size_t source_length,
-                                        FileCodePoint source_start_in_file):
+                                        FileCodeLocation source_start_in_file):
     source_start_in_file(source_start_in_file),
     next({}),
     source(source),
@@ -1016,7 +1120,7 @@ template <size_t N> [[nodiscard]] CodePointStream::Peek<N> CodePointStream::peek
     return { out };
 };
 
-template <size_t N> inline SourceCodePoint CodePointStream::advance_by_peek(CodePointStream::Peek<N> peek) {
+template <size_t N> inline SourceCodeLocation CodePointStream::advance_by_peek(CodePointStream::Peek<N> peek) {
     for (size_t i { 0 }; i < N; ++i)
         increment_source_code_point(next, peek[i]);
     return end_token();
@@ -1037,7 +1141,7 @@ template <typename Predicate> inline size_t CodePointStream::advance_while_count
     return i;
 };
 
-template <typename Predicate> inline SourceCodePoint CodePointStream::advance_while(Predicate&& predicate) {
+template <typename Predicate> inline SourceCodeLocation CodePointStream::advance_while(Predicate&& predicate) {
     advance_while_count(std::forward<Predicate>(predicate));
     return end_token();
 }
@@ -1046,7 +1150,7 @@ template <typename Predicate> inline SourceCodePoint CodePointStream::advance_wh
     return FileCodeRange { source_to_file(source.begin), source_to_file(source.end) };
 }
 
-[[nodiscard]] inline FileCodePoint CodePointStream::source_to_file(const SourceCodePoint& source) const {
+[[nodiscard]] inline FileCodeLocation CodePointStream::source_to_file(const SourceCodeLocation& source) const {
     const auto file_begin_abs = source.absolute - source_start_in_file.absolute;
     const auto file_begin_line_number = [&]() -> int {
         for (int l { 0 }; l < abs_new_line_locations.size(); ++l) {
@@ -1061,18 +1165,18 @@ template <typename Predicate> inline SourceCodePoint CodePointStream::advance_wh
     return { file_begin_abs, abs_start_of_line, offset_in_line };
 }
 
-[[nodiscard]] inline std::tuple<SourceCodePoint, CodePoint> CodePointStream::start_token() {
+[[nodiscard]] inline std::tuple<SourceCodeLocation, CodePoint> CodePointStream::start_token() {
     const auto loc = next;
     return { loc, advance() };
 }
 
-inline std::size_t CodePointStream::line_start(SourceCodePoint p) {
+inline std::size_t CodePointStream::line_start(SourceCodeLocation p) {
     // Should have seen this before, so should be here.
     assert(p.lineNumber < abs_new_line_locations.size());
     return abs_new_line_locations[p.lineNumber];
 }
 
-[[nodiscard]] inline SourceCodePoint CodePointStream::end_token() const { return next; }
+[[nodiscard]] inline SourceCodeLocation CodePointStream::end_token() const { return next; }
 
 [[nodiscard]] inline bool CodePointStream::should_leave_cmd_initial() noexcept {
     if (mode == Mode::CMDInitial) {
@@ -1092,7 +1196,7 @@ inline CodePoint CodePointStream::advance() {
 }
 
 
-[[nodiscard]] inline std::tuple<CodePoint, std::uint8_t> CodePointStream::read(size_t pos) const {
+[[nodiscard]] inline std::tuple<CodePoint, std::uint8_t> CodePointStream::read(size_t pos) const noexcept {
     return char_sequence_to_codepoint(source, pos, source_length);
 }
 
@@ -1113,7 +1217,7 @@ inline CodePoint CodePointStream::advance() {
         return 4;
 }
 
-inline void CodePointStream::increment_source_code_point(SourceCodePoint& p, CodePoint c, std::uint8_t sz) const {
+inline void CodePointStream::increment_source_code_point(SourceCodeLocation& p, CodePoint c, std::uint8_t sz) const {
     if (details::is_newline(c)) {
         p.lineNumber += 1;
         p.absolute += sz;
@@ -1127,7 +1231,7 @@ inline void CodePointStream::increment_source_code_point(SourceCodePoint& p, Cod
     }
 }
 
-inline void CodePointStream::increment_source_code_point(SourceCodePoint& p, CodePoint c) const {
+inline void CodePointStream::increment_source_code_point(SourceCodeLocation& p, CodePoint c) const {
     return increment_source_code_point(p, c, character_size(c));
 }
 
@@ -1139,7 +1243,7 @@ CodePointStream::source_range(const SourceCodeRange& range) const {
 }
 
 inline void CodePointStream::reset() {
-    next = SourceCodePoint {};
+    next = SourceCodeLocation {};
     mode = (mode == Mode::ClassLibrary) ? Mode::ClassLibrary : Mode::CMDInitial;
 }
 [[nodiscard]] inline CodePoint CodePointStream::peek() const { return peek_n<1>()[0]; }
@@ -1162,8 +1266,6 @@ template <typename T> T& operator<<(T& stream, const TokenType& t) {
         return stream << "AccidentalCents";
     case TokenType::Hexidecimal:
         return stream << "Hexidecimal";
-    case TokenType::Symbol:
-        return stream << "Symbol";
     case TokenType::SymbolSlash:
         return stream << "SymbolSlash";
     case TokenType::SymbolQuote:
@@ -1202,12 +1304,10 @@ template <typename T> T& operator<<(T& stream, const TokenType& t) {
         return stream << "DotDot";
     case TokenType::BeginClosedFunction:
         return stream << "BeginClosedFunction";
-    case TokenType::BadToken:
+    case TokenType::Unexpected:
         return stream << "BadToken";
     case TokenType::Interpret:
         return stream << "Interpret";
-    case TokenType::BeginGenerator:
-        return stream << "BeginGenerator";
     case TokenType::CurryArg:
         return stream << "CurryArg";
     case TokenType::BinaryOperator:

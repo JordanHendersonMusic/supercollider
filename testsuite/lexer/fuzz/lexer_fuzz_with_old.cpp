@@ -18,7 +18,7 @@ void compare_tokens(const char* text, bool should_print = false) {
     TokenOnlyAction action {};
 
     OldInfo old_i { 0, 0, 0 };
-    NewInfo new_i { TokenType::End, 0, 0 };
+    NewInfo new_i { TokenType::EndOfFile, 0, 0 };
     while (true) {
         if (old_i.end < new_i.end) {
             const auto old_t = old_lexer(old_state, false);
@@ -52,9 +52,9 @@ void compare_tokens(const char* text, bool should_print = false) {
 
         if (should_print) {}
 
-        if (old_i.type == YYEOF && new_i.type == TokenType::End)
+        if (old_i.type == YYEOF && new_i.type == TokenType::EndOfFile)
             break;
-        if (old_i.type == YYEOF || new_i.type == TokenType::End) {
+        if (old_i.type == YYEOF || new_i.type == TokenType::EndOfFile) {
             if (!should_print) {
                 return compare_tokens(text, true);
             } else {
@@ -125,14 +125,11 @@ void compare_tokens(const char* text, bool should_print = false) {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     using namespace sc::lex;
-    using namespace sc::lex::literals;
     std::vector<char> bytes { data, data + size };
     bytes.push_back(' ');
     bytes.push_back(0);
 
-    try {
-        compare_tokens(bytes.data());
-    } catch (const BadUTF8Input& e) {}
+    compare_tokens(bytes.data());
 
     return 0;
 }

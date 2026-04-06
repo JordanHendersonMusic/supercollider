@@ -78,13 +78,12 @@ extern int yydebug;
     BEGINCLOSEDFUNC = 279,         /* BEGINCLOSEDFUNC  */
     BADTOKEN = 280,                /* BADTOKEN  */
     INTERPRET = 281,               /* INTERPRET  */
-    BEGINGENERATOR = 282,          /* BEGINGENERATOR  */
-    LEFTARROW = 283,               /* LEFTARROW  */
-    WHILE = 284,                   /* WHILE  */
-    BINOP = 285,                   /* BINOP  */
-    KEYBINOP = 286,                /* KEYBINOP  */
-    READWRITEVAR = 287,            /* READWRITEVAR  */
-    UMINUS = 288                   /* UMINUS  */
+    LEFTARROW = 282,               /* LEFTARROW  */
+    WHILE = 283,                   /* WHILE  */
+    BINOP = 284,                   /* BINOP  */
+    KEYBINOP = 285,                /* KEYBINOP  */
+    READWRITEVAR = 286,            /* READWRITEVAR  */
+    UMINUS = 287                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
