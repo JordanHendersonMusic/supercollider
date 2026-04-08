@@ -76,8 +76,7 @@ See TypeAndLocationAction for more documentation.
 struct ActionExample {
     using Output = ...;  //
 
-    template <TokenType type> std::optional<Output> token(SourceCodeRange loc);
-    template <TokenType type, typename Error> std::optional<Output> error(SourceCodeRange loc, Error&& error);
+    template <TokenType type> std::optional<Output> process(SourceCodeRange loc);
 };
 */
 
@@ -103,10 +102,10 @@ namespace details {
 
 template <typename CRTP> struct TextLocationLocation {
     TextLocationLocation() = default;
-    constexpr TextLocationLocation(std::size_t absolute, std::size_t lineNumber, std::size_t offsetInLine) noexcept:
+    constexpr TextLocationLocation(std::size_t absolute, std::size_t lineNumber, std::size_t column) noexcept:
         absolute(absolute),
         lineNumber(lineNumber),
-        offsetInLine(offsetInLine) {};
+        column(column) {};
     constexpr TextLocationLocation(TextLocationLocation&&) noexcept = default;
     constexpr TextLocationLocation(const TextLocationLocation&) noexcept = default;
     constexpr TextLocationLocation& operator=(TextLocationLocation&&) noexcept = default;
@@ -114,12 +113,14 @@ template <typename CRTP> struct TextLocationLocation {
 
     [[nodiscard]] constexpr bool operator==(const CRTP& o) const noexcept { return tuple() == o.tuple(); }
     [[nodiscard]] constexpr auto tuple() const noexcept -> std::tuple<std::size_t, std::size_t, std::size_t> {
-        return { absolute, lineNumber, offsetInLine };
+        return { absolute, lineNumber, column };
     }
 
     std::size_t absolute { 0 }; // Offset as a byte index into the text.
     std::size_t lineNumber { 0 }; // Zero indexed, first line is zero.
-    std::size_t offsetInLine { 0 }; // OIffset as a bute index into the current line.
+    std::size_t column {
+        0
+    }; // Codepoint count, note, this is currently broken and doesn't work with multicodepoint graphemes.
 };
 
 // A range of points in some text.
@@ -133,6 +134,7 @@ template <typename POINT> struct TextLocationRange {
     constexpr TextLocationRange& operator=(const TextLocationRange&) noexcept = default;
 
     [[nodiscard]] constexpr auto size() const { return end.absolute - begin.absolute; }
+    [[nodiscard]] constexpr auto line_count() const { return (end.lineNumber - begin.lineNumber) + 1; }
     [[nodiscard]] constexpr static TextLocationRange range(TextLocationRange left, TextLocationRange right) {
         return { left.begin, right.end };
     }
@@ -255,10 +257,30 @@ public:
     CodePointStream& operator=(const CodePointStream&) = delete;
 
 
+    // SourceCodeRange manipulation
+
     [[nodiscard]] FileCodeRange source_to_file(const SourceCodeRange& source) const;
     [[nodiscard]] FileCodeLocation source_to_file(const SourceCodeLocation& source) const;
 
-    [[nodiscard]] std::tuple<const char*, const char*> source_range(const SourceCodeRange& range) const;
+    // returns begin and size
+    [[nodiscard]] std::tuple<const char*, std::size_t> source_range(const SourceCodeRange& range) const;
+
+    struct LineIter {
+        const CodePointStream& cps;
+        std::size_t start_line, end_line;
+        std::size_t current_line { start_line };
+        [[nodiscard]] inline std::optional<std::tuple<const char*, std::size_t, std::size_t>> operator()();
+    };
+    friend struct LineIter;
+
+    [[nodiscard]] LineIter line_iter(const SourceCodeRange& range, std::size_t lines_before = 0,
+                                     std::size_t lines_after = 0) const;
+
+    // Given a location in a line, return the start of that line.
+    [[nodiscard]] SourceCodeLocation line_start(SourceCodeLocation p) const;
+
+
+    // Advancing through stream.
 
     [[nodiscard]] std::tuple<SourceCodeLocation, CodePoint> start_token();
 
@@ -296,15 +318,14 @@ public:
     // Does not clear the new line cache. Goes back to the beginning.
     void reset();
 
-    std::size_t line_start(SourceCodeLocation p);
 
 private:
     FileCodeLocation source_start_in_file; // Allows us to get the location in the file from the source code location.
     SourceCodeLocation next; // Iterator through code, points to the next not the current.
     const char* source; // Text, may not be null terminated. Only access this inside read.
     size_t source_length; // Text length.
-    // Cache of new line locations.
-    mutable std::vector<std::size_t> abs_new_line_locations { 0 };
+    // Cache of new line locations, in source code, not file.
+    mutable std::vector<std::uint32_t> abs_new_line_locations { 0 };
     Mode mode;
 
     // Also returns the character size in bytes.
@@ -383,92 +404,91 @@ enum struct TokenType : int {
     BeginClosedFunction,
     Interpret,
 
-    // errors
-    Unexpected = 2048,
-    InvalidToken,
-    InvalidUTF8,
-
     // white space
-    Space = 3072,
+    Space = 2048,
     NewLine,
     Tab,
 
     // comments
-    Comment = 4096,
+    Comment = 3072,
     DocumentationComment,
     MultiLineComment,
+
+    // errors
+    ErUnexpected = 4096,
+    ErSymbolQuoteUnclosed,
+    ErMultilineCommentUnclosed,
+    ErStringUnclosed,
+    ErMissingExponent,
+    ErInvalidToken,
+    ErInvalidUTF8,
+
+    ErFirstUserDefinedError = 5119
 };
 
-namespace details {
-template <typename... ARGS> constexpr inline bool matches(TokenType t, ARGS... args) { return ((t == args) || ...); }
-};
+template <typename... ARGS> constexpr inline bool matches(TokenType t, ARGS... args) {
+    return ((t == static_cast<TokenType>(args)) || ...);
+}
+
+constexpr inline bool is_ascii_literal(TokenType t) {
+    const auto v = static_cast<int>(t);
+    return 0 < v && v < 128;
+}
 
 constexpr inline bool is_error(TokenType t) {
     const auto v { static_cast<int>(t) };
-    return 2048 <= v && v < 3072;
+    return static_cast<int>(TokenType::ErUnexpected) <= v;
 }
 
 constexpr inline bool is_whitespace(TokenType t) {
     const auto v { static_cast<int>(t) };
-    return 3072 <= v && v < 4096;
+    return 2048 <= v && v < 3072;
 }
 
 constexpr inline bool is_comment(TokenType t) {
     const auto v { static_cast<int>(t) };
-    return 4096 <= v && v < 5120;
+    return 3072 <= v && v < 4096;
 }
 
 constexpr inline bool is_identifier(TokenType t) {
-    return details::matches(t, TokenType::Name, TokenType::PrimitiveName, TokenType::ClassName);
+    return matches(t, TokenType::Name, TokenType::PrimitiveName, TokenType::ClassName);
+}
+
+constexpr inline bool is_keyword(TokenType t) {
+    return matches(t, TokenType::Arg, TokenType::Var, TokenType::Const, TokenType::While, TokenType::ClassVar);
 }
 
 constexpr inline bool is_integer(TokenType t) {
-    return details::matches(t, TokenType::Integer, TokenType::IntegerRadix, TokenType::Hexidecimal);
+    return matches(t, TokenType::Integer, TokenType::IntegerRadix, TokenType::Hexidecimal);
 }
 
+// Also includes constants pi and inf
 constexpr inline bool is_float(TokenType t) {
-    return details::matches(t, TokenType::Float, TokenType::FloatRadix, TokenType::FloatExponent, TokenType::Pi,
-                            TokenType::Inf);
+    return matches(t, TokenType::Float, TokenType::FloatRadix, TokenType::FloatExponent, TokenType::Pi, TokenType::Inf);
+}
+
+constexpr inline bool is_constant(TokenType t) {
+    return matches(t, TokenType::Pi, TokenType::Nil, TokenType::Inf, TokenType::True, TokenType::False);
 }
 
 constexpr inline bool is_accidental(TokenType t) {
-    return details::matches(t, TokenType::AccidentalCents, TokenType::AccidentalSteps);
+    return matches(t, TokenType::AccidentalCents, TokenType::AccidentalSteps);
 }
 
-constexpr inline bool is_symbol(TokenType t) {
-    return details::matches(t, TokenType::SymbolQuote, TokenType::SymbolSlash);
-}
+constexpr inline bool is_symbol(TokenType t) { return matches(t, TokenType::SymbolQuote, TokenType::SymbolSlash); }
 
-constexpr inline bool is_boolean(TokenType t) { return details::matches(t, TokenType::True, TokenType::False); }
+// Constants true and false
+constexpr inline bool is_boolean(TokenType t) { return matches(t, TokenType::True, TokenType::False); }
 
 namespace literals {
 inline constexpr TokenType operator""_tokentype(char c) { return static_cast<TokenType>(c); }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Errors
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-namespace errors {
-
-struct SymbolQuoteContainsNewLine {};
-struct SymbolQuoteUnclosed {};
-
-struct MissingExponent {};
-
-struct StringUnclosed {};
-struct MultilineCommentUnclosed {};
-
-struct InvalidUTF8 {};
-struct UnexpectedCodePoint {};
-
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Semantic Action, used to do stuff.
-// The main lexer function takes in a template argument call Action which is in charge of emitting or discarding tokens.
-// `typename Action::Output` becomes the return type of lexer.
-// You cannot discard the EndOfFile token, ensure this returns a filled optional.
+// The main lexer function takes in a template argument call Action which is in charge of emitting or discarding
+// tokens. `typename Action::Output` becomes the return type of lexer. You cannot discard the EndOfFile token,
+// ensure this returns a filled optional.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct TypeAndLocationAction {
     struct Output {
@@ -478,16 +498,7 @@ struct TypeAndLocationAction {
 
     // Return std::nullopt to discard the token type.
     // Don't use template speicialisation as this isn't valid c++, instead use if constexpr.
-    template <TokenType type> std::optional<Output> token(SourceCodeRange loc) {
-        static_assert(!is_error(type));
-        return { { type, loc } };
-    }
-
-    // You are allowed to discard errors.
-    template <TokenType type, typename Error> std::optional<Output> error(SourceCodeRange loc, Error&& error) {
-        static_assert(is_error(type));
-        return { { type, loc } };
-    }
+    template <TokenType type> std::optional<Output> process(SourceCodeRange loc) { return { { type, loc } }; }
 };
 
 
@@ -503,6 +514,8 @@ constexpr inline bool is_space(CodePoint c) {
         || c == 0x00a0 // This is the Ux00a0, no-break-space, often occurs when copying code from the web
         ;
 }
+
+constexpr inline bool is_whitespace(CodePoint c) { return is_newline(c) || is_space(c); }
 
 constexpr inline bool is_control_code(CodePoint c) { return (1 <= c && c <= 8) || (14 <= c && c <= 31) || c == 127; }
 constexpr inline bool is_lower(CodePoint c) { return 'a' <= c && c <= 'z'; }
@@ -526,8 +539,8 @@ constexpr inline bool is_binary_operator_character(CodePoint c) {
 }
 
 constexpr inline int str_to_int_for_radix(const char* str, size_t n, int base) {
-    // TODO: in future it would be nice to remove this from the lexer, it means changing the language to accept invalid
-    // radixs at the lexing stage, but makes things context dependant.
+    // TODO: in future it would be nice to remove this from the lexer, it means changing the language to accept
+    // invalid radixs at the lexing stage, but makes things context dependant.
     int out { 0 };
     for (size_t i { 0 }; i < n; ++i) {
         const char c = *str++;
@@ -560,38 +573,37 @@ struct StringMatcher {
 template <typename Action>
 decltype(auto) lexer_binary_operator(CodePointStream& stream, Action& action, SourceCodeLocation token_start) {
     const auto end = stream.advance_while(is_binary_operator_character);
-    const auto [str_b, str_e] = stream.source_range({ token_start, end });
-    const auto sz = str_e - str_b;
+    const auto [str_b, sz] = stream.source_range({ token_start, end });
     assert(sz > 0);
     if (sz == 1) {
         const auto c = str_b[0];
         switch (c) {
         case '<':
-            return action.template token<static_cast<TokenType>('<')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('<')>({ token_start, end });
         case '>':
-            return action.template token<static_cast<TokenType>('>')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('>')>({ token_start, end });
         case '.':
-            return action.template token<static_cast<TokenType>('.')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('.')>({ token_start, end });
         case '-':
-            return action.template token<static_cast<TokenType>('-')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('-')>({ token_start, end });
         case '*':
-            return action.template token<static_cast<TokenType>('*')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('*')>({ token_start, end });
         case '+':
-            return action.template token<static_cast<TokenType>('+')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('+')>({ token_start, end });
         case '|':
-            return action.template token<static_cast<TokenType>('|')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('|')>({ token_start, end });
         case '=':
-            return action.template token<static_cast<TokenType>('=')>({ token_start, end });
+            return action.template process<static_cast<TokenType>('=')>({ token_start, end });
         }
     } else if (sz == 2) {
         const auto c1 = str_b[0];
         const auto c2 = str_b[1];
         if (c1 == '<' && c2 == '-')
-            return action.template token<TokenType::LeftArrow>({ token_start, end });
+            return action.template process<TokenType::LeftArrow>({ token_start, end });
         if (c1 == '<' && c2 == '>')
-            return action.template token<TokenType::ReadWriteVar>({ token_start, end });
+            return action.template process<TokenType::ReadWriteVar>({ token_start, end });
     }
-    return action.template token<TokenType::BinaryOperator>({ token_start, end });
+    return action.template process<TokenType::BinaryOperator>({ token_start, end });
 }
 
 
@@ -603,53 +615,52 @@ decltype(auto) lexer_identifier_keybinop_curry_kw_etc(CodePointStream& stream, A
     // Note: this logic is a little odd, as it mean '_:' and '_asdf:' are keybinops, as is 'Foo:'.
     // This explains why you need a space between child and parent class in class definitions.
     // Also means keywords can be keybinops, 'var:', 'pi:'.
-    // The only place these can be used is in Event: `( _: {|self, other| other } ) _: 1`. This makes no sense for '_',
-    // but 'true:' and 'pi:' could be used somwhere.
+    // The only place these can be used is in Event: `( _: {|self, other| other } ) _: 1`. This makes no sense for
+    // '_', but 'true:' and 'pi:' could be used somwhere.
     if (stream.peek_advance_if(':'))
-        return action.template token<TokenType::KeywordBinaryOperator>({ token_start, stream.end_token() });
+        return action.template process<TokenType::KeywordBinaryOperator>({ token_start, stream.end_token() });
 
     const SourceCodeRange range { token_start, end };
-    const auto [t_b, t_e] = stream.source_range(range);
+    const auto [t_b, sz] = stream.source_range(range);
 
     if (t_b[0] == '_' && range.size() == 1)
-        return action.template token<TokenType::CurryArg>(range);
+        return action.template process<TokenType::CurryArg>(range);
 
     if (t_b[0] == '_')
-        return action.template token<TokenType::PrimitiveName>(range);
+        return action.template process<TokenType::PrimitiveName>(range);
 
     if (is_start_of_class(ascii_to_codepoint(*t_b)))
-        return action.template token<TokenType::ClassName>(range);
+        return action.template process<TokenType::ClassName>(range);
 
     const auto txt = StringMatcher { t_b };
-    const auto sz = t_e - t_b;
     if (sz == 2) {
         if (txt.match<2>("pi"))
-            return action.template token<TokenType::Pi>(range);
+            return action.template process<TokenType::Pi>(range);
     } else if (sz == 3) {
         if (txt.match<3>("var"))
-            return action.template token<TokenType::Var>(range);
+            return action.template process<TokenType::Var>(range);
         else if (txt.match<3>("arg"))
-            return action.template token<TokenType::Arg>(range);
+            return action.template process<TokenType::Arg>(range);
         else if (txt.match<3>("nil"))
-            return action.template token<TokenType::Nil>(range);
+            return action.template process<TokenType::Nil>(range);
         else if (txt.match<3>("inf"))
-            return action.template token<TokenType::Float>(range);
+            return action.template process<TokenType::Float>(range);
     } else if (sz == 4) {
         if (txt.match<4>("true"))
-            return action.template token<TokenType::True>(range);
+            return action.template process<TokenType::True>(range);
     } else if (sz == 5) {
         if (txt.match<5>("const"))
-            return action.template token<TokenType::Const>(range);
+            return action.template process<TokenType::Const>(range);
         else if (txt.match<5>("while"))
-            return action.template token<TokenType::While>(range);
+            return action.template process<TokenType::While>(range);
         else if (txt.match<5>("false"))
-            return action.template token<TokenType::False>(range);
+            return action.template process<TokenType::False>(range);
     } else if (sz == 8) {
         if (txt.match<8>("classvar"))
-            return action.template token<TokenType::ClassVar>(range);
+            return action.template process<TokenType::ClassVar>(range);
     }
 
-    return action.template token<TokenType::Name>(range);
+    return action.template process<TokenType::Name>(range);
 }
 
 template <typename Action>
@@ -660,9 +671,9 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeL
 
     switch (peek[0]) {
     case 'r': {
-        const auto [radix_str_b, radix_str_e] = stream.source_range({ token_start, end_of_pre });
+        const auto [radix_str_b, sz] = stream.source_range({ token_start, end_of_pre });
         stream.advance(); // drop 'r'
-        const int radix = str_to_int_for_radix(radix_str_b, radix_str_e - radix_str_b, 10);
+        const int radix = str_to_int_for_radix(radix_str_b, sz, 10);
         const auto offset10 = std::max<int>(0, std::min<int>(10, radix)) - 1;
         const auto offset36 = std::max<int>(0, std::min<int>(36, radix)) - 11;
 
@@ -686,9 +697,9 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeL
         if (stream.peek_advance_if('.')) {
             stream.advance_while(
                 [=](auto c) { return ('0' <= c && c <= '0' + offset10) || ('A' <= c && c <= 'A' + offset36); });
-            return action.template token<TokenType::FloatRadix>({ token_start, stream.end_token() });
+            return action.template process<TokenType::FloatRadix>({ token_start, stream.end_token() });
         } else {
-            return action.template token<TokenType::IntegerRadix>({ token_start, stream.end_token() });
+            return action.template process<TokenType::IntegerRadix>({ token_start, stream.end_token() });
         }
     }
 
@@ -700,20 +711,19 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeL
         const auto has_sign = stream.peek_advance_if('+', '-');
         const auto count = stream.advance_while_count([](auto c) { return is_numeric(c); });
         if (count == 0)
-            return action.template error<TokenType::InvalidToken>({ token_start, stream.end_token() },
-                                                                  errors::MissingExponent {});
+            return action.template process<TokenType::ErMissingExponent>({ token_start, stream.end_token() });
 
-        return action.template token<TokenType::FloatExponent>({ token_start, stream.end_token() });
+        return action.template process<TokenType::FloatExponent>({ token_start, stream.end_token() });
     }
 
     case '.': {
         if (!is_numeric(peek[1]))
-            return action.template token<TokenType::Integer>({ token_start, stream.end_token() });
+            return action.template process<TokenType::Integer>({ token_start, stream.end_token() });
         stream.advance(); // drop '.'
         stream.advance_while(is_numeric);
         if (const auto e = stream.peek(); e == 'e' || e == 'E')
             goto exponent; // floating point exponent.
-        return action.template token<TokenType::Float>({ token_start, stream.end_token() });
+        return action.template process<TokenType::Float>({ token_start, stream.end_token() });
     }
 
     case 'b':
@@ -726,11 +736,11 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeL
             // 123s40
             const auto num_cent_chars = stream.advance_while_count(is_numeric);
             if (num_cent_chars == 0)
-                return action.template token<TokenType::AccidentalSteps>({ token_start, stream.end_token() });
+                return action.template process<TokenType::AccidentalSteps>({ token_start, stream.end_token() });
             else
-                return action.template token<TokenType::AccidentalCents>({ token_start, stream.end_token() });
+                return action.template process<TokenType::AccidentalCents>({ token_start, stream.end_token() });
         }
-        return action.template token<TokenType::AccidentalSteps>({ token_start, stream.end_token() });
+        return action.template process<TokenType::AccidentalSteps>({ token_start, stream.end_token() });
     }
 
     case 'x': {
@@ -739,11 +749,11 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeL
         // BUG: this means 89702347890234589xAA == 0xAA. Probably not intended.
         const auto end = stream.advance_while(
             [](auto c) { return is_numeric(c) || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F'); });
-        return action.template token<TokenType::Hexidecimal>({ token_start, end });
+        return action.template process<TokenType::Hexidecimal>({ token_start, end });
     }
 
     default:
-        return action.template token<TokenType::Integer>({ token_start, stream.end_token() });
+        return action.template process<TokenType::Integer>({ token_start, stream.end_token() });
     }
 }
 
@@ -759,7 +769,7 @@ template <typename Action> auto lexer(CodePointStream& stream, Action& action) n
     using namespace details;
     // Must return the Interpret token the first time we are called if in interpret mode.
     if (stream.should_leave_cmd_initial()) {
-        if (auto r = action.template token<TokenType::Interpret>({ stream.end_token(), stream.end_token() }))
+        if (auto r = action.template process<TokenType::Interpret>({ stream.end_token(), stream.end_token() }))
             return *r;
     }
 
@@ -770,13 +780,13 @@ discard_token : {
 
     // Will repeatedly return this as this doesn't mutate state.
     if (c == 0) {
-        const auto r = action.template token<TokenType::EndOfFile>({ token_start, stream.end_token() });
+        const auto r = action.template process<TokenType::EndOfFile>({ token_start, stream.end_token() });
         return *r;
     }
 
     if (is_newline(c)) {
         const auto end = stream.advance_while([](auto c) { return is_newline(c); });
-        if (auto r = action.template token<TokenType::NewLine>({ token_start, end }))
+        if (auto r = action.template process<TokenType::NewLine>({ token_start, end }))
             return *r;
         else
             goto discard_token;
@@ -785,7 +795,7 @@ discard_token : {
 
     if (c == '\t') {
         const auto end = stream.advance_while([](auto c) { return c == '\t'; });
-        if (auto r = action.template token<TokenType::Tab>({ token_start, stream.end_token() }))
+        if (auto r = action.template process<TokenType::Tab>({ token_start, stream.end_token() }))
             return *r;
         else
             goto discard_token;
@@ -793,7 +803,7 @@ discard_token : {
 
     if (is_space(c)) {
         const auto end = stream.advance_while(is_space);
-        if (auto r = action.template token<TokenType::Space>({ token_start, stream.end_token() }))
+        if (auto r = action.template process<TokenType::Space>({ token_start, stream.end_token() }))
             return *r;
         else
             goto discard_token;
@@ -801,7 +811,7 @@ discard_token : {
 
 #define literal_case(c)                                                                                                \
     case (c):                                                                                                          \
-        if (auto r = action.template token<static_cast<TokenType>((c))>({ token_start, stream.end_token() }))          \
+        if (auto r = action.template process<static_cast<TokenType>((c))>({ token_start, stream.end_token() }))        \
             return *r;                                                                                                 \
         else                                                                                                           \
             goto discard_token
@@ -825,11 +835,11 @@ discard_token : {
 
     if (c == '#') {
         if (stream.peek_advance_if('{')) {
-            if (auto r = action.template token<TokenType::BeginClosedFunction>({ token_start, stream.end_token() }))
+            if (auto r = action.template process<TokenType::BeginClosedFunction>({ token_start, stream.end_token() }))
                 return *r;
             else
                 goto discard_token;
-        } else if (auto r = action.template token<static_cast<TokenType>('#')>({ token_start, stream.end_token() })) {
+        } else if (auto r = action.template process<static_cast<TokenType>('#')>({ token_start, stream.end_token() })) {
             return *r;
         } else
             goto discard_token;
@@ -841,7 +851,7 @@ discard_token : {
         // '///' documentation comments
         if (p == CodePointArray<2> { '/', '/' }) {
             const auto end = stream.advance_while([](auto c) { return !is_newline(c); });
-            if (auto r = action.template token<TokenType::DocumentationComment>({ token_start, stream.end_token() }))
+            if (auto r = action.template process<TokenType::DocumentationComment>({ token_start, stream.end_token() }))
                 return *r;
             else
                 goto discard_token;
@@ -869,11 +879,14 @@ discard_token : {
             });
             const auto delimit = stream.advance();
             if (delimit == 0) {
-                action.template error<TokenType::InvalidToken>({ token_start, stream.end_token() },
-                                                               errors::MultilineCommentUnclosed {});
+                if (auto r = action.template process<TokenType::ErMultilineCommentUnclosed>(
+                        { token_start, stream.end_token() }))
+                    return *r;
+                else
+                    goto discard_token;
             }
 
-            if (auto r = action.template token<TokenType::MultiLineComment>({ token_start, stream.end_token() }))
+            if (auto r = action.template process<TokenType::MultiLineComment>({ token_start, stream.end_token() }))
                 return *r;
             else
                 goto discard_token;
@@ -882,7 +895,7 @@ discard_token : {
         // '//'
         else if (p == CodePointArray<1> { '/' }) {
             const auto end = stream.advance_while([](auto c) { return !is_newline(c); });
-            if (auto r = action.template token<TokenType::Comment>({ token_start, stream.end_token() }))
+            if (auto r = action.template process<TokenType::Comment>({ token_start, stream.end_token() }))
                 return *r;
             else
                 goto discard_token;
@@ -897,18 +910,18 @@ discard_token : {
     if (c == '.') {
         const auto p = stream.peek_n<2>();
         if (p == CodePointArray<2> { '.', '.' }) {
-            if (auto r = action.template token<TokenType::Ellipsis>({ token_start, stream.advance_by_peek(p) }))
+            if (auto r = action.template process<TokenType::Ellipsis>({ token_start, stream.advance_by_peek(p) }))
                 return *r;
             else
                 goto discard_token;
         } else if (p == CodePointArray<1> { '.' }) {
             stream.advance(); // drop '.;
-            if (auto r = action.template token<TokenType::DotDot>({ token_start, stream.end_token() }))
+            if (auto r = action.template process<TokenType::DotDot>({ token_start, stream.end_token() }))
                 return *r;
             else
                 goto discard_token;
         }
-        if (auto r = action.template token<static_cast<TokenType>('.')>({ token_start, stream.end_token() }))
+        if (auto r = action.template process<static_cast<TokenType>('.')>({ token_start, stream.end_token() }))
             return *r;
         else
             goto discard_token;
@@ -918,7 +931,7 @@ discard_token : {
         if (stream.peek() == '\\') {
             stream.advance(); // consume '\'
             stream.advance(); // consume whatever happens after it.
-            if (auto r = action.template token<TokenType::Ascii>({ token_start, stream.end_token() }))
+            if (auto r = action.template process<TokenType::Ascii>({ token_start, stream.end_token() }))
                 return *r;
             else
                 goto discard_token;
@@ -926,7 +939,7 @@ discard_token : {
 
         stream.advance(); // consume whatever character comes after the '$'
 
-        if (auto r = action.template token<TokenType::Ascii>({ token_start, stream.end_token() }))
+        if (auto r = action.template process<TokenType::Ascii>({ token_start, stream.end_token() }))
             return *r;
         else
             goto discard_token;
@@ -966,11 +979,14 @@ discard_token : {
             return true;
         });
 
-        if (stream.advance() != '"')
-            action.template error<TokenType::InvalidToken>({ token_start, stream.end_token() },
-                                                           errors::StringUnclosed {});
+        if (stream.advance() != '"') {
+            if (auto r = action.template process<TokenType::ErStringUnclosed>({ token_start, end }))
+                return *r;
+            else
+                goto discard_token;
+        }
 
-        if (auto r = action.template token<TokenType::StringLine>({ token_start, stream.end_token() }))
+        if (auto r = action.template process<TokenType::StringLine>({ token_start, stream.end_token() }))
             return *r;
         else
             goto discard_token;
@@ -991,7 +1007,7 @@ discard_token : {
             // This is weird, if it isn't either of the above, emit an empty symbol.
             return stream.end_token();
         }();
-        if (auto r = action.template token<TokenType::SymbolSlash>({ token_start, end }))
+        if (auto r = action.template process<TokenType::SymbolSlash>({ token_start, end }))
             return *r;
         else
             goto discard_token;
@@ -999,7 +1015,7 @@ discard_token : {
 
     // Symbol quotes 'asdf'
     if (c == '\'') {
-        stream.advance_while([escape = false](auto c) mutable {
+        const auto content_end = stream.advance_while([escape = false](auto c) mutable {
             if (is_newline(c) && !escape) // you can escape the new line characters
                 return false;
             if (c == '\'' && !escape)
@@ -1012,22 +1028,14 @@ discard_token : {
             return true;
         });
         const auto next = stream.advance();
-        const SourceCodeRange range { token_start, stream.end_token() };
-        if (next == 0) {
-            if (auto r = action.template error<TokenType::InvalidToken>(range, errors::SymbolQuoteUnclosed {}))
-                return *r;
-            else
-                goto discard_token;
-        } else if (is_newline(next)) {
-            if (auto r = action.template error<TokenType::InvalidToken>(range, errors::SymbolQuoteContainsNewLine {}))
+        if (next != '\'') {
+            if (auto r = action.template process<TokenType::ErSymbolQuoteUnclosed>({ token_start, content_end }))
                 return *r;
             else
                 goto discard_token;
         }
 
-        assert(next == '\'');
-
-        if (auto r = action.template token<TokenType::SymbolQuote>(range))
+        if (auto r = action.template process<TokenType::SymbolQuote>({ token_start, stream.end_token() }))
             return *r;
         else
             goto discard_token;
@@ -1041,16 +1049,14 @@ discard_token : {
     }
 
     if (c == invalid_utf8_flag) {
-        if (auto r = action.template error<TokenType::InvalidUTF8>({ token_start, stream.end_token() },
-                                                                   errors::InvalidUTF8 {}))
+        if (auto r = action.template process<TokenType::ErInvalidUTF8>({ token_start, stream.end_token() }))
             return *r;
         else
             goto discard_token;
     }
 
 
-    if (auto r = action.template error<TokenType::Unexpected>({ token_start, stream.end_token() },
-                                                              errors::UnexpectedCodePoint {}))
+    if (auto r = action.template process<TokenType::ErUnexpected>({ token_start, stream.end_token() }))
         return *r;
     else
         goto discard_token;
@@ -1170,10 +1176,10 @@ template <typename Predicate> inline SourceCodeLocation CodePointStream::advance
     return { loc, advance() };
 }
 
-inline std::size_t CodePointStream::line_start(SourceCodeLocation p) {
+inline SourceCodeLocation CodePointStream::line_start(SourceCodeLocation p) const {
     // Should have seen this before, so should be here.
     assert(p.lineNumber < abs_new_line_locations.size());
-    return abs_new_line_locations[p.lineNumber];
+    return { abs_new_line_locations[p.lineNumber], p.lineNumber, 0 };
 }
 
 [[nodiscard]] inline SourceCodeLocation CodePointStream::end_token() const { return next; }
@@ -1197,7 +1203,14 @@ inline CodePoint CodePointStream::advance() {
 
 
 [[nodiscard]] inline std::tuple<CodePoint, std::uint8_t> CodePointStream::read(size_t pos) const noexcept {
-    return char_sequence_to_codepoint(source, pos, source_length);
+    const auto [cp, sz] = char_sequence_to_codepoint(source, pos, source_length);
+    if (details::is_newline(cp)) {
+        const auto line_start = pos + sz;
+        if (abs_new_line_locations.empty() || abs_new_line_locations.back() < line_start) {
+            abs_new_line_locations.push_back(line_start);
+        }
+    }
+    return { cp, sz };
 }
 
 [[nodiscard]] inline CodePoint CodePointStream::advance_and_peek() {
@@ -1218,16 +1231,12 @@ inline CodePoint CodePointStream::advance() {
 }
 
 inline void CodePointStream::increment_source_code_point(SourceCodeLocation& p, CodePoint c, std::uint8_t sz) const {
+    p.absolute += sz;
     if (details::is_newline(c)) {
         p.lineNumber += 1;
-        p.absolute += sz;
-        p.offsetInLine = 0;
-        if (abs_new_line_locations.empty() || abs_new_line_locations.back() < p.absolute) {
-            abs_new_line_locations.push_back(p.absolute);
-        }
+        p.column = 0;
     } else {
-        p.absolute += sz;
-        p.offsetInLine += sz;
+        p.column += 1;
     }
 }
 
@@ -1236,10 +1245,10 @@ inline void CodePointStream::increment_source_code_point(SourceCodeLocation& p, 
 }
 
 
-[[nodiscard]] inline std::tuple<const char*, const char*>
+[[nodiscard]] inline std::tuple<const char*, std::size_t>
 CodePointStream::source_range(const SourceCodeRange& range) const {
     assert(range.begin.absolute <= range.end.absolute);
-    return { source + range.begin.absolute, source + range.end.absolute };
+    return { source + range.begin.absolute, range.end.absolute - range.begin.absolute };
 }
 
 inline void CodePointStream::reset() {
@@ -1247,6 +1256,40 @@ inline void CodePointStream::reset() {
     mode = (mode == Mode::ClassLibrary) ? Mode::ClassLibrary : Mode::CMDInitial;
 }
 [[nodiscard]] inline CodePoint CodePointStream::peek() const { return peek_n<1>()[0]; }
+
+
+[[nodiscard]] inline CodePointStream::LineIter
+CodePointStream::line_iter(const SourceCodeRange& range, std::size_t lines_before, std::size_t lines_after) const {
+    const auto start_line = range.begin.lineNumber >= lines_before ? range.begin.lineNumber - lines_before : 0;
+    const auto end_line = range.end.lineNumber + lines_after;
+
+    auto pos = range.end.absolute;
+    // ensures we have seen the entirety of the lines we are about to return.
+    // This means we can always access the next line.
+    while (pos < source_length && abs_new_line_locations.size() < (end_line + 2)) {
+        const auto [cp, sz] = read(pos);
+        pos += sz;
+    }
+    return { *this, start_line, std::min(end_line, abs_new_line_locations.size() - 1) };
+}
+
+[[nodiscard]] inline std::optional<std::tuple<const char*, std::size_t, std::size_t>>
+CodePointStream::LineIter::operator()() {
+    if (current_line > end_line)
+        return std::nullopt;
+
+    if (current_line >= cps.abs_new_line_locations.size())
+        return std::nullopt;
+
+    const auto line_start = cps.abs_new_line_locations[current_line];
+    current_line += 1;
+    if (current_line < cps.abs_new_line_locations.size()) {
+        const auto line_end = cps.abs_new_line_locations[current_line];
+        return { { cps.source + line_start, line_end - line_start, current_line - 1 } };
+    } else {
+        return { { cps.source + line_start, cps.source_length - line_start, current_line - 1 } };
+    }
+}
 
 template <typename T> T& operator<<(T& stream, const TokenType& t) {
     const auto i = static_cast<int>(t);
@@ -1304,7 +1347,7 @@ template <typename T> T& operator<<(T& stream, const TokenType& t) {
         return stream << "DotDot";
     case TokenType::BeginClosedFunction:
         return stream << "BeginClosedFunction";
-    case TokenType::Unexpected:
+    case TokenType::ErUnexpected:
         return stream << "BadToken";
     case TokenType::Interpret:
         return stream << "Interpret";

@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <sstream>
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
@@ -168,18 +169,22 @@ void initLexer() {
 
 namespace lex = sc::lex;
 using namespace lex::literals;
+
+
 using TokenType = lex::TokenType;
+
 
 [[nodiscard]] constexpr std::optional<yytokentype> convert_to_bison_tokentype(TokenType t) {
     const auto i = static_cast<int>(t);
-    if (i < 256)
+    if (i == 0)
+        return YYEOF;
+
+    if (sc::lex::is_ascii_literal(t))
         return static_cast<yytokentype>(i); // easy case, all ascii.
-    else if (i == 256)
-        return YYerror;
-    else if (i == 257)
-        return YYUNDEF;
-    else if (i == 288)
-        return UMINUS;
+
+    if (sc::lex::is_error(t))
+        return BADTOKEN;
+
 
     // TODO: THIS IS MISSING CASES!!!!
     switch (t) {
@@ -239,8 +244,7 @@ using TokenType = lex::TokenType;
         return DOTDOT;
     case TokenType::BeginClosedFunction:
         return BEGINCLOSEDFUNC;
-    case TokenType::Unexpected:
-        return BADTOKEN;
+
     case TokenType::Interpret:
         return INTERPRET;
     case TokenType::CurryArg:
@@ -273,85 +277,147 @@ constexpr inline int str_to_int(const char* str, size_t n, int base) {
     return z;
 }
 
-struct BisonSemAction {
+enum struct ExtendedErrors : int {
+    ExtraClosingParenBracket = static_cast<int>(TokenType::ErFirstUserDefinedError),
+    ExtraClosingSqaureBracket,
+    ExtraClosingCurlyBracket,
+
+    GotParenExpectedSquare,
+    GotParenExpectedCurly,
+
+    GotCurlyExpectedParen,
+    GotCurlyExpectedSquare,
+
+    GotSquareExpectedParen,
+    GotSquareExpectedCurly,
+};
+
+struct BisonSemActionOutput {
+    [[nodiscard]] constexpr BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range):
+        type(static_cast<TokenType>(e)),
+        range(range),
+        slot({}) {};
+
+    [[nodiscard]] constexpr BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range,
+                                                 lex::SourceCodeRange extra_range):
+        type(static_cast<TokenType>(e)),
+        range(range),
+        slot({}),
+        extra_range_of_error(extra_range) {};
+
+    [[nodiscard]] constexpr BisonSemActionOutput(TokenType t, lex::SourceCodeRange range,
+                                                 std::optional<PyrSlot> slot = {}):
+        type(t),
+        range(range),
+        slot(slot) {};
+
+    [[nodiscard]] constexpr BisonSemActionOutput() = default;
+    [[nodiscard]] constexpr BisonSemActionOutput(BisonSemActionOutput&&) noexcept = default;
+    [[nodiscard]] constexpr BisonSemActionOutput(const BisonSemActionOutput&) noexcept = default;
+    BisonSemActionOutput& operator=(BisonSemActionOutput&&) noexcept = default;
+    BisonSemActionOutput& operator=(const BisonSemActionOutput&) noexcept = default;
+
+    constexpr bool is_error() const { return sc::lex::is_error(type); }
+    constexpr bool is(TokenType t) const { return type == t; }
+    constexpr bool is(ExtendedErrors t) const { return static_cast<int>(type) == static_cast<int>(t); }
+
+    TokenType type {}; // can also include the ExtendedErrors set. There is no nice way to extend an enum in c++.
+    lex::SourceCodeRange range {};
+    std::optional<PyrSlot> slot {};
+    std::optional<lex::SourceCodeRange> extra_range_of_error {};
+};
+struct BisonLexerAction {
 public:
-    BisonSemAction(const char* source): source(source) {};
-    BisonSemAction() = delete;
-    BisonSemAction(BisonSemAction&&) noexcept = default;
-    BisonSemAction(const BisonSemAction&) = default;
-    BisonSemAction& operator=(BisonSemAction&&) noexcept = default;
-    BisonSemAction& operator=(const BisonSemAction&) = default;
+    BisonLexerAction(const char* source): source(source) {};
+    BisonLexerAction() = delete;
+    BisonLexerAction(BisonLexerAction&&) noexcept = default;
+    BisonLexerAction(const BisonLexerAction&) = default;
+    BisonLexerAction& operator=(BisonLexerAction&&) noexcept = default;
+    BisonLexerAction& operator=(const BisonLexerAction&) = default;
 
     const char* source;
-    std::vector<std::pair<TokenType, int>> bracket_stack {};
+    std::vector<std::pair<TokenType, lex::SourceCodeRange>> closing_bracket_stack {};
 
-    struct Output {
-        TokenType type {};
-        lex::SourceCodeRange range {};
-        std::optional<PyrSlot> slot {};
-        bool is_error { false };
-    };
+    using Output = BisonSemActionOutput;
 
-    template <TokenType T> std::optional<Output> token(lex::SourceCodeRange loc) {
-        static_assert(!sc::lex::is_error(T));
-        if constexpr (T == TokenType::EndOfFile) {
+    template <TokenType T> std::optional<Output> process(lex::SourceCodeRange loc) {
+        if constexpr (sc::lex::is_error(T))
             return { { T, loc } };
-        }
+
+        if constexpr (T == TokenType::EndOfFile)
+            return { { T, loc } };
 
         // Discard
-        if constexpr (sc::lex::is_whitespace(T) || sc::lex::is_comment(T)) {
+        if constexpr (sc::lex::is_whitespace(T) || sc::lex::is_comment(T))
             return std::nullopt;
-        }
+
 
         // Basic symbols
-        else if constexpr (T == TokenType::Arg || T == TokenType::Var || T == TokenType::Const || T == TokenType::While
-                           || T == TokenType::ClassVar || T == TokenType::Name || T == TokenType::ClassName
-                           || T == TokenType::PrimitiveName || T == TokenType::BinaryOperator
-                           || T == TokenType::ReadWriteVar || T == '<'_tokentype || T == '>'_tokentype
-                           || T == '-'_tokentype || T == '*'_tokentype || T == '+'_tokentype || T == '|'_tokentype) {
+        else if constexpr (sc::lex::is_identifier(T) || sc::lex::is_keyword(T)
+                           || sc::lex::matches(T, TokenType::BinaryOperator, TokenType::ReadWriteVar, '<', '>', '-',
+                                               '*', '+', '|'))
             return { { T, loc, PyrSlot::make(text_to_symbol(loc)) } };
-        }
 
         // More complex symbols that drop part of the location and/or use escape characters.
         else if constexpr (T == TokenType::KeywordBinaryOperator)
             return { { T, loc, PyrSlot::make(text_to_symbol(loc, 0, 1)) } };
+
         else if constexpr (T == TokenType::SymbolSlash)
             return { { T, loc, PyrSlot::make(text_to_symbol(loc, 1, 0)) } };
+
         else if constexpr (T == TokenType::SymbolQuote)
             return { { T, loc, PyrSlot::make(text_to_symbol(loc, 1, 1, true)) } };
 
         // Constants
-        else if constexpr (T == TokenType::Nil || T == TokenType::Inf || T == TokenType::True || T == TokenType::False
-                           || T == TokenType::Pi)
+        else if constexpr (sc::lex::is_constant(T))
             return { { T, loc, to_constant<T>() } };
 
-
         // Open brackets
-        else if constexpr (T == '('_tokentype || T == '['_tokentype || T == '{'_tokentype
-                           || T == TokenType::BeginClosedFunction) {
-            bracket_stack.push_back({ T, loc.begin.absolute });
+        else if constexpr (sc::lex::matches(T, '(', '[', '{', TokenType::BeginClosedFunction)) {
+            closing_bracket_stack.push_back({ get_closing_bracket<T>(), loc });
             return { { T, loc } };
         }
 
         // Closing brackets
-        else if constexpr (T == ')'_tokentype || T == ']'_tokentype || T == '}'_tokentype) {
-            if (bracket_stack.empty()) {
-                ::error("Incorrect brackets — bracket stack was empty.\n");
-                return { { TokenType::Unexpected, loc, {}, true } };
+        else if constexpr (sc::lex::matches(T, ')', ']', '}')) {
+            if (closing_bracket_stack.empty()) {
+                if constexpr (T == ')'_tokentype)
+                    return { { ExtendedErrors::ExtraClosingParenBracket, loc } };
+                else if constexpr (T == ']'_tokentype)
+                    return { { ExtendedErrors::ExtraClosingSqaureBracket, loc } };
+                else if constexpr (T == '}'_tokentype)
+                    return { { ExtendedErrors::ExtraClosingCurlyBracket, loc } };
             }
-            for (const auto& t : get_closing_brackets<T>()) {
-                if (bracket_stack.back().first == t) {
-                    // This is pushed even if it isn't a closed function.
-                    lastClosedFuncCharNo = bracket_stack.back().second;
-                    bracket_stack.pop_back();
-                    return { { T, loc } };
-                }
-            }
-            ::error("Incorrect brackets — mismatch expected '%d' got %d.\n", static_cast<int>(T),
-                    bracket_stack.back().first);
-            return { { TokenType::Unexpected, loc, {}, true } };
-        }
 
+            const auto expected = closing_bracket_stack.back().first;
+            if (expected == T) {
+                // This is pushed even if it isn't a closed function.
+                lastClosedFuncCharNo = closing_bracket_stack.back().second.begin.absolute;
+                closing_bracket_stack.pop_back();
+                return { { T, loc } };
+            }
+
+            if (expected == ')'_tokentype) {
+                if (T == ']'_tokentype)
+                    return { { ExtendedErrors::GotSquareExpectedParen, loc, closing_bracket_stack.back().second } };
+                if (T == '}'_tokentype)
+                    return { { ExtendedErrors::GotCurlyExpectedParen, loc, closing_bracket_stack.back().second } };
+            } else if (expected == ']'_tokentype) {
+                if (T == ')'_tokentype)
+                    return { { ExtendedErrors::GotParenExpectedSquare, loc, closing_bracket_stack.back().second } };
+                if (T == '}'_tokentype)
+                    return { { ExtendedErrors::GotCurlyExpectedSquare, loc, closing_bracket_stack.back().second } };
+            } else if (expected == '}'_tokentype) {
+                if (T == ')'_tokentype)
+                    return { { ExtendedErrors::GotParenExpectedCurly, loc, closing_bracket_stack.back().second } };
+                if (T == ']'_tokentype)
+                    return { { ExtendedErrors::GotSquareExpectedCurly, loc, closing_bracket_stack.back().second } };
+            }
+            // should not happen, all cases should be dealt with.
+            assert(false);
+            return std::nullopt;
+
+        }
 
         // Floats
         else if constexpr (T == TokenType::Float)
@@ -437,30 +503,8 @@ public:
         else if constexpr (T == TokenType::AccidentalSteps)
             return { { TokenType::AccidentalSteps, loc, process_accidental_steps(fill_temp_buf(loc)) } };
 
-        // default, empty
         else
             return { { T, loc } };
-    }
-
-
-    template <TokenType type, typename Error> std::optional<Output> error(lex::SourceCodeRange loc, Error&& er) {
-        static_assert(sc::lex::is_error(type));
-        if constexpr (std::is_same_v<Error, sc::lex::errors::SymbolQuoteContainsNewLine>) {
-            ::error("Symbol with quotes cannot contain a new line.\n");
-        } else if constexpr (std::is_same_v<Error, sc::lex::errors::SymbolQuoteUnclosed>) {
-            ::error("Symbol with quotes was not closed.\n");
-        } else if constexpr (std::is_same_v<Error, sc::lex::errors::MissingExponent>) {
-            ::error("Number exponent was missing.\n");
-        } else if constexpr (std::is_same_v<Error, sc::lex::errors::StringUnclosed>) {
-            ::error("String was not closed.\n");
-        } else if constexpr (std::is_same_v<Error, sc::lex::errors::MultilineCommentUnclosed>) {
-            ::error("Multiline comment was not closed before the end of the file.\n");
-        } else if constexpr (std::is_same_v<Error, sc::lex::errors::InvalidUTF8>) {
-            ::error("Invalid UTF8, all supercollider source code must be valid utf8.\n");
-        } else if constexpr (std::is_same_v<Error, sc::lex::errors::UnexpectedCodePoint>) {
-            ::error("Unexpected token.\n");
-        }
-        return { { type, loc, {}, true } };
     }
 
 
@@ -468,6 +512,8 @@ private:
     std::string temp_buffer {};
 
     template <TokenType T> PyrSlot to_constant() {
+        static_assert(
+            sc::lex::matches(T, TokenType::Pi, TokenType::Nil, TokenType::Inf, TokenType::True, TokenType::False));
         if constexpr (T == TokenType::Pi)
             return PyrSlot::make(pi);
         else if constexpr (T == TokenType::Nil)
@@ -478,8 +524,6 @@ private:
             return PyrSlot::make(true);
         else if constexpr (T == TokenType::False)
             return PyrSlot::make(false);
-        // else
-        // static_assert(false); // old compilers don't like this...
     }
 
     const char* fill_temp_buf(lex::SourceCodeRange loc) {
@@ -514,26 +558,196 @@ private:
         return getsym(temp_buffer.c_str());
     }
 
-    template <TokenType T> constexpr auto get_closing_brackets() -> decltype(auto) {
-        if constexpr (T == ')'_tokentype)
-            return std::array<TokenType, 1> { '('_tokentype };
-        else if constexpr (T == ']'_tokentype)
-            return std::array<TokenType, 1> { '['_tokentype };
-        else if constexpr (T == '}'_tokentype)
-            return std::array<TokenType, 2> { '{'_tokentype, TokenType::BeginClosedFunction };
-        else {
-            assert(false);
-            return std::array<TokenType, 1> { TokenType::Unexpected };
-        }
+    template <TokenType T> constexpr auto get_closing_bracket() -> decltype(auto) {
+        static_assert(sc::lex::matches(T, '(', '[', '{', TokenType::BeginClosedFunction));
+        if constexpr (T == '('_tokentype)
+            return ')'_tokentype;
+        else if constexpr (T == '['_tokentype)
+            return ']'_tokentype;
+        else if constexpr (T == '{'_tokentype)
+            return '}'_tokentype;
+        else if constexpr (T == TokenType::BeginClosedFunction)
+            return '}'_tokentype;
     }
 };
 
+void print_error_line(const lex::CodePointStream& char_stream, sc::lex::SourceCodeRange r,
+                      const char* short_description = nullptr) {
+    const auto start_line_in_source = char_stream.line_start(r.begin);
+
+    std::stringstream ss;
+
+    auto it = r.line_count() > 4 ? char_stream.line_iter(r) : char_stream.line_iter(r, 2, 2);
+    bool ended_with_new_line { false };
+
+    const auto single_line_error = r.line_count() == 1;
+
+    static constexpr auto max_line_count { 10 };
+
+    auto line_count = 0;
+    for (auto line = it(); line; (line = it()), ++line_count) {
+        const auto [str, sz, line_number] = *line;
+
+        const auto error_line = r.begin.lineNumber <= line_number && line_number <= r.end.lineNumber;
+        if (single_line_error) {
+            ss << std::setfill(' ') << std::setw(5) << line_number + 1 << " │ ";
+
+            ss.write(str, sz);
+            const auto last = str[sz - 1];
+            ended_with_new_line = (last == '\n' || last == '\r');
+
+            if (error_line) {
+                if (!ended_with_new_line)
+                    ss << '\n';
+                ss << "      │ ";
+                for (auto i { 0 }; i < r.begin.column; ++i)
+                    ss << " ";
+                for (auto i { r.begin.column }; i < r.end.column; ++i)
+                    ss << "^";
+                if (short_description)
+                    ss << " " << short_description;
+                ss << '\n';
+                ended_with_new_line = true;
+            }
+        } else {
+            ss << std::setfill(' ') << std::setw(5) << line_number + 1 << (error_line ? ">│ " : " │ ");
+
+            ss.write(str, sz);
+            const auto last = str[sz - 1];
+            ended_with_new_line = (last == '\n' || last == '\r');
+        }
+
+        if (line_count > max_line_count) {
+            if (!ended_with_new_line)
+                ss << '\n';
+            ss << std::setfill(' ') << std::setw(5) << line_number + 2 << " | ";
+            ss << ".... source too long .... \n";
+            ended_with_new_line = true;
+            break;
+        }
+    }
+
+
+    if (!ended_with_new_line)
+        ss << '\n';
+
+    if (!single_line_error) {
+        if (short_description) {
+            ss << short_description;
+            ss << '\n';
+        }
+    }
+
+    const auto str = ss.str();
+
+    post("%s\n\n", str.c_str());
+}
 
 struct GlobalBisonLexerState {
-    GlobalBisonLexerState(BisonSemAction a, lex::CodePointStream s): action(std::move(a)), char_stream(std::move(s)) {}
-    BisonSemAction action;
+    GlobalBisonLexerState(BisonLexerAction a, lex::CodePointStream s):
+        action(std::move(a)),
+        char_stream(std::move(s)) {}
+    BisonLexerAction action;
     lex::CodePointStream char_stream;
-    std::optional<BisonSemAction::Output> cached {};
+    std::optional<BisonLexerAction::Output> cached {};
+
+    int mutate_global_state_for_return(const BisonLexerAction::Output& o) {
+        // If you set this to 0 when not in use, the parse will segfault.
+        // TODO: use yylval.
+        if (o.slot && !o.is_error())
+            zzval = (intptr_t)newPyrSlotNode(*o.slot);
+
+        // Yes it reads from the end point only. Very odd. Causes many issues.
+        textpos = o.range.end.absolute;
+        lineno = o.range.end.lineNumber + 1; // zero indexed to 1
+        linepos = char_stream.line_start(o.range.end).absolute;
+        charno = o.range.end.column;
+        if (maxlinestarts < o.range.end.lineNumber) {
+            maxlinestarts += maxlinestarts;
+            linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
+        }
+        linestarts[lineno] = linepos;
+
+        if (o.is_error()) {
+            zzval = 0; // stop anything from continuing.
+
+            post("\nLexing "
+                 "Error:\n──────────────────────────────────────────────────────────────────────────────────\n");
+            if (o.is(ExtendedErrors::GotCurlyExpectedParen) || o.is(ExtendedErrors::GotSquareExpectedParen)) {
+                if (o.extra_range_of_error) {
+                    print_error_line(char_stream, *o.extra_range_of_error, "Parenthises opened here...");
+                    print_error_line(char_stream, o.range, "...was expected to be closed here with a ')'.");
+                }
+            } else if (o.is(ExtendedErrors::GotCurlyExpectedSquare) || o.is(ExtendedErrors::GotParenExpectedSquare)) {
+                if (o.extra_range_of_error) {
+                    print_error_line(char_stream, *o.extra_range_of_error, "Square bracket opened here...");
+                    print_error_line(char_stream, o.range, "...was expected to be closed here with a ']'.");
+                }
+            } else if (o.is(ExtendedErrors::GotParenExpectedCurly) || o.is(ExtendedErrors::GotSquareExpectedCurly)) {
+                if (o.extra_range_of_error) {
+                    print_error_line(char_stream, *o.extra_range_of_error, "Curly bracket opened here...");
+                    print_error_line(char_stream, o.range, "...was expected to be closed here with a '}'.");
+                }
+            } else if (o.is(ExtendedErrors::ExtraClosingCurlyBracket)) {
+                print_error_line(char_stream, o.range,
+                                 "Unexpected closing curly brace, could not find a matching opening one.");
+            } else if (o.is(ExtendedErrors::ExtraClosingParenBracket)) {
+                print_error_line(char_stream, o.range,
+                                 "Unexpected closing parenthesis, could not find a matching opening one.");
+            } else if (o.is(ExtendedErrors::ExtraClosingSqaureBracket)) {
+                print_error_line(char_stream, o.range,
+                                 "Unexpected closing square bracket, could not find a matching opening one.");
+            } else if (o.is(TokenType::ErMissingExponent)) {
+                const auto [ptr, sz] = char_stream.source_range(o.range);
+                const std::string example { ptr, sz };
+                const auto desc = std::string { "Expected digits after the 'e', for example '" } + example + "10'.";
+                print_error_line(char_stream, o.range, desc.c_str());
+            }
+
+            else if (o.is(TokenType::ErSymbolQuoteUnclosed)) {
+                const auto [ptr, sz] = char_stream.source_range(o.range);
+                size_t i { 0 };
+                while (i < sz && ptr[i] != ' ' && ptr[i] != '\n')
+                    ++i;
+                // TODO: we could look forward to see if the next token (discarding whitespace) is a '\'', in that case,
+                // the user has a new line character in the wrong place.
+                const std::string example { ptr, i };
+                const auto desc =
+                    std::string { "This quoted symbol does not have a matching closing quote, perhaps you meant "
+                                  + example + "'?" };
+                print_error_line(char_stream, o.range, desc.c_str());
+            }
+
+            else if (o.is(TokenType::ErInvalidUTF8)) {
+                print_error_line(char_stream, o.range,
+                                 "Invalid UTF8 encountered here, you probably want to delete this.");
+            } else if (o.is(TokenType::ErInvalidToken)) {
+                print_error_line(char_stream, o.range,
+                                 "Invalid token encountered, supercollider does not know how to handle this.");
+            }
+
+            else if (o.is(TokenType::ErStringUnclosed)) {
+                const auto [ptr, sz] = char_stream.source_range(o.range);
+                size_t i { 0 };
+                while (i < sz && ptr[i] != '\n' && ptr[i] != ' ')
+                    ++i;
+                const std::string example { ptr, i };
+                const auto desc =
+                    std::string { "This string does not have a closing '\"', perhaps you meant " + example + "\"?" };
+                print_error_line(char_stream, o.range, desc.c_str());
+            } else if (o.is(TokenType::ErMultilineCommentUnclosed)) {
+                const auto desc = std::string { "This multiline comment does not have a closing */." };
+                print_error_line(char_stream, o.range, desc.c_str());
+            }
+
+            else {
+                print_error_line(char_stream, o.range);
+            }
+        }
+        parseFailed = o.is_error() ? 1 : 0;
+
+        return *convert_to_bison_tokentype(o.type);
+    }
 };
 
 std::optional<GlobalBisonLexerState> global_bison_lexer_state {};
@@ -544,39 +758,19 @@ bool scanForClosingBracket(char to_find) {
     assert(global_bison_lexer_state);
     GlobalBisonLexerState& s = *global_bison_lexer_state;
     const auto tok = static_cast<TokenType>(to_find);
-    assert(!s.action.bracket_stack.empty());
-    const auto target_depth = s.action.bracket_stack.size() - 1; // we have just pushed a bracket.
+    assert(!s.action.closing_bracket_stack.empty());
+    const auto target_depth = s.action.closing_bracket_stack.size() - 1; // we have just pushed a bracket.
 
-    const auto mutate_global_state_for_return = [&](const BisonSemAction::Output& o) -> int {
-        if (o.slot) {
-            zzval = (intptr_t)newPyrSlotNode(*o.slot);
-        }
-
-        parseFailed = o.is_error ? 1 : 0;
-
-        // Yes it reads from the end point only. Very odd. Causes many issues.
-        textpos = o.range.end.absolute;
-        lineno = o.range.end.lineNumber + 1; // zero indexed to 1
-        linepos = s.char_stream.line_start(o.range.end);
-        charno = o.range.end.offsetInLine;
-        if (maxlinestarts < o.range.end.lineNumber) {
-            maxlinestarts += maxlinestarts;
-            linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
-        }
-        linestarts[lineno] = linepos;
-
-        return *convert_to_bison_tokentype(o.type);
-    };
-    BisonSemAction::Output out;
+    BisonLexerAction::Output out {};
     while (true) {
         out = lex::lexer(s.char_stream, s.action);
 
-        if (out.type == TokenType::EndOfFile || out.is_error) {
-            mutate_global_state_for_return(out); // must do this!
+        if (out.type == TokenType::EndOfFile || out.is_error()) {
+            s.mutate_global_state_for_return(out);
             return false;
         }
-        if (out.type == tok && s.action.bracket_stack.size() == target_depth) {
-            mutate_global_state_for_return(out); // must do this!
+        if (out.type == tok && s.action.closing_bracket_stack.size() == target_depth) {
+            s.mutate_global_state_for_return(out);
             return true;
         }
     }
@@ -586,94 +780,62 @@ void scan_for_end() {
     assert(global_bison_lexer_state);
     GlobalBisonLexerState& s = *global_bison_lexer_state;
 
-    BisonSemAction::Output out;
+    BisonLexerAction::Output out;
     do {
         out = lex::lexer(s.char_stream, s.action);
-    } while (out.type != TokenType::EndOfFile && out.type != TokenType::Unexpected && !out.is_error);
+    } while (out.type != TokenType::EndOfFile && out.type != TokenType::ErUnexpected && !out.is_error());
 
-    if (out.slot)
-        zzval = (intptr_t)newPyrSlotNode(*out.slot);
-
-
-    parseFailed = out.is_error ? 1 : 0;
-
-    // Yes it reads from the end point only. Very odd. Causes many issues.
-    textpos = out.range.end.absolute;
-    lineno = out.range.end.lineNumber + 1; // zero indexed to 1
-    linepos = s.char_stream.line_start(out.range.end);
-    charno = out.range.end.offsetInLine;
-    if (maxlinestarts < out.range.end.lineNumber) {
-        maxlinestarts += maxlinestarts;
-        linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
-    }
-    linestarts[lineno] = linepos;
+    s.mutate_global_state_for_return(out);
 }
-
 
 int yylex() {
     assert(global_bison_lexer_state);
     GlobalBisonLexerState& s = *global_bison_lexer_state;
 
-    const auto mutate_global_state_for_return = [&](const BisonSemAction::Output& o) -> int {
-        // If you set this to 0 when not in use, the parse will segfault.
-        // TODO: use yylval.
-        if (o.slot)
-            zzval = (intptr_t)newPyrSlotNode(*o.slot);
-
-        parseFailed = o.is_error ? 1 : 0;
-
-        // Yes it reads from the end point only. Very odd. Causes many issues.
-        textpos = o.range.end.absolute;
-        lineno = o.range.end.lineNumber + 1; // zero indexed to 1
-        linepos = s.char_stream.line_start(o.range.end);
-        charno = o.range.end.offsetInLine;
-        if (maxlinestarts < o.range.end.lineNumber) {
-            maxlinestarts += maxlinestarts;
-            linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
-        }
-        linestarts[lineno] = linepos;
-
-        return *convert_to_bison_tokentype(o.type);
-    };
 
     // If we have a cached out return it.
+    // This is necessary for the string line bodge while we migrate, it can be remove in the future once the
+    // parser & compiler know how to deal with string lines.
     if (s.cached) {
         const auto o = std::move(*s.cached);
         s.cached.reset();
-        return mutate_global_state_for_return(o);
+        return s.mutate_global_state_for_return(o);
     }
 
-    BisonSemAction::Output out = lex::lexer(s.char_stream, s.action);
+    BisonLexerAction::Output out = lex::lexer(s.char_stream, s.action);
 
     if (out.type != TokenType::StringLine)
-        return mutate_global_state_for_return(out);
+        return s.mutate_global_state_for_return(out);
 
+    sc::lex::SourceCodeLocation start { out.range.begin };
     std::string str {};
     str.reserve(128);
 
     auto prev = out;
     while (true) {
+        // This is nasty, but in the future, this should move into the compiler making this unnecessary.
         if (out.type != TokenType::StringLine) {
             assert(!s.cached.has_value());
-            s.cached = std::move(out); // save for next time.
+
+            // Yes it reads from the end point only. Very odd. Causes many issues.
+            textpos = prev.range.end.absolute;
+            lineno = prev.range.end.lineNumber + 1; // zero indexed to 1
+            linepos = s.char_stream.line_start(prev.range.end).absolute;
+            charno = prev.range.end.column;
+            if (maxlinestarts < prev.range.end.lineNumber) {
+                maxlinestarts += maxlinestarts;
+                linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
+            }
+            linestarts[lineno] = linepos;
 
             // This is the one case in the whole lexer where we currently have to alloc using the GC.
             // This would be much better pushed into the compiler.
             const int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
             auto sc_str = newPyrString(gMainVMGlobals->gc, str.c_str(), flags, false);
             zzval = (intptr_t)newPyrSlotNode(PyrSlot::make(sc_str));
-            parseFailed = prev.is_error ? 1 : 0;
+            parseFailed = prev.is_error() ? 1 : 0;
 
-            // Yes it reads from the end point only. Very odd. Causes many issues.
-            textpos = prev.range.end.absolute;
-            lineno = prev.range.end.lineNumber + 1; // zero indexed to 1
-            linepos = s.char_stream.line_start(prev.range.end);
-            charno = prev.range.end.offsetInLine;
-            if (maxlinestarts < prev.range.end.lineNumber) {
-                maxlinestarts += maxlinestarts;
-                linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
-            }
-            linestarts[lineno] = linepos;
+            s.cached = std::move(out); // save for next time.
             return STRING;
         }
         auto range = out.range;
@@ -683,7 +845,8 @@ int yylex() {
         range.end.absolute -= 1;
 
         bool escaped = false;
-        for (auto [b, e] = s.char_stream.source_range(range); b < e; ++b) {
+        const auto [bb, sz] = s.char_stream.source_range(range);
+        for (auto b = bb; b < (bb + sz); ++b) {
             if (*b == '\\' && !escaped) {
                 escaped = true;
                 continue;
@@ -777,15 +940,15 @@ PyrSlot process_accidental_steps(const char* s) {
 void yyerror(const char* s) {
     parseFailed = 1;
     error("%s\n", s);
-    postErrorLine(lineno, linepos, charno);
-    // Debugger();
+    // postErrorLine(lineno, linepos, charno);
+    //  Debugger();
 }
 
 void fatal() {
     parseFailed = 1;
     error("Parse error\n");
-    postErrorLine(lineno, linepos, charno);
-    // Debugger();
+    // postErrorLine(lineno, linepos, charno);
+    //  Debugger();
 }
 
 void postErrorLine(int linenum, int start, int charpos) {
@@ -1628,7 +1791,7 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
     linestarts[1] = 0;
     compilingCmdLine = false;
 
-    global_bison_lexer_state.emplace(std::move(BisonSemAction { text }),
+    global_bison_lexer_state.emplace(std::move(BisonLexerAction { text }),
                                      std::move(lex::CodePointStream { true, text, static_cast<size_t>(textlen), {} }));
 
     return true;
@@ -1658,7 +1821,7 @@ void startLexerForTestingClassLib(PyrSymbol* file_name_with_src) {
     linestarts[0] = 0;
     linestarts[1] = 0;
 
-    global_bison_lexer_state.emplace(std::move(BisonSemAction { text }),
+    global_bison_lexer_state.emplace(std::move(BisonLexerAction { text }),
                                      std::move(lex::CodePointStream { true, text, static_cast<size_t>(textlen), {} }));
 }
 
@@ -1696,7 +1859,7 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
     errLineOffset = 0;
     errCharPosOffset = 0;
 
-    global_bison_lexer_state.emplace(std::move(BisonSemAction { text }),
+    global_bison_lexer_state.emplace(std::move(BisonLexerAction { text }),
                                      std::move(lex::CodePointStream { false, text, static_cast<size_t>(textlen), {} }));
 }
 

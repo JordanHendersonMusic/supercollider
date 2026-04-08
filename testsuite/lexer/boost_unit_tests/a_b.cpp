@@ -94,7 +94,7 @@ void random_test_ascii(size_t seed, size_t sz) {
 
     random += " ";
 
-    compare_tokens(random.c_str(), false);
+    compare_tokens(random.c_str(), true);
 }
 
 BOOST_AUTO_TEST_CASE(random_test_all_ascii_few_big) {

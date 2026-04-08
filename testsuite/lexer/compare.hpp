@@ -882,7 +882,7 @@ leave:
 struct TokenOnlyAction {
     using Output = std::pair<TokenType, SourceCodeRange>;
 
-    template <TokenType type> std::optional<Output> token(SourceCodeRange loc) {
+    template <TokenType type> std::optional<Output> process(SourceCodeRange loc) {
         switch (type) {
         case TokenType::Space:
         case TokenType::NewLine:
@@ -895,16 +895,16 @@ struct TokenOnlyAction {
             return { { type, loc } };
         }
     }
-
-    template <TokenType type, typename Error> std::optional<Output> error(SourceCodeRange loc, Error&& error) {
-        return { { type, loc } };
-    }
 };
 
 
 inline bool tokens_equal(int o, TokenType n) {
-    if (o < 256)
+    if (o < 128)
         return o == static_cast<int>(n);
+
+    if (sc::lex::is_error(n))
+        return o == BADTOKEN;
+
     if (o == NAME)
         return n == TokenType::Name;
     if (o == INTEGER)
@@ -985,7 +985,6 @@ struct OldInfo {
         for (size_t i { start }; i < end; ++i) {
             t << source[i];
         }
-        t << "'";
 
         t << "' : [ ";
         for (size_t i { start }; i < end; ++i) {
@@ -999,8 +998,7 @@ struct NewInfo {
     size_t start, end;
 
     template <typename T> void printOn(T& t, const char* source) const {
-        t << "New{ type: " << type << "[" << static_cast<int>(type) << "]"
-          << ", start: " << start << ", end: " << end;
+        t << "New{ type: " << type << ", start: " << start << ", end: " << end;
 
         t << ", src: '";
         const auto sz = end - start;
@@ -1008,7 +1006,6 @@ struct NewInfo {
         for (size_t i { start }; i < end; ++i) {
             t << source[i];
         }
-        t << "'";
 
         t << "' : [ ";
         for (size_t i { start }; i < end; ++i) {
