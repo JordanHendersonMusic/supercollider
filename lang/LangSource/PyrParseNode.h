@@ -387,7 +387,7 @@ extern intptr_t gParserResult;
 extern bool gIsTailCodeBranch;
 extern bool gTailIsMethodReturn;
 
-extern bool compilingCmdLine;
+extern bool gCompilingCmdLine;
 
 extern const char* nodename[];
 

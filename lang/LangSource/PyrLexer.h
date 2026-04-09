@@ -25,37 +25,22 @@
 #include "SC_Export.h"
 #include <filesystem>
 
-extern char* text;
-
-extern int charno, lineno, linepos;
-extern int* linestarts;
-
-extern int parseFailed;
-extern bool compilingCmdLine;
-extern bool compiledOK;
-
-extern int lastClosedFuncCharNo;
-
-extern intptr_t zzval;
+// These are set
+extern bool gCompilingCmdLine;
+extern PyrSymbol* gCompilingFileSym;
+extern char* gCompilingText;
 extern intptr_t gParserResult;
 
-extern PyrSymbol* gCompilingFileSym;
+// This is set when calling yyparse.
+extern int gParseFailed;
+extern bool gCompiledOK;
 
-struct ClassExtFile {
-    struct ClassExtFile* next;
-    PyrSymbol* fileSym;
-    int startPos, endPos, lineOffset;
-};
+// The following globals are to be removed.
+extern int charno, lineno, linepos;
+extern int* linestarts;
+extern int lastClosedFuncCharNo;
+extern intptr_t zzval;
 
-typedef struct classdep {
-    struct classdep* next;
-    struct classdep* superClassDep;
-    struct classdep* subclasses;
-    PyrSymbol* className;
-    PyrSymbol* superClassName;
-    PyrSymbol* fileSym;
-    int startPos, endPos, lineOffset;
-} ClassDependancy;
 
 struct FatalInterpreterError : public std::runtime_error {
     using std::runtime_error::runtime_error;

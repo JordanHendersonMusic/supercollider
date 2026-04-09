@@ -86,7 +86,7 @@ int compileErrors = 0;
 int numOverwrites = 0;
 std::string overwriteMsg;
 
-extern bool compilingCmdLine;
+extern bool gCompilingCmdLine;
 extern int errLineOffset, errCharPosOffset;
 
 const char* nodename[] = { "ClassNode", "ClassExtNode", "MethodNode", "BlockNode", "SlotNode",
@@ -266,7 +266,7 @@ std::optional<FindVarNameResult> findVarName(PyrBlock* func, PyrClass* classobjC
 
 void compilePushVar(PyrParseNode* node, PyrSymbol* varName) {
     if (std::isupper(varName->name[0])) {
-        if (compilingCmdLine && varName->u.classobj == nullptr) {
+        if (gCompilingCmdLine && varName->u.classobj == nullptr) {
             error("Class not defined.\n");
             nodePostErrorLine(node);
             compileErrors++;
@@ -1212,7 +1212,7 @@ void installByteCodes(PyrBlock* block) {
     if (byteCodes) {
         length = byteCodeLength(byteCodes);
         if (length) {
-            flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+            flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
             byteArray = newPyrInt8Array(compileGC(), length, flags, false);
             copyByteCodes(byteArray->b, byteCodes);
             byteArray->size = length;
@@ -1796,7 +1796,7 @@ void PyrCallNodeBase::compilePartialApplication(int numCurryArgs, PyrSlot* resul
 
     ByteCodes savedBytes = saveByteCodeArray();
 
-    int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+    int flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
     PyrBlock* block = newPyrBlock(flags);
 
     PyrSlot blockSlot;
@@ -2865,7 +2865,7 @@ void compileSwitchMsg(PyrCallNode* node) {
     if (canInline) {
         PyrParseNode* argnode = node->mArglist;
 
-        int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+        int flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
         int arraySize = NEXTPOWEROFTWO(numArgs * 2);
         PyrObject* array = newPyrArray(compileGC(), arraySize, flags, false);
         array->size = arraySize;
@@ -3812,7 +3812,7 @@ void PyrLitListNode::compile(PyrSlot* result) {
     }
     resultSlot = (PyrSlot*)result;
     numItems = mElems ? nodeListLength(mElems) : 0;
-    flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+    flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
     array = newPyrArray(compileGC(), numItems, flags, false);
     inode = mElems;
     for (i = 0; i < numItems; ++i, inode = (PyrParseNode*)inode->mNext) {
@@ -3856,7 +3856,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
 
     // create a new block object
 
-    flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+    flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
     block = newPyrBlock(flags);
     SetObject(slotResult, block);
 
@@ -3878,7 +3878,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
 
     int endCharNo = linestarts[mLineno] + mCharno;
     int stringLength = endCharNo - mBeginCharNo;
-    int lastChar = text[mBeginCharNo + stringLength - 1];
+    int lastChar = gCompilingText[mBeginCharNo + stringLength - 1];
     if (lastChar == 0)
         stringLength--;
 
@@ -4131,7 +4131,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         SetNil(&block->contextDef);
 
         PyrString* string = newPyrStringN(compileGC(), stringLength, flags, false);
-        memcpy(string->s, text + mBeginCharNo, stringLength);
+        memcpy(string->s, gCompilingText + mBeginCharNo, stringLength);
         SetObject(&block->sourceCode, string);
     }
 
@@ -4184,7 +4184,7 @@ int conjureSelectorIndex(PyrParseNode* node, PyrBlock* func, bool isSuper, PyrSy
     PyrSlot* slot;
     int newsize, flags;
 
-    flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+    flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
     if (!isSuper) {
         if (selector == gSpecialSelectors[opmIf]) {
             *selType = selIf;
@@ -4285,7 +4285,7 @@ Byte conjureLiteralSlotIndex(PyrParseNode* node, PyrBlock* func, PyrSlot* slot) 
     PyrSlot* slot2;
     int newsize, flags;
 
-    flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+    flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
     // lookup slot in selectors table
 
     if (IsObj(&func->selectors)) {
@@ -4331,7 +4331,7 @@ Byte conjureLiteralSlotIndex(PyrParseNode* node, PyrBlock* func, PyrSlot* slot) 
 
 
 int conjureConstantIndex(PyrParseNode* node, PyrBlock* func, PyrSlot* slot) {
-    const int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+    const int flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
 
     // lookup slot in constants table
     PyrObject* constants;

@@ -72,6 +72,22 @@
 
 #include "lexer.hpp"
 
+struct ClassExtFile {
+    struct ClassExtFile* next;
+    PyrSymbol* fileSym;
+    int startPos, endPos, lineOffset;
+};
+
+typedef struct classdep {
+    struct classdep* next;
+    struct classdep* superClassDep;
+    struct classdep* subclasses;
+    PyrSymbol* className;
+    PyrSymbol* superClassName;
+    PyrSymbol* fileSym;
+    int startPos, endPos, lineOffset;
+} ClassDependancy;
+
 int yyparse();
 PyrSlot process_accidental_cents(const char* s);
 PyrSlot process_accidental_steps(const char* s);
@@ -93,14 +109,13 @@ static fs::path gCompileDir;
 
 
 bool gShowWarnings = false;
-LongStack closedFuncCharNo;
 LongStack generatorStack;
 int lastClosedFuncCharNo = 0;
 
 fs::path currfilename;
 std::string printingCurrfilename; // for error reporting
 
-bool compilingCmdLine = false;
+bool gCompilingCmdLine = false;
 
 // TODO: replace with yylval
 intptr_t zzval;
@@ -111,13 +126,13 @@ int* linestarts;
 int maxlinestarts { 0 };
 
 // This is the text of the source file currently being tokenized.
-char* text { nullptr };
+char* gCompilingText { nullptr };
 int textlen { 0 };
 int textpos { 0 };
 // I don't know what these do.
 int errLineOffset, errCharPosOffset;
-int parseFailed = 0;
-bool compiledOK = false;
+int gParseFailed = 0;
+bool gCompiledOK = false;
 std::set<fs::path> compiledDirectories;
 
 
@@ -186,7 +201,6 @@ using TokenType = lex::TokenType;
         return BADTOKEN;
 
 
-    // TODO: THIS IS MISSING CASES!!!!
     switch (t) {
     case TokenType::Name:
         return NAME;
@@ -293,20 +307,18 @@ enum struct ExtendedErrors : int {
 };
 
 struct BisonSemActionOutput {
-    [[nodiscard]] constexpr BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range):
+    [[nodiscard]] BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range):
         type(static_cast<TokenType>(e)),
         range(range),
         slot({}) {};
 
-    [[nodiscard]] constexpr BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range,
-                                                 lex::SourceCodeRange extra_range):
+    [[nodiscard]] BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range, lex::SourceCodeRange extra_range):
         type(static_cast<TokenType>(e)),
         range(range),
         slot({}),
         extra_range_of_error(extra_range) {};
 
-    [[nodiscard]] constexpr BisonSemActionOutput(TokenType t, lex::SourceCodeRange range,
-                                                 std::optional<PyrSlot> slot = {}):
+    [[nodiscard]] BisonSemActionOutput(TokenType t, lex::SourceCodeRange range, std::optional<PyrSlot> slot = {}):
         type(t),
         range(range),
         slot(slot) {};
@@ -316,15 +328,15 @@ struct BisonSemActionOutput {
         range(range),
         slot(slot) {};
 
-    [[nodiscard]] constexpr BisonSemActionOutput() = default;
-    [[nodiscard]] constexpr BisonSemActionOutput(BisonSemActionOutput&&) noexcept = default;
-    [[nodiscard]] constexpr BisonSemActionOutput(const BisonSemActionOutput&) noexcept = default;
+    [[nodiscard]] BisonSemActionOutput() = default;
+    [[nodiscard]] BisonSemActionOutput(BisonSemActionOutput&&) noexcept = default;
+    [[nodiscard]] BisonSemActionOutput(const BisonSemActionOutput&) noexcept = default;
     BisonSemActionOutput& operator=(BisonSemActionOutput&&) noexcept = default;
     BisonSemActionOutput& operator=(const BisonSemActionOutput&) noexcept = default;
 
-    constexpr bool is_error() const { return sc::lex::is_error(type); }
-    constexpr bool is(TokenType t) const { return type == t; }
-    constexpr bool is(ExtendedErrors t) const { return static_cast<int>(type) == static_cast<int>(t); }
+    [[nodiscard]] bool is_error() const { return sc::lex::is_error(type); }
+    [[nodiscard]] bool is(TokenType t) const { return type == t; }
+    [[nodiscard]] bool is(ExtendedErrors t) const { return static_cast<int>(type) == static_cast<int>(t); }
 
     TokenType type {}; // can also include the ExtendedErrors set. There is no nice way to extend an enum in c++.
     lex::SourceCodeRange range {};
@@ -749,7 +761,7 @@ struct GlobalBisonLexerState {
                 print_error_line(char_stream, o.range);
             }
         }
-        parseFailed = o.is_error() ? 1 : 0;
+        gParseFailed = o.is_error() ? 1 : 0;
 
         return *convert_to_bison_tokentype(o.type);
     }
@@ -835,10 +847,10 @@ int yylex() {
 
             // This is the one case in the whole lexer where we currently have to alloc using the GC.
             // This would be much better pushed into the compiler.
-            const int flags = compilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
+            const int flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
             auto sc_str = newPyrString(gMainVMGlobals->gc, str.c_str(), flags, false);
             zzval = (intptr_t)newPyrSlotNode(PyrSlot::make(sc_str));
-            parseFailed = prev.is_error() ? 1 : 0;
+            gParseFailed = prev.is_error() ? 1 : 0;
 
             s.cached = std::move(out); // save for next time.
             return STRING;
@@ -943,14 +955,14 @@ PyrSlot process_accidental_steps(const char* s) {
 }
 
 void yyerror(const char* s) {
-    parseFailed = 1;
+    gParseFailed = 1;
     error("%s\n", s);
     // postErrorLine(lineno, linepos, charno);
     //  Debugger();
 }
 
 void fatal() {
-    parseFailed = 1;
+    gParseFailed = 1;
     error("Parse error\n");
     // postErrorLine(lineno, linepos, charno);
     //  Debugger();
@@ -971,12 +983,12 @@ void postErrorLine(int linenum, int start, int charpos) {
     // postfl error line for context
     pos = start + charpos;
     for (i = pos; i < textlen; ++i) {
-        if (text[i] == 0 || text[i] == '\r' || text[i] == '\n')
+        if (gCompilingText[i] == 0 || gCompilingText[i] == '\r' || gCompilingText[i] == '\n')
             break;
     }
     end = i;
     for (i = start, j = 0; i < end && j < 255; ++i) {
-        str[j++] = text[i];
+        str[j++] = gCompilingText[i];
     }
     str[j] = 0;
 
@@ -984,9 +996,9 @@ void postErrorLine(int linenum, int start, int charpos) {
     if (i < textlen) {
         // postfl following line for context
         for (j = 0; j < 255 && i < textlen; ++i) {
-            if (text[i] == 0 || text[i] == '\r' || text[i] == '\n')
+            if (gCompilingText[i] == 0 || gCompilingText[i] == '\r' || gCompilingText[i] == '\n')
                 break;
-            str[j++] = text[i];
+            str[j++] = gCompilingText[i];
         }
         str[j] = 0;
         post("  %s\n", str);
@@ -1166,12 +1178,12 @@ void compileClass(PyrSymbol* fileSym, int startPos, int endPos, int lineOffset) 
     initParserPool();
     if (startLexer(fileSym, fs::path(), startPos, endPos, lineOffset)) {
         // postfl("->Parsing %s\n", fileSym->name); fflush(stdout);
-        parseFailed = yyparse();
+        gParseFailed = yyparse();
         // postfl("<-Parsing %s %d\n", fileSym->name, parseFailed); fflush(stdout);
         // post("parseFailed %d\n", parseFailed); fflush(stdout);
-        if (!parseFailed && gRootParseNode) {
+        if (!gParseFailed && gRootParseNode) {
             // postfl("Compiling nodes %p\n", gRootParseNode);fflush(stdout);
-            compilingCmdLine = false;
+            gCompilingCmdLine = false;
             compileNodeList(gRootParseNode, true);
             // postfl("done compiling\n");fflush(stdout);
         } else {
@@ -1215,7 +1227,7 @@ void findDiscrepancy();
 
 void traverseFullDepTree2() {
     // assign a class index to all classes
-    if (!parseFailed && !compileErrors) {
+    if (!gParseFailed && !compileErrors) {
         buildClassTree();
         gNumClasses = 0;
 
@@ -1370,7 +1382,7 @@ void initPassOne() {
 
     compileErrors = 0;
     numClassDeps = 0;
-    compiledOK = false;
+    gCompiledOK = false;
     compiledDirectories.clear();
 
     // main class library folder: only used for relative path resolution
@@ -1587,13 +1599,13 @@ void schedRun();
 
 void compileSucceeded();
 void compileSucceeded() {
-    compiledOK = !(parseFailed || compileErrors);
-    if (compiledOK) {
-        compiledOK = true;
+    gCompiledOK = !(gParseFailed || compileErrors);
+    if (gCompiledOK) {
+        gCompiledOK = true;
 
-        compiledOK = initRuntime(gMainVMGlobals, 128 * 1024, pyr_pool_runtime);
+        gCompiledOK = initRuntime(gMainVMGlobals, 128 * 1024, pyr_pool_runtime);
 
-        if (compiledOK) {
+        if (gCompiledOK) {
             VMGlobals* g = gMainVMGlobals;
 
             g->canCallOS = true;
@@ -1612,7 +1624,7 @@ void compileSucceeded() {
 static void runShutdown() {
     // printf("->aboutToCompileLibrary\n");
     gLangMutex.lock();
-    if (compiledOK) {
+    if (gCompiledOK) {
         VMGlobals* g = gMainVMGlobals;
 
         g->canCallOS = true;
@@ -1643,7 +1655,7 @@ void shutdownLibrary() {
     gLangMutex.lock();
     closeAllCustomPorts();
 
-    if (compiledOK) {
+    if (gCompiledOK) {
         VMGlobals* g = gMainVMGlobals;
         g->canCallOS = true;
         g->gc->RunAllFinalizers();
@@ -1652,7 +1664,7 @@ void shutdownLibrary() {
 
     pyr_pool_runtime->FreeAll();
 
-    compiledOK = false;
+    gCompiledOK = false;
 
     gLangMutex.unlock();
     deinitPrimitives();
@@ -1664,7 +1676,7 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool standalone) {
 
     gLangMutex.lock();
     gNumCompiledFiles = 0;
-    compiledOK = false;
+    gCompiledOK = false;
 
     if (!gLanguageConfig) {
         SC_LanguageConfig::readLibraryConfig(standalone);
@@ -1697,12 +1709,12 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool standalone) {
         flushPostBuf();
         compileSucceeded();
     } else {
-        compiledOK = false;
+        gCompiledOK = false;
     }
 
     gLangMutex.unlock();
     // printf("<-compileLibrary\n");
-    return compiledOK;
+    return gCompiledOK;
 }
 
 void dumpByteCodes(PyrBlock* theBlock);
@@ -1711,7 +1723,7 @@ SCLANG_DLLEXPORT_C void runLibrary(PyrSymbol* selector) {
     VMGlobals* g = gMainVMGlobals;
     g->canCallOS = true;
     try {
-        if (compiledOK) {
+        if (gCompiledOK) {
             ++g->sp;
             SetObject(g->sp, g->process);
             runInterpreter(g, selector, 1);
@@ -1748,24 +1760,24 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
             file.open(p, std::ios_base::binary);
             size_t sz = fs::file_size(p);
 
-            text = (char*)pyr_pool_compile->Alloc((sz + 1) * sizeof(char));
-            MEMFAIL(text);
-            file.read(text, sz);
-            text[sz] = '\0';
-            fileSym->u.source = text;
-            rtf2txt(text);
+            gCompilingText = (char*)pyr_pool_compile->Alloc((sz + 1) * sizeof(char));
+            MEMFAIL(gCompilingText);
+            file.read(gCompilingText, sz);
+            gCompilingText[sz] = '\0';
+            fileSym->u.source = gCompilingText;
+            rtf2txt(gCompilingText);
         } catch (const std::exception& ex) {
             error("Could not read %s: %s.\n", SC_Codecvt::path_to_utf8_str(p).c_str(), ex.what());
             return false;
         }
     } else
-        text = fileSym->u.source;
+        gCompilingText = fileSym->u.source;
 
     if ((startPos >= 0) && (endPos > 0)) {
         textlen = endPos - startPos;
-        text += startPos;
+        gCompilingText += startPos;
     } else if (textlen == -1)
-        textlen = strlen(text);
+        textlen = strlen(gCompilingText);
 
     if (lineOffset > 0)
         errLineOffset = lineOffset;
@@ -1777,7 +1789,6 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
     else
         errCharPosOffset = 0;
 
-    initLongStack(&closedFuncCharNo);
     initLongStack(&generatorStack);
     lastClosedFuncCharNo = 0;
     textpos = 0;
@@ -1786,7 +1797,7 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
     charno = 0;
 
     zzval = 0;
-    parseFailed = 0;
+    gParseFailed = 0;
     currfilename = fs::path(filename);
     printingCurrfilename = "file '" + SC_Codecvt::path_to_utf8_str(currfilename) + "'";
     maxlinestarts = 1000;
@@ -1794,20 +1805,20 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
     MEMFAIL(linestarts);
     linestarts[0] = 0;
     linestarts[1] = 0;
-    compilingCmdLine = false;
+    gCompilingCmdLine = false;
 
-    global_bison_lexer_state.emplace(std::move(BisonLexerAction { text }),
-                                     std::move(lex::CodePointStream { true, text, static_cast<size_t>(textlen), {} }));
+    global_bison_lexer_state.emplace(
+        std::move(BisonLexerAction { gCompilingText }),
+        std::move(lex::CodePointStream { true, gCompilingText, static_cast<size_t>(textlen), {} }));
 
     return true;
 }
 
 void startLexerForTestingClassLib(PyrSymbol* file_name_with_src) {
-    text = file_name_with_src->u.source;
+    gCompilingText = file_name_with_src->u.source;
 
-    textlen = strlen(text);
+    textlen = strlen(gCompilingText);
 
-    initLongStack(&closedFuncCharNo);
     initLongStack(&generatorStack);
     lastClosedFuncCharNo = 0;
     textpos = 0;
@@ -1817,7 +1828,7 @@ void startLexerForTestingClassLib(PyrSymbol* file_name_with_src) {
     errLineOffset = 0;
     errCharPosOffset = 0;
 
-    parseFailed = 0;
+    gParseFailed = 0;
     currfilename = fs::path();
     printingCurrfilename = "file '" + SC_Codecvt::path_to_utf8_str(currfilename) + "'";
     maxlinestarts = 1000;
@@ -1826,23 +1837,23 @@ void startLexerForTestingClassLib(PyrSymbol* file_name_with_src) {
     linestarts[0] = 0;
     linestarts[1] = 0;
 
-    global_bison_lexer_state.emplace(std::move(BisonLexerAction { text }),
-                                     std::move(lex::CodePointStream { true, text, static_cast<size_t>(textlen), {} }));
+    global_bison_lexer_state.emplace(
+        std::move(BisonLexerAction { gCompilingText }),
+        std::move(lex::CodePointStream { true, gCompilingText, static_cast<size_t>(textlen), {} }));
 }
 
 void startLexerCmdLine(char* textbuf, int textbuflen) {
     // pyrmalloc:
     // lifetime: kill after compile. (this one gets killed anyway)
-    text = (char*)pyr_pool_compile->Alloc((textbuflen + 2) * sizeof(char));
-    MEMFAIL(text);
-    memcpy(text, textbuf, textbuflen);
-    text[textbuflen] = ' ';
-    text[textbuflen + 1] = 0;
+    gCompilingText = (char*)pyr_pool_compile->Alloc((textbuflen + 2) * sizeof(char));
+    MEMFAIL(gCompilingText);
+    memcpy(gCompilingText, textbuf, textbuflen);
+    gCompilingText[textbuflen] = ' ';
+    gCompilingText[textbuflen + 1] = 0;
     textlen = textbuflen + 1;
 
-    rtf2txt(text);
+    rtf2txt(gCompilingText);
 
-    initLongStack(&closedFuncCharNo);
     initLongStack(&generatorStack);
     lastClosedFuncCharNo = 0;
     textpos = 0;
@@ -1850,9 +1861,9 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
     lineno = 1;
     charno = 0;
 
-    compilingCmdLine = true;
+    gCompilingCmdLine = true;
     zzval = 0;
-    parseFailed = 0;
+    gParseFailed = 0;
     currfilename = fs::path("interpreted text");
     printingCurrfilename = currfilename.string();
     maxlinestarts = 1000;
@@ -1864,13 +1875,13 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
     errLineOffset = 0;
     errCharPosOffset = 0;
 
-    global_bison_lexer_state.emplace(std::move(BisonLexerAction { text }),
-                                     std::move(lex::CodePointStream { false, text, static_cast<size_t>(textlen), {} }));
+    global_bison_lexer_state.emplace(
+        std::move(BisonLexerAction { gCompilingText }),
+        std::move(lex::CodePointStream { false, gCompilingText, static_cast<size_t>(textlen), {} }));
 }
 
 void finiLexer() {
     global_bison_lexer_state.reset();
     pyr_pool_compile->Free(linestarts);
-    freeLongStack(&closedFuncCharNo);
     freeLongStack(&generatorStack);
 }

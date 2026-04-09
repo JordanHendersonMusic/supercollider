@@ -83,7 +83,7 @@
 
 void bcopy(void *src, void *dst, size_t size) ;
 int yyparse();
-extern bool compilingCmdLine;
+extern bool gCompilingCmdLine;
 extern LongStack generatorStack;
 
 
