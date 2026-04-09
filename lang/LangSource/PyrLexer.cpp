@@ -311,6 +311,11 @@ struct BisonSemActionOutput {
         range(range),
         slot(slot) {};
 
+    [[nodiscard]] BisonSemActionOutput(TokenType t, lex::SourceCodeRange range, PyrSlot slot):
+        type(t),
+        range(range),
+        slot(slot) {};
+
     [[nodiscard]] constexpr BisonSemActionOutput() = default;
     [[nodiscard]] constexpr BisonSemActionOutput(BisonSemActionOutput&&) noexcept = default;
     [[nodiscard]] constexpr BisonSemActionOutput(const BisonSemActionOutput&) noexcept = default;
@@ -478,7 +483,7 @@ public:
                     // on how you evaluate a file, I've opted to make this consistent. If we need the null terminator
                     // character, we could use $\0, although that currently produces the same of $0.
                     return { { T, loc, PyrSlot::make(' ') } };
-                return { { T, loc, PyrSlot::make(out) } };
+                return { { T, loc, std::optional<PyrSlot> { PyrSlot::make(out) } } };
             }
             assert(loc.size() == 3);
             assert(source[loc.begin.absolute] == '$');
@@ -495,7 +500,7 @@ public:
                 out = '\f';
             else if (out == 'v')
                 out = '\v';
-            return { { T, loc, PyrSlot::make(out) } };
+            return { Output { T, loc, std::optional<PyrSlot> { PyrSlot::make(out) } } };
         }
 
         else if constexpr (T == TokenType::AccidentalCents)
