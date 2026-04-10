@@ -816,8 +816,7 @@ string1 : {
         }
         if (c == 0) {
             s.yylen = 0;
-            // WARNING UNTERMINATED STRING
-            r = STRING;
+            r = BADTOKEN;
             goto leave;
         }
     }
@@ -890,6 +889,7 @@ struct TokenOnlyAction {
         case TokenType::Comment:
         case TokenType::DocumentationComment:
         case TokenType::MultiLineComment:
+        case TokenType::ErMultilineCommentUnclosed:
             return std::nullopt;
         default:
             return { { type, loc } };
@@ -977,16 +977,16 @@ struct OldInfo {
             t << "Old{ type: " << static_cast<char>(type) << "[" << type << "]";
         else
             t << "Old{ type: " << type;
-        t << ", start: " << start << ", end: " << end;
+        t << ", start: " << start << ", end: " << end << ", ";
 
-        t << ", src: '";
-        const auto sz = end - start;
-        assert(end >= start);
-        for (size_t i { start }; i < end; ++i) {
-            t << source[i];
-        }
+        // t << ", src: '";
+        // const auto sz = end - start;
+        // assert(end >= start);
+        // for (size_t i { start }; i < end; ++i) {
+        //     t << source[i];
+        // }
 
-        t << "' : [ ";
+        t << "[ ";
         for (size_t i { start }; i < end; ++i) {
             t << static_cast<int>(source[i]) << " ";
         }
@@ -998,16 +998,16 @@ struct NewInfo {
     size_t start, end;
 
     template <typename T> void printOn(T& t, const char* source) const {
-        t << "New{ type: " << type << ", start: " << start << ", end: " << end;
+        t << "New{ type: " << type << ", start: " << start << ", end: " << end << ", ";
 
-        t << ", src: '";
-        const auto sz = end - start;
-        assert(end >= start);
-        for (size_t i { start }; i < end; ++i) {
-            t << source[i];
-        }
+        // t << ", src: '";
+        // const auto sz = end - start;
+        // assert(end >= start);
+        // for (size_t i { start }; i < end; ++i) {
+        // t << source[i];
+        //}
 
-        t << "' : [ ";
+        t << "[ ";
         for (size_t i { start }; i < end; ++i) {
             t << static_cast<int>(source[i]) << " ";
         }

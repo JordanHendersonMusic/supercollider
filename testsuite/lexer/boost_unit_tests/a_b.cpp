@@ -4,7 +4,9 @@
 
 #include "../compare.hpp"
 
-void compare_tokens(const char* text, bool print) {
+enum struct Print { No, Always, IfError };
+
+void compare_tokens(const char* text, Print print) {
     State old_state { text, strlen(text), 0, 0, 0, State::Nil {}, {}, 0 };
 
     CodePointStream stream { true, text, strlen(text), {} };
@@ -12,6 +14,13 @@ void compare_tokens(const char* text, bool print) {
 
     OldInfo old_i { 0, 0, 0 };
     NewInfo new_i { TokenType::EndOfFile, 0, 0 };
+
+    const auto print_tokens = [&]() {
+        old_i.printOn(std::cout, text);
+        std::cout << std::endl;
+        new_i.printOn(std::cout, text);
+        std::cout << '\n' << std::endl;
+    };
     while (true) {
         if (old_i.end < new_i.end) {
             const auto old_t = old_lexer(old_state, false);
@@ -33,17 +42,16 @@ void compare_tokens(const char* text, bool print) {
         }
 
 
-        if (print) {
-            old_i.printOn(std::cout, text);
-            std::cout << std::endl;
-            new_i.printOn(std::cout, text);
-            std::cout << '\n' << std::endl;
-        }
+        if (print == Print::Always)
+            print_tokens();
 
         if (old_i.type == YYEOF && new_i.type == TokenType::EndOfFile)
             break;
         if (old_i.type == YYEOF || new_i.type == TokenType::EndOfFile) {
             BOOST_TEST(false);
+            if (print != Print::No)
+                print_tokens();
+
             break;
         }
 
@@ -68,8 +76,26 @@ void compare_tokens(const char* text, bool print) {
                 BOOST_TEST_REQUIRE(ni.end <= old_i.end);
             };
             continue;
+        } else if (old_i.type == BADTOKEN && new_i.type == TokenType::ErSymbolQuoteUnclosed) {
+            // the new version doesn't consume any trailing newline characters, this produces better error messages.
+
+            BOOST_TEST(old_i.start == new_i.start);
+            if (old_i.end != new_i.end) {
+                const auto c = text[old_i.end - 1];
+                if (c == '\n' || c == '\r') {
+                    new_i.end = old_i.end;
+                } else {
+                    // only reason they might differ is because the new version does not consume the new line character.
+                    BOOST_TEST(false);
+                    if (print != Print::No)
+                        print_tokens();
+                }
+            }
         } else {
             BOOST_TEST(tokens_equal(old_i.type, new_i.type));
+            if (print != Print::No && !tokens_equal(old_i.type, new_i.type))
+                print_tokens();
+
             continue;
         }
     }
@@ -77,7 +103,7 @@ void compare_tokens(const char* text, bool print) {
 
 BOOST_AUTO_TEST_CASE(basic) {
     // Note the old lexer requires there be a space at the end of the file...
-    compare_tokens("asdf 0.0 -0.2 pi const var arg 10pi <> | || + ++ <> < > 123ssss 324s43 ", false);
+    compare_tokens("asdf 0.0 -0.2 pi const var arg 10pi <> | || + ++ <> < > 123ssss 324s43 ", Print::IfError);
 }
 
 void random_test_ascii(size_t seed, size_t sz) {
@@ -94,12 +120,11 @@ void random_test_ascii(size_t seed, size_t sz) {
 
     random += " ";
 
-    compare_tokens(random.c_str(), true);
+    compare_tokens(random.c_str(), Print::IfError);
 }
 
 BOOST_AUTO_TEST_CASE(random_test_all_ascii_few_big) {
     // If you find a seed that breaks, explicitly add it.
-    // This equates to about 3 seconds worth of testing on local machine.
     for (size_t i { 0 }; i < 1'000; ++i)
         random_test_ascii(i, 100'000);
 }
@@ -116,7 +141,7 @@ BOOST_AUTO_TEST_CASE(random_test_all_ascii_all_tiny) {
             a[1] = j;
             for (std::uint32_t k { 1 }; k < 128; ++k) {
                 a[2] = k;
-                compare_tokens(a, false);
+                compare_tokens(a, Print::IfError);
             }
         }
     }
