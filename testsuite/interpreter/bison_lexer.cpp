@@ -9,6 +9,7 @@
 #include "SCBase.h"
 #include "VMGlobals.h"
 
+#include "bisonHeaderInclude.hpp"
 #include "Bison/lang11d_tab.h"
 #include "boost/test/tools/interface.hpp"
 
@@ -34,7 +35,6 @@ template <size_t N> void test_tokens(const char* txt, const std::array<yytokenty
     initSpecialClasses();
     initClasses();
     initParserPool();
-    initParseNodes();
 
     initParser();
 
@@ -117,7 +117,6 @@ template <size_t N> void test_zzval(const char* txt, const std::array<std::tuple
     initSpecialClasses();
     initClasses();
     initParserPool();
-    initParseNodes();
 
     initParser();
 
@@ -129,7 +128,7 @@ template <size_t N> void test_zzval(const char* txt, const std::array<std::tuple
     for (const auto& t : expected) {
         const auto token = yylex();
         BOOST_TEST(token == std::get<0>(t));
-        const auto* slot_node = reinterpret_cast<PyrSlotNode*>(zzval);
+        const auto* slot_node = yylval.slotNode;
         BOOST_TEST(slot_node);
         const PyrSlot slot = slot_node->mSlot;
         const PyrSlot expected_slot = std::get<1>(t);
