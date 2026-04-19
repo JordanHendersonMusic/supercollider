@@ -4472,9 +4472,15 @@ bool findVarName(PyrParseNode* node, PyrBlock* startingFunc, PyrClass** classobj
                 if (fdef != startingFunc) {
                     return { frameIndex };
                 } else if constexpr (SC_Version < scVersionSwitches::nameResolutionChange) {
-                    error("Using the variable '%s' in its own initialiser ", name->name);
+                    post("\n");
+                    error("Using the variable '%s' in its own initialiser.\n"
+                          "From the next version of SuperCollider this will be an error and your code will fail to "
+                          "compile or behave differently.\n"
+                          "Please fix the code before updating.\n"
+                          "For more information on this change see scdoc://VersionUpdateGuide/ArgAndVarOrdering.html\n",
+                          name->name);
                     nodePostErrorLine(node);
-                    emitCompilerErrorFromVersion(scVersionSwitches::nameResolutionChange);
+                    post("\n");
                     return { frameIndex };
                 }
             }
@@ -4482,8 +4488,8 @@ bool findVarName(PyrParseNode* node, PyrBlock* startingFunc, PyrClass** classobj
             if constexpr (SC_Version < scVersionSwitches::nameResolutionChange) {
                 post("\n");
                 error("Accessing the named identifier '%s' before it was declared.\n"
-                      "From the next version of SuperCollider, this will be an error and your code will "
-                      "fail to compile or behave differently.\n"
+                      "From the next version of SuperCollider this will be an error and your code will fail to compile "
+                      "or behave differently.\n"
                       "Please fix the code before updating.\n"
                       "For more information on this change see scdoc://VersionUpdateGuide/ArgAndVarOrdering.html\n",
                       name->name);
