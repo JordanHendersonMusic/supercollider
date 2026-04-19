@@ -118,8 +118,7 @@ template <typename CRTP> struct TextLocationLocation {
 
     std::size_t absolute { 0 }; // Offset as a byte index into the text.
     std::size_t lineNumber { 0 }; // Zero indexed, first line is zero.
-    std::size_t column { 0 };
-    // Codepoint count, note, this is currently broken and doesn't work with multicodepoint graphemes.
+    std::size_t column { 0 }; // Zero indexed, measured in code points, not true columns.
 };
 
 // A range of points in some text.

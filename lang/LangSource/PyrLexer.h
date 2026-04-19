@@ -20,7 +20,7 @@
 
 
 #pragma once
-
+#include "SCBase.h"
 #include "PyrSymbol.h"
 #include "SC_Export.h"
 #include "lexer.hpp"
@@ -60,6 +60,15 @@ void finiLexer();
 
 void printErrorLine(const sc::lex::CodePointStream& char_stream, sc::lex::SourceCodeRange r,
                     const char* short_description = nullptr);
+
+enum struct ErrorType { Lexing, Parsing, Compiling };
+struct PrintErrorLineInfo {
+    sc::lex::SourceCodeRange r;
+    const char* short_description { nullptr };
+};
+void printError(ErrorType type, const char* error_description, const sc::lex::CodePointStream& char_stream,
+                const std::vector<PrintErrorLineInfo>&, const char* file_path = nullptr);
+
 
 int yylex();
 void yyerror(const char* s);

@@ -19,7 +19,6 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-#include "SCBase.h"
 #include "PyrLexer.h"
 #include "PyrSlot.h"
 #include "PyrSymbol.h"
@@ -655,6 +654,28 @@ void printErrorLine(const lex::CodePointStream& char_stream, sc::lex::SourceCode
     post("%s\n\n", str.c_str());
 }
 
+void printError(ErrorType type, const char* error_description, const sc::lex::CodePointStream& char_stream,
+                const std::vector<PrintErrorLineInfo>& lines, const char* file_path) {
+    switch (type) {
+    case ErrorType::Lexing:
+        post("\nLexing Error\n");
+        break;
+    case ErrorType::Parsing:
+        post("\nParsing Error\n");
+        break;
+    case ErrorType::Compiling:
+        post("\nCompiling Error\n");
+        break;
+    }
+
+    post("Error: %s\n", error_description);
+    post("──────────────────────────────────────────────────────────────────────────────────\n");
+    for (const auto& l : lines) {
+        if (file_path)
+            post("file://%s:%d:%d\n", file_path, l.r.begin.lineNumber + 1, l.r.begin.column + 1);
+        printErrorLine(char_stream, l.r, l.short_description);
+    }
+}
 struct GlobalBisonLexerState {
     GlobalBisonLexerState(BisonLexerAction a, lex::CodePointStream s):
         action(std::move(a)),
@@ -675,37 +696,60 @@ struct GlobalBisonLexerState {
 
 
         if (o.is_error()) {
-            post("\nLexing "
-                 "Error:\n──────────────────────────────────────────────────────────────────────────────────\n");
+            const char* file_name = gCompilingFileSym ? gCompilingFileSym->name : nullptr;
             if (o.is(ExtendedErrors::GotCurlyExpectedParen) || o.is(ExtendedErrors::GotSquareExpectedParen)) {
                 if (o.extra_range_of_error) {
-                    printErrorLine(char_stream, *o.extra_range_of_error, "Parenthises opened here...");
-                    printErrorLine(char_stream, o.range, "...was expected to be closed here with a ')'.");
+                    printError(ErrorType::Lexing, "unclosed parenthises", char_stream,
+                               { { *o.extra_range_of_error, "Parenthises opened here..." },
+                                 { o.range, "...was expected to be closed here with a ')." } },
+                               file_name);
+                } else {
+                    assert(false);
+                    printError(ErrorType::Lexing, "unclosed parenthises", char_stream,
+                               { { *o.extra_range_of_error, "Parenthises opened here was not closed." } }, file_name);
                 }
             } else if (o.is(ExtendedErrors::GotCurlyExpectedSquare) || o.is(ExtendedErrors::GotParenExpectedSquare)) {
                 if (o.extra_range_of_error) {
-                    printErrorLine(char_stream, *o.extra_range_of_error, "Square bracket opened here...");
-                    printErrorLine(char_stream, o.range, "...was expected to be closed here with a ']'.");
+                    printError(ErrorType::Lexing, "unclosed square bracket", char_stream,
+                               { { *o.extra_range_of_error, "Square bracket opened here..." },
+                                 { o.range, "...was expected to be closed here with a ']." } },
+                               file_name);
+                } else {
+                    assert(false);
+                    printError(ErrorType::Lexing, "unclosed square bracket", char_stream,
+                               { { *o.extra_range_of_error, "Square bracket opened here was not closed." } },
+                               file_name);
                 }
             } else if (o.is(ExtendedErrors::GotParenExpectedCurly) || o.is(ExtendedErrors::GotSquareExpectedCurly)) {
                 if (o.extra_range_of_error) {
-                    printErrorLine(char_stream, *o.extra_range_of_error, "Curly bracket opened here...");
-                    printErrorLine(char_stream, o.range, "...was expected to be closed here with a '}'.");
+                    printError(ErrorType::Lexing, "unclosed curly bracket", char_stream,
+                               { { *o.extra_range_of_error, "Curly bracket opened here..." },
+                                 { o.range, "...was expected to be closed here with a '}." } },
+                               file_name);
+                } else {
+                    assert(false);
+                    printError(ErrorType::Lexing, "unclosed curly bracket", char_stream,
+                               { { *o.extra_range_of_error, "Curly bracket opened here was not closed." } }, file_name);
                 }
             } else if (o.is(ExtendedErrors::ExtraClosingCurlyBracket)) {
-                printErrorLine(char_stream, o.range,
-                               "Unexpected closing curly brace, could not find a matching opening one.");
+                printError(ErrorType::Lexing, "unexpected closing curly bracket", char_stream,
+                           { { o.range, "Unexpected closing curly bracket, could not find a matching opening one." } },
+                           file_name);
             } else if (o.is(ExtendedErrors::ExtraClosingParenBracket)) {
-                printErrorLine(char_stream, o.range,
-                               "Unexpected closing parenthesis, could not find a matching opening one.");
+                printError(ErrorType::Lexing, "unexpected closing parenthesis", char_stream,
+                           { { o.range, "Unexpected closing parenthesis, could not find a matching opening one." } },
+                           file_name);
             } else if (o.is(ExtendedErrors::ExtraClosingSqaureBracket)) {
-                printErrorLine(char_stream, o.range,
-                               "Unexpected closing square bracket, could not find a matching opening one.");
+                printError(
+                    ErrorType::Lexing, "unexpected closing square bracket", char_stream,
+                    { { o.range, "Unexpected closing square brackett, could not find a matching opening one." } },
+                    file_name);
             } else if (o.is(TokenType::ErMissingExponent)) {
                 const auto [ptr, sz] = char_stream.source_range(o.range);
                 const std::string example { ptr, sz };
                 const auto desc = std::string { "Expected digits after the 'e', for example '" } + example + "10'.";
-                printErrorLine(char_stream, o.range, desc.c_str());
+                printError(ErrorType::Lexing, "Invalid exponent", char_stream, { { o.range, desc.c_str() } },
+                           file_name);
             }
 
             else if (o.is(TokenType::ErSymbolQuoteUnclosed)) {
@@ -719,15 +763,19 @@ struct GlobalBisonLexerState {
                 const auto desc =
                     std::string { "This quoted symbol does not have a matching closing quote, perhaps you meant "
                                   + example + "'?" };
-                printErrorLine(char_stream, o.range, desc.c_str());
+
+                printError(ErrorType::Lexing, "Quoted symbol has not been closed", char_stream,
+                           { { o.range, desc.c_str() } }, file_name);
             }
 
             else if (o.is(TokenType::ErInvalidUTF8)) {
-                printErrorLine(char_stream, o.range,
-                               "Invalid UTF8 encountered here, you probably want to delete this.");
+                printError(ErrorType::Lexing, "Invalid UTF8", char_stream,
+                           { { o.range, "Invalid UTF8 text encountered here. You probably want to delete this." } },
+                           file_name);
             } else if (o.is(TokenType::ErInvalidToken)) {
-                printErrorLine(char_stream, o.range,
-                               "Invalid token encountered, supercollider does not know how to handle this.");
+                printError(ErrorType::Lexing, "Invalid token", char_stream,
+                           { { o.range, "Supercollider does not know how to handle this in the current context." } },
+                           file_name);
             }
 
             else if (o.is(TokenType::ErStringUnclosed)) {
@@ -738,14 +786,16 @@ struct GlobalBisonLexerState {
                 const std::string example { ptr, i };
                 const auto desc =
                     std::string { "This string does not have a closing '\"', perhaps you meant " + example + "\"?" };
-                printErrorLine(char_stream, o.range, desc.c_str());
+
+                printError(ErrorType::Lexing, "Unclosed string", char_stream, { { o.range, desc.c_str() } }, file_name);
             } else if (o.is(TokenType::ErMultilineCommentUnclosed)) {
-                const auto desc = std::string { "This multiline comment does not have a closing */." };
-                printErrorLine(char_stream, o.range, desc.c_str());
+                printError(ErrorType::Lexing, "Unclosed multiline comment", char_stream,
+                           { { o.range, "This multiline comment does not have a closing */." } }, file_name);
             }
 
             else {
-                printErrorLine(char_stream, o.range);
+                printError(ErrorType::Lexing, "Unknown error", char_stream,
+                           { { o.range, "An unknown error occured here." } }, file_name);
             }
         }
         gParseFailed = o.is_error() ? 1 : 0;
@@ -796,7 +846,7 @@ int scan_for_end() {
     BisonLexerAction::Output out;
     do {
         out = lex::lexer(s.char_stream, s.action);
-    } while (out.type != TokenType::EndOfFile && out.type != TokenType::ErUnexpected && !out.is_error());
+    } while (out.type != TokenType::EndOfFile && !sc::lex::is_error(out.type) && !out.is_error());
 
     return s.mutate_global_state_for_return(out);
 }
@@ -1258,102 +1308,111 @@ bool parseOneClass(PyrSymbol* fileSym) {
         Location location;
     };
 
-    const auto lex = []() -> std::optional<R> {
+    const auto lex = []() -> R {
         const auto t = yylex();
-        if (t == BADTOKEN)
-            return std::nullopt;
-        return { { t, yylval, yylloc } };
+        return { t, yylval, yylloc };
     };
 
-    const auto lex_scan_for_end = []() -> std::optional<R> {
+    const auto lex_scan_for_end = []() -> R {
         const auto t = scan_for_end();
-        if (t == BADTOKEN)
-            return std::nullopt;
-        return { { t, yylval, yylloc } };
+        return { t, yylval, yylloc };
     };
 
-    const auto lex_closing_bracket = [](char b) -> std::optional<R> {
+    const auto lex_closing_bracket = [](char b) -> R {
         if (!scanForClosingBracket(b))
-            return std::nullopt;
-        return { { b, yylval, yylloc } };
+            return { BADTOKEN, yylval, yylloc };
+        return { b, yylval, yylloc };
     };
 
 
     const auto t1 = lex();
-    if (!t1 || t1->token == 0)
-        return false;
-
-    if (t1->token != CLASSNAME && t1->token != '+') {
-        compileErrors++;
-        post("Expected class name or '+'.  got token: %d\n", t1->token);
-        // postErrorLine(lineno, linepos, charno);
+    if (t1.token == BADTOKEN) {
+        ++compileErrors;
         return false;
     }
 
-    if (t1->token == '+') {
-        const auto t2 = lex();
-        if (!t2 || t2->token == 0)
-            return false;
+    if (t1.token == 0) // empty file, this is valid.
+        return false;
 
-        const auto e = lex_scan_for_end();
-        if (!e)
-            return false;
+    if (t1.token != CLASSNAME && t1.token != '+') {
+        printError(ErrorType::Parsing, "Expected class definition or an extentsion class", **getActiveCodePointStream(),
+                   { { t1.location, "Expected a classname token or '+'" } }, fileSym->name);
+        compileErrors++;
+        return false;
+    }
 
+    if (t1.token == '+') {
         // Mark file as being a class extention file and leave.
         // The grammar means there are no more classes after this point.
         const auto end = lex_scan_for_end();
-        if (!end)
-            return false;
-        const auto ext_range = t1->location.span_to(end->location);
+        if (end.token != 0)
+            return false; // if there are invalid tokens, then the end of the line is not returned. These errors should
+                          // be printed by the lexer.
+
+        const auto ext_range = t1.location.span_to(end.location);
         newClassExtFile(fileSym, (*getActiveCodePointStream())->source_to_file(ext_range));
         return false;
     }
 
-    const auto classname = t1->semantic_value.slotNode->mSlot.getSymbol();
+    const auto classname = t1.semantic_value.slotNode->mSlot.getSymbol();
     PyrSymbol* superclassname { classname == s_object ? s_none : s_object };
 
     auto rolling_token = lex();
-    if (!rolling_token || rolling_token->token == 0)
-        return false;
 
-    if (rolling_token->token == '[') {
+
+    if (rolling_token.token == '[') {
         const auto closing_b = lex_closing_bracket(']');
-        if (!closing_b)
-            // ERROR: could not find closign bracket.
-            return false;
-
-
-        // carry on.
-        rolling_token = lex();
-        if (!rolling_token || rolling_token->token == 0)
-            return false;
-    }
-
-    if (rolling_token->token == ':') {
-        const auto t3 = lex();
-        if (!t3 || t3->token != CLASSNAME) {
-            // ERROR: expecting class name as super class.
+        if (closing_b.token != ']') {
+            printError(ErrorType::Parsing, "Unclosed square bracket in class definition", **getActiveCodePointStream(),
+                       { { rolling_token.location, "Square bracket opened here is not closed." } }, fileSym->name);
             return false;
         }
 
-        superclassname = t3->semantic_value.slotNode->mSlot.getSymbol();
+        // carry on.
         rolling_token = lex();
-        if (!rolling_token || rolling_token->token == 0)
+        if (rolling_token.token == 0) {
+            printError(ErrorType::Parsing, "Missing class definition body", **getActiveCodePointStream(),
+                       { { rolling_token.location, "Expected class definition body here." } }, fileSym->name);
+            compileErrors++;
             return false;
+        }
     }
 
-    if (rolling_token->token != '{') {
-        // ERROR: no body in class def.
+    if (rolling_token.token == ':') {
+        const auto t3 = lex();
+        if (t3.token != CLASSNAME) {
+            printError(ErrorType::Parsing, "Missing super class name", **getActiveCodePointStream(),
+                       { { rolling_token.location, "Expected a class name here." } }, fileSym->name);
+            compileErrors++;
+            return false;
+        }
+
+        superclassname = t3.semantic_value.slotNode->mSlot.getSymbol();
+        rolling_token = lex();
+        if (rolling_token.token == 0) {
+            printError(ErrorType::Parsing, "Missing class definition body", **getActiveCodePointStream(),
+                       { { rolling_token.location, "Expected class definition body here." } }, fileSym->name);
+            compileErrors++;
+            return false;
+        }
+    }
+
+    if (rolling_token.token != '{') {
+        printError(ErrorType::Parsing, "Missing class definition body", **getActiveCodePointStream(),
+                   { { rolling_token.location, "Expected a '{' here." } }, fileSym->name);
+        compileErrors++;
         return false;
     }
 
     const auto closing_b = lex_closing_bracket('}');
-    if (!closing_b) {
-        // ERROR: could not find closing bracket.
+    if (closing_b.token != '}') {
+        printError(ErrorType::Parsing, "Unclosed curly bracket in class definition", **getActiveCodePointStream(),
+                   { { rolling_token.location, "Curly bracket opened here is not closed." } }, fileSym->name);
+        compileErrors++;
         return false;
     }
 
-    const sc::lex::SourceCodeRange loc = t1->location.span_to(closing_b->location);
+    const sc::lex::SourceCodeRange loc = t1.location.span_to(closing_b.location);
     const sc::lex::CodePointStream& cps = **getActiveCodePointStream();
     const sc::lex::FileCodeRange loc_in_file = cps.source_to_file(loc);
     newClassDependancy(classname, superclassname, fileSym, loc_in_file);
