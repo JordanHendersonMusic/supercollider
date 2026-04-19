@@ -118,13 +118,12 @@ template <typename CRTP> struct TextLocationLocation {
 
     std::size_t absolute { 0 }; // Offset as a byte index into the text.
     std::size_t lineNumber { 0 }; // Zero indexed, first line is zero.
-    std::size_t column {
-        0
-    }; // Codepoint count, note, this is currently broken and doesn't work with multicodepoint graphemes.
+    std::size_t column { 0 };
+    // Codepoint count, note, this is currently broken and doesn't work with multicodepoint graphemes.
 };
 
 // A range of points in some text.
-template <typename POINT> struct TextLocationRange {
+template <typename POINT, typename CRTP> struct TextLocationRange {
     using Point = POINT;
     TextLocationRange() noexcept = default;
     constexpr TextLocationRange(Point begin, Point end) noexcept: begin(begin), end(end) {}
@@ -135,10 +134,8 @@ template <typename POINT> struct TextLocationRange {
 
     [[nodiscard]] constexpr auto size() const { return end.absolute - begin.absolute; }
     [[nodiscard]] constexpr auto line_count() const { return (end.lineNumber - begin.lineNumber) + 1; }
-    [[nodiscard]] constexpr static TextLocationRange range(TextLocationRange left, TextLocationRange right) {
-        return { left.begin, right.end };
-    }
 
+    [[nodiscard]] constexpr CRTP span_to(CRTP other) const { return { begin, other.end }; }
     Point begin, end;
 };
 
@@ -156,13 +153,13 @@ struct FileCodeLocation : public details::TextLocationLocation<FileCodeLocation>
     using TextLocationLocation::TextLocationLocation;
 };
 
-struct SourceCodeRange : details::TextLocationRange<SourceCodeLocation> {
-    using TextLocationRange<SourceCodeLocation>::TextLocationRange;
-    using TextLocationRange<SourceCodeLocation>::operator=;
+struct SourceCodeRange : details::TextLocationRange<SourceCodeLocation, SourceCodeRange> {
+    using TextLocationRange<SourceCodeLocation, SourceCodeRange>::TextLocationRange;
+    using TextLocationRange<SourceCodeLocation, SourceCodeRange>::operator=;
 };
-struct FileCodeRange : details::TextLocationRange<FileCodeLocation> {
-    using TextLocationRange<FileCodeLocation>::TextLocationRange;
-    using TextLocationRange<FileCodeLocation>::operator=;
+struct FileCodeRange : details::TextLocationRange<FileCodeLocation, FileCodeRange> {
+    using TextLocationRange<FileCodeLocation, FileCodeRange>::TextLocationRange;
+    using TextLocationRange<FileCodeLocation, FileCodeRange>::operator=;
 };
 
 
@@ -235,10 +232,11 @@ inline constexpr CodePoint ascii_to_codepoint(char c) {
 //    call should_leave_cmd_initial to see if this should be returned.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class CodePointStream {
-    // The first time we enter cmd mode, we must return Interpret.
     enum struct Mode { ClassLibrary, CMDInitial, CMDContinue };
 
 public:
+    // The first time we enter cmd mode, we must return Interpret.
+
     template <size_t N> struct Peek {
         template <size_t M> [[nodiscard]] constexpr Peek<M> shrink_to() const noexcept;
         [[nodiscard]] constexpr CodePoint operator[](size_t n) const noexcept;
@@ -1157,18 +1155,8 @@ template <typename Predicate> inline SourceCodeLocation CodePointStream::advance
 }
 
 [[nodiscard]] inline FileCodeLocation CodePointStream::source_to_file(const SourceCodeLocation& source) const {
-    const auto file_begin_abs = source.absolute - source_start_in_file.absolute;
-    const auto file_begin_line_number = [&]() -> int {
-        for (int l { 0 }; l < abs_new_line_locations.size(); ++l) {
-            if (abs_new_line_locations[l] <= file_begin_abs) {
-                return l;
-            }
-        }
-        return static_cast<int>(abs_new_line_locations.size()) - 1;
-    }();
-    const auto abs_start_of_line = abs_new_line_locations[file_begin_line_number];
-    const auto offset_in_line = file_begin_abs - abs_start_of_line;
-    return { file_begin_abs, abs_start_of_line, offset_in_line };
+    return { source.absolute + source_start_in_file.absolute, source_start_in_file.lineNumber + source.lineNumber,
+             source.lineNumber == 0 ? source_start_in_file.column + source.column : source.column };
 }
 
 [[nodiscard]] inline std::tuple<SourceCodeLocation, CodePoint> CodePointStream::start_token() {

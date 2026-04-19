@@ -167,7 +167,7 @@ struct PyrMethod : public PyrBlock {
     // PyrSlot callMeter;
 };
 
-enum {
+enum MethodType : unsigned short {
     methNormal = 0,
     methReturnSelf,
     methReturnLiteral,

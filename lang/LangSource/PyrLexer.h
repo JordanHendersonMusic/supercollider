@@ -23,23 +23,25 @@
 
 #include "PyrSymbol.h"
 #include "SC_Export.h"
+#include "lexer.hpp"
 #include <filesystem>
+#include <optional>
 
 // These are set
 extern bool gCompilingCmdLine;
 extern PyrSymbol* gCompilingFileSym;
 extern char* gCompilingText;
-extern intptr_t gParserResult;
+
+// Only valid after startLexer* and before finiLexer.
+// Is not nullptr
+std::optional<sc::lex::CodePointStream* const> getActiveCodePointStream();
 
 // This is set when calling yyparse.
 extern int gParseFailed;
 extern bool gCompiledOK;
 
 // The following globals are to be removed.
-extern int charno, lineno, linepos;
-extern int* linestarts;
 extern int lastClosedFuncCharNo;
-extern intptr_t zzval;
 
 
 struct FatalInterpreterError : public std::runtime_error {
@@ -53,15 +55,17 @@ SCLANG_DLLEXPORT_C void runLibrary(PyrSymbol* selector);
 void startLexerCmdLine(char* textbuf, int textbuflen);
 void startLexerForTestingClassLib(PyrSymbol* file_name_with_src);
 
+// Must not be called until all compilation has finished.
 void finiLexer();
+
+void printErrorLine(const sc::lex::CodePointStream& char_stream, sc::lex::SourceCodeRange r,
+                    const char* short_description = nullptr);
 
 int yylex();
 void yyerror(const char* s);
 void fatal();
 
 std::filesystem::path relativeToCompileDir(const std::filesystem::path&);
-
-void postErrorLine(int linenum, int start, int charpos);
 
 int rtf2txt(char* txt);
 int html2txt(char* txt);

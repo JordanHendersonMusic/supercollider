@@ -20,10 +20,7 @@
 
 #include "SCBase.h"
 #include "PyrParseNode.h"
-#include "PyrLexer.h"
 #include "PyrKernel.h"
-#include "Opcodes.h"
-#include "PyrPrimitive.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -43,11 +40,11 @@ void dumpNodeList(PyrParseNode* node) {
 void PyrCurryArgNode::dump(int level) { postfl("%2d CurryArg %d\n", level, mArgNum); }
 
 void PyrSlotNode::dump(int level) {
-    if (mClassno == pn_PushLitNode)
+    if (mClassno == PyrParseNodeType::PushLitNode)
         dumpPushLit(level);
-    else if (mClassno == pn_PushNameNode)
+    else if (mClassno == PyrParseNodeType::PushNameNode)
         postfl("%2d PushName '%s'\n", level, slotRawSymbol(&mSlot)->name);
-    else if (mClassno == pn_LiteralNode)
+    else if (mClassno == PyrParseNodeType::LiteralNode)
         dumpLiteral(level);
     else {
         postfl("%2d SlotNode\n", level);

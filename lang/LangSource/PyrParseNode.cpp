@@ -20,6 +20,7 @@
 
 #include "PyrObject.h"
 #include "PyrSlot.h"
+#include "PyrSymbol.h"
 #include "SCBase.h"
 #include "PyrParseNode.h"
 #include "PyrLexer.h"
@@ -47,6 +48,177 @@ namespace fs = std::filesystem;
 
 using namespace Opcode;
 
+// Takes code like...
+// ```
+// var a, b, c;
+// var d, e, f;
+// ```
+// and turns into into one var list of `var a, b, c, d, e, f`.
+PyrVarListNode* joinVarLists(PyrVarListNode* varlist) {
+    if (varlist) {
+        PyrVarListNode* prevvarlist;
+        // find end of this list
+        auto vardef = varlist->mVarDefs;
+        auto lastvardef = (PyrVarDefNode*)vardef->mTail;
+        prevvarlist = varlist;
+        varlist = (PyrVarListNode*)varlist->mNext;
+
+        for (; varlist; varlist = (PyrVarListNode*)varlist->mNext) {
+            vardef = varlist->mVarDefs;
+            lastvardef->mNext = (PyrParseNode*)vardef;
+
+            // find end of this list
+            lastvardef = (PyrVarDefNode*)vardef->mTail;
+        }
+    }
+    return varlist;
+}
+
+PyrParseNode::PyrParseNode(Tag, PyrParseNodeType classno, Location loc):
+    mNext(nullptr),
+    mTail(this),
+    location(loc),
+    mClassno(classno) {}
+
+PyrSlotNode::PyrSlotNode(Tag t, Location loc, PyrSlot s, PyrParseNodeType subtype):
+    PyrParseNode(t, subtype, loc),
+    mSlot(s) {
+    assert(subtype == types[0] || subtype == types[1] || subtype == types[2] || subtype == types[3]);
+}
+
+PyrCurryArgNode::PyrCurryArgNode(Tag t, Location loc): PyrParseNode(t, PyrParseNodeType::CurryArgNode, loc) {}
+
+PyrClassExtNode::PyrClassExtNode(Tag t, Location l, PyrSlotNode* classname, struct PyrMethodNode* methods):
+    PyrParseNode(t, PyrParseNodeType::ClassExtNode, l),
+    mClassName(classname),
+    mMethods(methods) {}
+
+PyrClassNode::PyrClassNode(Tag t, Location l, struct PyrSlotNode* mClassName, struct PyrSlotNode* mSuperClassName,
+                           struct PyrSlotNode* mIndexType, struct PyrVarListNode* mVarlists,
+                           struct PyrMethodNode* mMethods):
+    PyrParseNode(t, PyrParseNodeType::ClassNode, l),
+    mClassName(mClassName),
+    mSuperClassName(mSuperClassName),
+    mIndexType(mIndexType),
+    mVarlists(mVarlists),
+    mMethods(mMethods) {}
+
+PyrMethodNode::PyrMethodNode(Tag t, Location l, PyrSlotNode* mMethodName, PyrSlotNode* mPrimitiveName,
+                             struct PyrArgListNode* mArglist, struct PyrVarListNode* mVarlist_in, PyrParseNode* mBody,
+                             bool mIsClassMethod, bool mExtension):
+    PyrParseNode(t, PyrParseNodeType::MethodNode, l),
+    mMethodName(mMethodName),
+    mPrimitiveName(mPrimitiveName),
+    mArglist(mArglist),
+    mVarlist(mVarlist_in),
+    mBody(mBody),
+    mIsClassMethod(mIsClassMethod),
+    mExtension(mExtension) {
+    joinVarLists(mVarlist);
+}
+
+PyrVarListNode::PyrVarListNode(Tag t, Location l, struct PyrVarDefNode* mVarDefs, int mFlags):
+    PyrParseNode(t, PyrParseNodeType::VarListNode, l),
+    mVarDefs(mVarDefs),
+    mFlags(mFlags) {}
+
+PyrVarDefNode::PyrVarDefNode(Tag t, Location l, PyrSlotNode* mVarName, PyrParseNode* mDefVal,
+                             ReadWriteAccessor accessor):
+    PyrParseNode(t, PyrParseNodeType::VarDefNode, l),
+    mVarName(mVarName),
+    mDefVal(mDefVal),
+    accessor(accessor) {}
+
+PyrCallNodeBase::PyrCallNodeBase(Tag t, Location l, PyrParseNodeType classno): PyrParseNode(t, classno, l) {}
+
+PyrCallNodeBase2::PyrCallNodeBase2(Tag tg, Location l, PyrParseNodeType t, PyrSlotNode* mSelector,
+                                   PyrParseNode* mArglist, PyrParseNode* mKeyarglist):
+    PyrCallNodeBase(tg, l, t),
+    mSelector(mSelector),
+    mArglist(mArglist),
+    mKeyarglist(mKeyarglist) {}
+
+PyrCallNode::PyrCallNode(Tag t, Location l, PyrSlotNode* mSelector, PyrParseNode* mArglist, PyrParseNode* mKeyarglist):
+    PyrCallNodeBase2(t, l, PyrParseNodeType::CallNode, mSelector, mArglist, mKeyarglist) {}
+
+PyrBinopCallNode::PyrBinopCallNode(Tag t, Location l, PyrSlotNode* mSelector, PyrParseNode* arglist):
+    PyrCallNodeBase2(t, l, PyrParseNodeType::BinopCallNode, mSelector, arglist, nullptr) {}
+
+PyrSetterNode::PyrSetterNode(Tag t, Location l, PyrSlotNode* mSelector, PyrParseNode* mExpr1, PyrParseNode* mExpr2):
+    PyrCallNodeBase(t, l, PyrParseNodeType::SetterNode),
+    mSelector(mSelector),
+    mExpr1(mExpr1),
+    mExpr2(mExpr2) {}
+
+PyrDynListNode::PyrDynListNode(Tag t, Location l, PyrParseNode* mClassname, PyrParseNode* mElems):
+    PyrCallNodeBase(t, l, PyrParseNodeType::DynListNode),
+    mClassname(mClassname),
+    mElems(mElems) {}
+
+PyrDynDictNode::PyrDynDictNode(Tag t, Location l, PyrParseNode* mElems):
+    PyrCallNodeBase(t, l, PyrParseNodeType::DynDictNode),
+    mElems(mElems) {}
+
+PyrDropNode::PyrDropNode(Tag t, Location l, PyrParseNode* e1, PyrParseNode* e2):
+    PyrParseNode(t, PyrParseNodeType::DropNode, l),
+    mExpr1(e1),
+    mExpr2(e2) {}
+
+PyrPushKeyArgNode::PyrPushKeyArgNode(Tag t, Location l, PyrSlotNode* mSelector, PyrParseNode* mExpr):
+    PyrParseNode(t, PyrParseNodeType::PushKeyArgNode, l),
+    mSelector(mSelector),
+    mExpr(mExpr) {}
+
+PyrReturnNode::PyrReturnNode(Tag t, Location l, PyrParseNode* mExpr):
+    PyrParseNode(t, PyrParseNodeType::ReturnNode, l),
+    mExpr(mExpr) {}
+
+PyrBlockReturnNode::PyrBlockReturnNode(Tag t, Location l, PyrParseNode* mExpr):
+    PyrParseNode(t, PyrParseNodeType::BlockReturnNode, l),
+    mExpr(mExpr) {}
+
+PyrAssignNode::PyrAssignNode(Tag t, Location l, PyrSlotNode* mVarName, PyrParseNode* mExpr):
+    PyrParseNode(t, PyrParseNodeType::AssignNode, l),
+    mVarName(mVarName),
+    mExpr(mExpr) {}
+
+PyrMultiAssignNode::PyrMultiAssignNode(Tag t, Location l, struct PyrMultiAssignVarListNode* mVarList,
+                                       PyrParseNode* mExpr):
+    PyrParseNode(t, PyrParseNodeType::MultiAssignNode, l),
+    mVarList(mVarList),
+    mExpr(mExpr) {}
+
+PyrMultiAssignVarListNode::PyrMultiAssignVarListNode(Tag t, Location l, PyrSlotNode* mVarNames, PyrSlotNode* mRest):
+    PyrParseNode(t, PyrParseNodeType::MultiAssignVarListNode, l),
+    mVarNames(mVarNames),
+    mRest(mRest) {}
+
+PyrBlockNode::PyrBlockNode(Tag t, Location l, struct PyrArgListNode* mArglist, struct PyrVarListNode* mVarlist_in,
+                           PyrParseNode* mBody, bool mIsTopLevel):
+    PyrParseNode(t, PyrParseNodeType::BlockNode, l),
+    mArglist(mArglist),
+    mVarlist(mVarlist_in),
+    mBody(mBody),
+    mIsTopLevel(mIsTopLevel) {
+    joinVarLists(mVarlist);
+}
+
+PyrArgListNode::PyrArgListNode(Tag t, Location l, struct PyrVarDefNode* mVarDefs, PyrSlotNode* mRest,
+                               PyrSlotNode* mKeywordArgs):
+    PyrParseNode(t, PyrParseNodeType::ArgListNode, l),
+    mVarDefs(mVarDefs),
+    mRest(mRest),
+    mKeywordArgs(mKeywordArgs) {}
+
+PyrLitListNode::PyrLitListNode(Tag t, Location l, PyrParseNode* mClassname, PyrParseNode* mElems):
+    PyrParseNode(t, PyrParseNodeType::LitListNode, l),
+    mClassname(mClassname),
+    mElems(mElems) {}
+
+
+extern bool gCompilingCmdLine;
+
+
 AdvancingAllocPool gParseNodePool;
 int gNumUninlinedFunctions = 0;
 
@@ -57,8 +229,7 @@ PyrSymbol* gSpecialClasses[op_NumSpecialClasses];
 SpecialValuesStruct gSpecialValues;
 SpecialNumberStruct gSpecialNumbers;
 
-PyrParseNode* gRootParseNode;
-intptr_t gParserResult;
+PyrParseNode* gRootParseNode = nullptr;
 
 int conjureConstantIndex(PyrParseNode* node, PyrBlock* func, PyrSlot* slot);
 void compilePushConstant(PyrParseNode* node, PyrSlot* slot);
@@ -89,21 +260,6 @@ std::string overwriteMsg;
 extern bool gCompilingCmdLine;
 extern int errLineOffset, errCharPosOffset;
 
-const char* nodename[] = { "ClassNode", "ClassExtNode", "MethodNode", "BlockNode", "SlotNode",
-
-                           /* variable declarations */
-                           "VarListNode", "VarDefNode", "DynDictNode", "DynListNode", "LitListNode", "LitDictNode",
-
-                           "StaticVarListNode", "InstVarListNode", "PoolVarListNode", "ArgListNode", "SlotDefNode",
-
-                           /* selectors */
-                           "LiteralNode",
-
-                           /* code */
-                           "PushLitNode", "PushNameNode", "PushKeyArgNode", "CallNode", "BinopCallNode", "DropNode",
-                           "AssignNode", "MultiAssignNode", "MultiAssignVarListNode", "SetterNode", "CurryArgNode",
-
-                           "ReturnNode", "BlockReturnNode" };
 
 void emitCompilerErrorFromVersion(SemanticVersion version) {
     if (SC_Version >= version) {
@@ -141,7 +297,7 @@ bool isWhileTrue(PyrParseNode* node);
 void installByteCodes(PyrBlock* block);
 
 void compilePyrMethodNode(PyrMethodNode* node, PyrSlot* result);
-void compilePyrLiteralNode(PyrLiteralNode* node, PyrSlot* result);
+void compilePyrLiteralNode(PyrSlotNode* node, PyrSlot* result);
 
 PyrClass* getNodeSuperclass(PyrClassNode* node);
 void countNodeMethods(PyrClassNode* node, int* numClassMethods, int* numInstMethods);
@@ -164,8 +320,8 @@ int compareCallArgs(PyrMethodNode* node, PyrCallNode* cnode, int* varIndex, PyrC
 bool findSpecialClassName(PyrSymbol* className, int* index);
 int getIndexType(PyrClassNode* classnode);
 
-ByteCodes compileSubExpression(PyrPushLitNode* litnode, bool onTailBranch);
-ByteCodes compileSubExpressionWithGoto(PyrPushLitNode* litnode, int branchLen, bool onTailBranch);
+ByteCodes compileSubExpression(PyrSlotNode* litnode, bool onTailBranch);
+ByteCodes compileSubExpressionWithGoto(PyrSlotNode* litnode, int branchLen, bool onTailBranch);
 ByteCodes compileBodyWithGoto(PyrParseNode* body, int branchLen, bool onTailBranch);
 
 
@@ -197,9 +353,6 @@ void initParser() {
     overwriteMsg.clear();
 }
 
-void finiParser() {}
-
-void initParseNodes() {}
 
 void initParserPool() {
     // postfl("initPool gParseNodePool pyr_pool_compile\n");
@@ -211,14 +364,6 @@ void freeParserPool() {
     gParseNodePool.FreeAll();
 }
 
-PyrParseNode::PyrParseNode(int inClassNo) {
-    mClassno = inClassNo;
-    mNext = nullptr;
-    mTail = this;
-    mCharno = ::charno;
-    mLineno = ::lineno;
-    mParens = 0;
-}
 
 void compileNodeList(PyrParseNode* node, bool onTailBranch) {
     PyrSlot dummy;
@@ -231,11 +376,12 @@ void compileNodeList(PyrParseNode* node, bool onTailBranch) {
     // postfl("<-compileNodeList\n");
 }
 
-void nodePostErrorLine(PyrParseNode* node) { postErrorLine(node->mLineno, linestarts[node->mLineno], node->mCharno); }
-
-PyrPushNameNode* newPyrPushNameNode(PyrSlotNode* slotNode) {
-    slotNode->mClassno = pn_PushNameNode;
-    return (PyrPushNameNode*)slotNode;
+void printErrorLine(PyrParseNode* node, const char* short_description) {
+    const auto cps = getActiveCodePointStream();
+    assert(cps);
+    if (!cps)
+        return; // this is probably an error. Fail silently.
+    printErrorLine(**cps, node->location, short_description);
 }
 
 
@@ -268,7 +414,7 @@ void compilePushVar(PyrParseNode* node, PyrSymbol* varName) {
     if (std::isupper(varName->name[0])) {
         if (gCompilingCmdLine && varName->u.classobj == nullptr) {
             error("Class not defined.\n");
-            nodePostErrorLine(node);
+            printErrorLine(node);
             compileErrors++;
         } else if (const auto specialClass = findSpecialClassFromName(varName)) {
             PushSpecialClass.emit(Operands::SpecialClass { *specialClass });
@@ -329,14 +475,9 @@ void compilePushVar(PyrParseNode* node, PyrSymbol* varName) {
         }
     } else {
         error("Variable '%s' not defined.\n", varName->name);
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
     }
-}
-
-PyrCurryArgNode* newPyrCurryArgNode() {
-    PyrCurryArgNode* node = ALLOCNODE(PyrCurryArgNode);
-    return node;
 }
 
 void PyrCurryArgNode::compile(PyrSlot* result) {
@@ -344,40 +485,27 @@ void PyrCurryArgNode::compile(PyrSlot* result) {
         PushTempZeroVar.emit(mArgNum);
     } else {
         error("found _ argument outside of a call.\n");
-        nodePostErrorLine((PyrParseNode*)this);
+        printErrorLine((PyrParseNode*)this);
         compileErrors++;
     }
 }
 
-PyrSlotNode* newPyrSlotNode(PyrSlot* slot) { return newPyrSlotNode(*slot); }
-PyrSlotNode* newPyrSlotNode(PyrSlot slot) {
-    PyrSlotNode* node = ALLOCNODE(PyrSlotNode);
-    node->mSlot = slot;
-    return node;
-}
 
 void PyrSlotNode::compile(PyrSlot* result) {
-    if (mClassno == pn_LiteralNode)
+    if (mClassno == PyrParseNodeType::LiteralNode)
         compileLiteral(result);
-    else if (mClassno == pn_PushLitNode)
+    else if (mClassno == PyrParseNodeType::PushLitNode)
         compilePushLit(result);
-    else if (mClassno == pn_PushNameNode)
+    else if (mClassno == PyrParseNodeType::PushNameNode)
         compilePushVar((PyrParseNode*)this, slotRawSymbol(&mSlot));
     else {
         error("compilePyrSlotNode: shouldn't get here.\n");
         dumpObjectSlot(&mSlot);
-        nodePostErrorLine((PyrParseNode*)this);
+        printErrorLine((PyrParseNode*)this);
         compileErrors++;
     }
 }
 
-PyrClassExtNode* newPyrClassExtNode(PyrSlotNode* className, PyrMethodNode* methods) {
-    PyrClassExtNode* node = ALLOCNODE(PyrClassExtNode);
-    node->mClassName = className;
-
-    node->mMethods = methods;
-    return node;
-}
 
 void PyrClassExtNode::compile(PyrSlot* result) {
     PyrClass* classobj = slotRawSymbol(&mClassName->mSlot)->u.classobj;
@@ -405,22 +533,6 @@ void compileExtNodeMethods(PyrClassExtNode* node) {
     gCompilingBlock = nullptr;
     gPartiallyAppliedFunction = nullptr;
     gInliningLevel = 0;
-}
-
-PyrClassNode* newPyrClassNode(PyrSlotNode* className, PyrSlotNode* superClassName, PyrVarListNode* varlists,
-                              PyrMethodNode* methods, PyrSlotNode* indexType) {
-    PyrClassNode* node = ALLOCNODE(PyrClassNode);
-    node->mClassName = className;
-    node->mIndexType = indexType;
-
-    node->mSuperClassName = superClassName;
-    node->mVarlists = varlists;
-    node->mMethods = methods;
-    node->mVarTally[varInst] = 0;
-    node->mVarTally[varClass] = 0;
-    node->mVarTally[varTemp] = 0;
-    node->mVarTally[varConst] = 0;
-    return node;
 }
 
 bool compareVarDefs(PyrClassNode* node, PyrClass* classobj) {
@@ -479,7 +591,7 @@ bool compareVarDefs(PyrClassNode* node, PyrClass* classobj) {
 differExit:
     if (isIntrinsic) {
         error("You may not change variable definitions of intrinsic classes.\n");
-        nodePostErrorLine(errnode);
+        printErrorLine(errnode);
         compileErrors++;
     }
     return true;
@@ -505,17 +617,17 @@ void countClassVarDefs(PyrClassNode* node, int* numClassMethods, int* numInstMet
         for (; vardef; vardef = (PyrVarDefNode*)vardef->mNext) {
             node->mVarTally[type]++;
             if (type == varClass) {
-                if (vardef->mFlags & rwReadOnly) {
+                if (has_read(vardef->accessor)) {
                     *numClassMethods = *numClassMethods + 1;
                 }
-                if (vardef->mFlags & rwWriteOnly) {
+                if (has_write(vardef->accessor)) {
                     *numClassMethods = *numClassMethods + 1;
                 }
             } else if (type == varInst) {
-                if (vardef->mFlags & rwReadOnly) {
+                if (has_read(vardef->accessor)) {
                     *numInstMethods = *numInstMethods + 1;
                 }
-                if (vardef->mFlags & rwWriteOnly) {
+                if (has_write(vardef->accessor)) {
                     *numInstMethods = *numInstMethods + 1;
                 }
             }
@@ -562,7 +674,7 @@ PyrClass* getNodeSuperclass(PyrClassNode* node) {
         if (superclassobj == nullptr) {
             error("Cannot find superclass '%s' for class '%s'\n", slotSymString(&node->mSuperClassName->mSlot),
                   slotSymString(&node->mClassName->mSlot));
-            nodePostErrorLine((PyrParseNode*)node->mSuperClassName);
+            printErrorLine((PyrParseNode*)node->mSuperClassName);
             superclassobj = (PyrClass*)-1;
             compileErrors++;
         }
@@ -575,15 +687,6 @@ PyrClass* getNodeSuperclass(PyrClassNode* node) {
 }
 
 void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* superclassobj) {
-    PyrVarListNode* varlist = nullptr;
-    PyrVarDefNode* vardef = nullptr;
-    PyrSlot *islot = nullptr, *cslot = nullptr, *kslot = nullptr;
-    PyrSymbol **inameslot = nullptr, **cnameslot = nullptr, **knameslot = nullptr;
-    PyrClass* metaclassobj = nullptr;
-    PyrMethod* method = nullptr;
-    PyrMethodRaw* methraw = nullptr;
-    int instVarIndex, classVarIndex;
-
     // copy superclass's prototype to here
     if (superclassobj && NotNil(&superclassobj->iprototype) && slotRawObject(&superclassobj->iprototype)->size) {
         memcpy(slotRawObject(&classobj->iprototype)->slots, slotRawObject(&superclassobj->iprototype)->slots,
@@ -597,200 +700,151 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
         // slotRawObject(&classobj->instVarNames)->size = slotRawObject(&superclassobj->iprototype)->size;
         slotRawObject(&classobj->instVarNames)->size = node->mNumSuperInstVars;
     }
+
     // fill the class' own part of prototypes
-    metaclassobj = classobj->classptr;
-    varlist = node->mVarlists;
+    auto metaclassobj = classobj->classptr;
+    auto varlist = node->mVarlists;
+
+    PyrSlot *iprototype_it = nullptr, *cprototype_it = nullptr, *const_values_it = nullptr;
+    PyrSymbol **inst_var_names_it = nullptr, **class_var_names_it = nullptr, **const_names_it = nullptr;
     if (NotNil(&classobj->iprototype)) {
-        islot = slotRawObject(&classobj->iprototype)->slots + node->mNumSuperInstVars;
+        iprototype_it = slotRawObject(&classobj->iprototype)->slots + node->mNumSuperInstVars;
     }
     if (NotNil(&classobj->cprototype)) {
-        cslot = slotRawObject(&classobj->cprototype)->slots;
+        cprototype_it = slotRawObject(&classobj->cprototype)->slots;
     }
     if (NotNil(&classobj->constValues)) {
-        kslot = slotRawObject(&classobj->constValues)->slots;
+        const_values_it = slotRawObject(&classobj->constValues)->slots;
     }
     if (NotNil(&classobj->instVarNames)) {
-        inameslot = slotRawSymbolArray(&classobj->instVarNames)->symbols + node->mNumSuperInstVars;
+        inst_var_names_it = slotRawSymbolArray(&classobj->instVarNames)->symbols + node->mNumSuperInstVars;
     }
     if (NotNil(&classobj->classVarNames)) {
-        cnameslot = slotRawSymbolArray(&classobj->classVarNames)->symbols;
+        class_var_names_it = slotRawSymbolArray(&classobj->classVarNames)->symbols;
     }
     if (NotNil(&classobj->constNames)) {
-        knameslot = slotRawSymbolArray(&classobj->constNames)->symbols;
+        const_names_it = slotRawSymbolArray(&classobj->constNames)->symbols;
     }
-    instVarIndex = node->mNumSuperInstVars;
-    classVarIndex = 0;
+    auto instVarIndex = node->mNumSuperInstVars;
+    int classVarIndex = 0;
+
+
+    // prepends underscore
+    const auto create_setter_name = [](PyrSymbol* name) {
+        char setterName[256];
+        sprintf(setterName, "%s_", name->name);
+        return getsym(setterName);
+    };
+    // sets up method correctly
+    const auto create_getter_or_setter_method = [](unsigned char num_args, MethodType method_type,
+                                                   unsigned short speical_index, PyrClass* owner_class,
+                                                   PyrSlot method_name, PyrSymbol* file_name, int byte_offset_in_file,
+                                                   std::optional<PyrSlot> selector = std::nullopt) {
+        assert(num_args > 0);
+        auto* method = newPyrMethod();
+        *METHRAW(method) = { 0,
+                             speical_index,
+                             method_type,
+                             0,
+                             0,
+                             num_args,
+                             0,
+                             0,
+                             num_args,
+                             0,
+                             static_cast<unsigned char>(num_args - 1),
+                             num_args };
+        method->contextDef = PyrSlot {};
+        method->varNames = PyrSlot {};
+        method->ownerclass = PyrSlot::make(owner_class);
+        method->name = method_name;
+        method->filenameSym = file_name ? PyrSlot::make(file_name) : PyrSlot {};
+        method->charPos = PyrSlot::make(byte_offset_in_file);
+        if (selector)
+            method->selectors = *selector;
+        return method;
+    };
+
     for (; varlist; varlist = (PyrVarListNode*)varlist->mNext) {
-        int type = varlist->mFlags;
+        const int type = varlist->mFlags;
+        auto vardef = varlist->mVarDefs;
         switch (type) {
-        case varInst:
-            vardef = varlist->mVarDefs;
+        case varInst: {
             for (; vardef; vardef = (PyrVarDefNode*)vardef->mNext) {
                 PyrSlot litslot;
-                compilePyrLiteralNode((PyrLiteralNode*)vardef->mDefVal, &litslot);
-                *islot++ = litslot;
+                compilePyrLiteralNode((PyrSlotNode*)vardef->mDefVal, &litslot);
+                *iprototype_it++ = litslot;
                 slotRawObject(&classobj->iprototype)->size++;
-                *inameslot++ = slotRawSymbol(&vardef->mVarName->mSlot);
+                *inst_var_names_it++ = slotRawSymbol(&vardef->mVarName->mSlot);
                 slotRawSymbolArray(&classobj->instVarNames)->size++;
-                if (vardef->mFlags & rwReadOnly) {
-                    // create getter method
-                    method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
-                    methraw->popSize = 0;
-                    SetNil(&method->contextDef);
-                    SetNil(&method->varNames);
-                    SetObject(&method->ownerclass, classobj);
-                    if (gCompilingFileSym)
-                        SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
-                    slotCopy(&method->name, &vardef->mVarName->mSlot);
-                    methraw->methType = methReturnInstVar;
-                    methraw->specialIndex = instVarIndex;
-                    addMethod(classobj, method);
-                }
-                if (vardef->mFlags & rwWriteOnly) {
-                    char setterName[256];
-                    PyrSymbol* setterSym;
-                    sprintf(setterName, "%s_", slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore = strcpy(setterName, slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore[0] = '_';
-                    // underscore[1] = 0;
-                    setterSym = getsym(setterName);
-                    // create setter method
-                    method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 2;
-                    methraw->numvars = 0;
-                    methraw->posargs = 2;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 2;
-                    methraw->popSize = 1;
-                    SetNil(&method->contextDef);
-                    SetNil(&method->varNames);
-                    SetObject(&method->ownerclass, classobj);
-                    SetSymbol(&method->name, setterSym);
-                    if (gCompilingFileSym)
-                        SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
 
-                    methraw->methType = methAssignInstVar;
-                    methraw->specialIndex = instVarIndex;
-                    addMethod(classobj, method);
+                // create auto getters and setters
+                if (has_read(vardef->accessor)) {
+                    auto* meth = create_getter_or_setter_method(1, methReturnInstVar, instVarIndex, classobj,
+                                                                vardef->mVarName->mSlot, gCompilingFileSym,
+                                                                vardef->mVarName->locationInFile().begin.absolute);
+                    addMethod(classobj, meth);
+                }
+                if (has_write(vardef->accessor)) {
+                    auto* meth = create_getter_or_setter_method(
+                        2, methAssignInstVar, instVarIndex, classobj,
+                        PyrSlot::make(create_setter_name(vardef->mVarName->mSlot.getSymbol())), gCompilingFileSym,
+                        vardef->mVarName->locationInFile().begin.absolute);
+                    addMethod(classobj, meth);
                 }
                 instVarIndex++;
             }
-            break;
-        case varClass:
-            vardef = varlist->mVarDefs;
+        }; break;
+
+
+        case varClass: {
             for (; vardef; vardef = (PyrVarDefNode*)vardef->mNext) {
                 PyrSlot litslot;
-                compilePyrLiteralNode((PyrLiteralNode*)vardef->mDefVal, &litslot);
-                *cslot++ = litslot;
+                compilePyrLiteralNode((PyrSlotNode*)vardef->mDefVal, &litslot);
+                *cprototype_it++ = litslot;
                 slotRawObject(&classobj->cprototype)->size++;
-                *cnameslot++ = slotRawSymbol(&vardef->mVarName->mSlot);
+                *class_var_names_it++ = slotRawSymbol(&vardef->mVarName->mSlot);
                 slotRawSymbolArray(&classobj->classVarNames)->size++;
-                if (vardef->mFlags & rwReadOnly) {
-                    // create getter method
-                    method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
-                    methraw->popSize = 0;
-                    SetNil(&method->contextDef);
-                    SetNil(&method->varNames);
-                    SetObject(&method->ownerclass, metaclassobj);
-                    slotCopy(&method->name, &vardef->mVarName->mSlot);
-                    SetSymbol(&method->selectors, slotRawSymbol(&classobj->name));
-                    if (gCompilingFileSym)
-                        SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
+                if (has_read(vardef->accessor)) {
+                    auto* meth = create_getter_or_setter_method(
+                        1, methReturnClassVar, classVarIndex + classobj->classVarIndex.getInt(), metaclassobj,
+                        vardef->mVarName->mSlot, gCompilingFileSym, vardef->mVarName->locationInFile().begin.absolute,
 
-                    methraw->methType = methReturnClassVar;
-                    methraw->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
-                    addMethod(metaclassobj, method);
+                        classobj->name);
+                    addMethod(metaclassobj, meth);
                 }
-                if (vardef->mFlags & rwWriteOnly) {
-                    char setterName[256];
-                    PyrSymbol* setterSym;
-                    sprintf(setterName, "%s_", slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore = strcpy(setterName, slotRawSymbol(&vardef->mVarName->mSlot)->name);
-                    // underscore[0] = '_';
-                    // underscore[1] = 0;
-                    setterSym = getsym(setterName);
-                    // create setter method
-                    method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->numargs = 2;
-                    methraw->numvars = 0;
-                    methraw->posargs = 2;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 2;
-                    methraw->popSize = 1;
-                    SetNil(&method->contextDef);
-                    SetNil(&method->varNames);
-                    SetObject(&method->ownerclass, metaclassobj);
-                    SetSymbol(&method->name, setterSym);
-                    SetSymbol(&method->selectors, slotRawSymbol(&classobj->name));
-                    if (gCompilingFileSym)
-                        SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
 
-                    methraw->methType = methAssignClassVar;
-                    methraw->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
-                    addMethod(metaclassobj, method);
+                if (has_write(vardef->accessor)) {
+                    auto* meth = create_getter_or_setter_method(
+                        2, methAssignClassVar, classVarIndex + classobj->classVarIndex.getInt(), metaclassobj,
+                        PyrSlot::make(create_setter_name(vardef->mVarName->mSlot.getSymbol())), gCompilingFileSym,
+
+                        vardef->mVarName->locationInFile().begin.absolute, classobj->name);
+                    addMethod(metaclassobj, meth);
                 }
                 classVarIndex++;
             }
-            break;
-        case varConst:
-            vardef = varlist->mVarDefs;
+        }; break;
+
+        case varConst: {
             for (; vardef; vardef = (PyrVarDefNode*)vardef->mNext) {
                 PyrSlot litslot;
-                compilePyrLiteralNode((PyrLiteralNode*)vardef->mDefVal, &litslot);
-                *kslot++ = litslot;
+                compilePyrLiteralNode((PyrSlotNode*)vardef->mDefVal, &litslot);
+                *const_values_it++ = litslot;
                 slotRawObject(&classobj->constValues)->size++;
-                *knameslot++ = slotRawSymbol(&vardef->mVarName->mSlot);
+                *const_names_it++ = slotRawSymbol(&vardef->mVarName->mSlot);
                 slotRawSymbolArray(&classobj->constNames)->size++;
-                if (vardef->mFlags & rwReadOnly) {
-                    // create getter method
-                    method = newPyrMethod();
-                    methraw = METHRAW(method);
-                    methraw->unused1 = 0;
-                    methraw->unused2 = 0;
-                    methraw->numargs = 1;
-                    methraw->numvars = 0;
-                    methraw->posargs = 1;
-                    methraw->varargs = 0;
-                    methraw->numtemps = 1;
-                    methraw->popSize = 0;
-                    SetNil(&method->contextDef);
-                    SetNil(&method->varNames);
-                    SetObject(&method->ownerclass, metaclassobj);
-                    slotCopy(&method->name, &vardef->mVarName->mSlot);
-                    if (gCompilingFileSym)
-                        SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
+                if (has_read(vardef->accessor)) {
+                    auto* meth = create_getter_or_setter_method(1, methReturnLiteral, 0, metaclassobj,
+                                                                vardef->mVarName->mSlot, gCompilingFileSym,
 
-                    methraw->methType = methReturnLiteral;
-                    slotCopy(&method->selectors, &litslot);
-                    addMethod(metaclassobj, method);
+                                                                vardef->mVarName->locationInFile().begin.absolute,
+
+                                                                litslot);
+                    addMethod(metaclassobj, meth);
                 }
             }
-            break;
+        }; break;
         }
     }
 
@@ -815,7 +869,7 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     const auto varName = def->mVarName->mSlot;
                     assert(varName.isSymbol());
                     if (varName.getSymbol() == duplicate) {
-                        nodePostErrorLine(def->mVarName);
+                        printErrorLine(def->mVarName);
                         return;
                     }
                 }
@@ -825,7 +879,7 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
         // In this case, the duplicate was in the parent class.
         // Since that has to be fixed anyway, and the location has already been printed, let's not print it twice.
         post("Duplicate found in superclass %s.\n", node->mSuperClassName->mSlot.getSymbol()->name);
-        nodePostErrorLine(node->mClassName);
+        printErrorLine(node->mClassName);
     };
 
     if (const auto duplicate = findDuplicateName(slotRawSymbolArray(&classobj->instVarNames))) {
@@ -941,13 +995,13 @@ void PyrClassNode::compile(PyrSlot* result) {
                 if (superclassesDiffer) {
                     error("Superclass of '%s' does not match intrinsic definition.\n",
                           slotRawSymbol(&mClassName->mSlot)->name);
-                    nodePostErrorLine((PyrParseNode*)(mSuperClassName ? mSuperClassName : mClassName));
+                    printErrorLine((PyrParseNode*)(mSuperClassName ? mSuperClassName : mClassName));
                     compileErrors++;
                 }
                 if (indexTypesDiffer) {
                     error("Index type of '%s' does not match intrinsic definition.\n",
                           slotRawSymbol(&mClassName->mSlot)->name);
-                    nodePostErrorLine((indexType ? (PyrParseNode*)mIndexType : (PyrParseNode*)mClassName));
+                    printErrorLine((indexType ? (PyrParseNode*)mIndexType : (PyrParseNode*)mClassName));
                     compileErrors++;
                 }
                 error("Class '%s' declaration doesn't match intrinsic definition.\n",
@@ -1001,9 +1055,9 @@ void PyrClassNode::compile(PyrSlot* result) {
     gCurrentMetaClass = metaclassobj;
     if (gCompilingFileSym) {
         SetSymbol(&classobj->filenameSym, gCompilingFileSym);
-        SetInt(&classobj->charPos, linestarts[mClassName->mLineno] + errCharPosOffset);
+        SetInt(&classobj->charPos, mClassName->location.begin.absolute);
         SetSymbol(&metaclassobj->filenameSym, gCompilingFileSym);
-        SetInt(&metaclassobj->charPos, linestarts[mClassName->mLineno] + errCharPosOffset);
+        SetInt(&metaclassobj->charPos, mClassName->location.begin.absolute);
     } else {
         SetNil(&classobj->filenameSym);
         SetNil(&metaclassobj->filenameSym);
@@ -1023,62 +1077,25 @@ void PyrClassNode::compile(PyrSlot* result) {
 
 void recompileSubclasses(PyrClass* classobj) {}
 
-
-void catVarLists(PyrVarListNode* varlist);
-void catVarLists(PyrVarListNode* varlist) {
-    PyrVarListNode* prevvarlist;
-    PyrVarDefNode *vardef, *lastvardef;
-
-    if (varlist) {
-        // find end of this list
-        vardef = varlist->mVarDefs;
-        lastvardef = (PyrVarDefNode*)vardef->mTail;
-        prevvarlist = varlist;
-        varlist = (PyrVarListNode*)varlist->mNext;
-
-        for (; varlist; varlist = (PyrVarListNode*)varlist->mNext) {
-            vardef = varlist->mVarDefs;
-            lastvardef->mNext = (PyrParseNode*)vardef;
-
-            // find end of this list
-            lastvardef = (PyrVarDefNode*)vardef->mTail;
-        }
-    }
-}
-
-PyrMethodNode* newPyrMethodNode(PyrSlotNode* methodName, PyrSlotNode* primitiveName, PyrArgListNode* arglist,
-                                PyrVarListNode* varlist, PyrParseNode* body, int isClassMethod) {
-    PyrMethodNode* node = ALLOCNODE(PyrMethodNode);
-    node->mMethodName = methodName;
-    node->mPrimitiveName = primitiveName;
-    node->mArglist = arglist;
-    catVarLists(varlist);
-    node->mVarlist = varlist;
-    node->mBody = body;
-    node->mIsClassMethod = isClassMethod;
-    return node;
-}
-
 enum { push_Normal, push_AllArgs, push_AllButFirstArg, push_AllButFirstArg2 };
 
-int checkPushAllArgs(PyrParseNode* actualArg, int numArgs);
 int checkPushAllArgs(PyrParseNode* actualArg, int numArgs) {
     PyrBlock* block;
-    PyrPushNameNode* nameNode;
+    PyrSlotNode* nameNode;
     block = gCompilingBlock;
     int i;
 
     // if (strcmp("ar", slotRawSymbol(&gCompilingMethod->name)->name)==0) Debugger();
-    if (actualArg->mClassno != pn_PushNameNode) {
+    if (actualArg->mClassno != PyrParseNodeType::PushNameNode) {
         if (numArgs < 3) {
             return push_Normal;
         }
         actualArg = actualArg->mNext;
         for (i = 1; i < numArgs; ++i) {
-            if (actualArg->mClassno != pn_PushNameNode) {
+            if (actualArg->mClassno != PyrParseNodeType::PushNameNode) {
                 return push_Normal;
             }
-            nameNode = (PyrPushNameNode*)actualArg;
+            nameNode = (PyrSlotNode*)actualArg;
             if (slotRawSymbol(&nameNode->mSlot) != slotRawSymbolArray(&block->argNames)->symbols[i]) {
                 return push_Normal;
             }
@@ -1089,10 +1106,10 @@ int checkPushAllArgs(PyrParseNode* actualArg, int numArgs) {
 
     } else {
         for (i = 0; i < numArgs; ++i) {
-            if (actualArg->mClassno != pn_PushNameNode) {
+            if (actualArg->mClassno != PyrParseNodeType::PushNameNode) {
                 return push_Normal;
             }
-            nameNode = (PyrPushNameNode*)actualArg;
+            nameNode = (PyrSlotNode*)actualArg;
             if (slotRawSymbol(&nameNode->mSlot) != slotRawSymbolArray(&block->argNames)->symbols[i]) {
                 return push_Normal;
             }
@@ -1103,10 +1120,9 @@ int checkPushAllArgs(PyrParseNode* actualArg, int numArgs) {
 }
 
 
-int checkPushAllButFirstTwoArgs(PyrParseNode* actualArg, int numArgs);
 int checkPushAllButFirstTwoArgs(PyrParseNode* actualArg, int numArgs) {
     PyrBlock* block;
-    PyrPushNameNode* nameNode;
+    PyrSlotNode* nameNode;
     block = gCompilingBlock;
     int i;
 
@@ -1114,10 +1130,10 @@ int checkPushAllButFirstTwoArgs(PyrParseNode* actualArg, int numArgs) {
         actualArg = actualArg->mNext;
         actualArg = actualArg->mNext;
         for (i = 1; i < numArgs; ++i) {
-            if (actualArg->mClassno != pn_PushNameNode) {
+            if (actualArg->mClassno != PyrParseNodeType::PushNameNode) {
                 return push_Normal;
             }
-            nameNode = (PyrPushNameNode*)actualArg;
+            nameNode = (PyrSlotNode*)actualArg;
             if (slotRawSymbol(&nameNode->mSlot) != slotRawSymbolArray(&block->argNames)->symbols[i]) {
                 return push_Normal;
             }
@@ -1134,7 +1150,7 @@ int compareCallArgs(PyrMethodNode* node, PyrCallNode* cnode, int* varIndex, PyrC
     int special, varType, varLevel;
     PyrParseNode* actualArg;
     PyrVarDefNode* formalArg;
-    PyrPushNameNode* nameNode;
+    PyrSlotNode* nameNode;
 
     // fail if has a rest arg .. too much trouble?
     if (node->mArglist && node->mArglist->mRest) {
@@ -1143,10 +1159,10 @@ int compareCallArgs(PyrMethodNode* node, PyrCallNode* cnode, int* varIndex, PyrC
 
     // check first actual arg is 'this'
     actualArg = cnode->mArglist;
-    if (actualArg->mClassno != pn_PushNameNode) {
+    if (actualArg->mClassno != PyrParseNodeType::PushNameNode) {
         return methNormal;
     }
-    nameNode = (PyrPushNameNode*)actualArg;
+    nameNode = (PyrSlotNode*)actualArg;
     if (slotRawSymbol(&nameNode->mSlot) == s_this) {
         special = methRedirect;
     } else if (slotRawSymbol(&nameNode->mSlot) == s_super) {
@@ -1187,11 +1203,11 @@ int compareCallArgs(PyrMethodNode* node, PyrCallNode* cnode, int* varIndex, PyrC
 
         formalArg = node->mArglist->mVarDefs;
         for (i = 0; i < numActualArgs - 1; ++i) {
-            if (actualArg->mClassno != pn_PushNameNode) {
+            if (actualArg->mClassno != PyrParseNodeType::PushNameNode) {
                 return methNormal;
             }
 
-            nameNode = (PyrPushNameNode*)actualArg;
+            nameNode = (PyrSlotNode*)actualArg;
             if (slotRawSymbol(&nameNode->mSlot) != slotRawSymbol(&formalArg->mVarName->mSlot)) {
                 return methNormal;
             }
@@ -1252,7 +1268,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
     if (oldmethod && !mExtension) {
         error("Method %s:%s already defined.\n", slotRawSymbol(&slotRawClass(&oldmethod->ownerclass)->name)->name,
               slotRawSymbol(&oldmethod->name)->name);
-        nodePostErrorLine((PyrParseNode*)mMethodName);
+        printErrorLine((PyrParseNode*)mMethodName);
         compileErrors++;
         return;
     }
@@ -1291,7 +1307,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
     method->name = mMethodName->mSlot;
     if (gCompilingFileSym)
         SetSymbol(&method->filenameSym, gCompilingFileSym);
-    SetInt(&method->charPos, linestarts[mMethodName->mLineno] + errCharPosOffset);
+    SetInt(&method->charPos, mMethodName->locationInFile().begin.absolute);
     if (mPrimitiveName) {
         hasPrimitive = true;
         method->primitiveName = mPrimitiveName->mSlot;
@@ -1357,7 +1373,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                         error("Argument '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                               slotRawSymbol(&gCompilingClass->name)->name,
                               slotRawSymbol(&gCompilingMethod->name)->name);
-                        nodePostErrorLine((PyrParseNode*)vardef);
+                        printErrorLine((PyrParseNode*)vardef);
                         compileErrors++;
                     }
                 }
@@ -1383,7 +1399,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                         error("Argument '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                               slotRawSymbol(&gCompilingClass->name)->name,
                               slotRawSymbol(&gCompilingMethod->name)->name);
-                        nodePostErrorLine((PyrParseNode*)vardef);
+                        printErrorLine((PyrParseNode*)vardef);
                         compileErrors++;
                     }
                 }
@@ -1404,7 +1420,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                             error("Argument '%s' already declared in %s:%s\n", slotRawSymbol(kwvarslot)->name,
                                   slotRawSymbol(&gCompilingClass->name)->name,
                                   slotRawSymbol(&gCompilingMethod->name)->name);
-                            nodePostErrorLine((PyrParseNode*)kwvarslot);
+                            printErrorLine((PyrParseNode*)kwvarslot);
                             compileErrors++;
                         }
                     }
@@ -1421,7 +1437,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
             for (i = 1; i < numArgs; ++i, vardef = (PyrVarDefNode*)vardef->mNext) {
                 PyrSlot *slot, litval;
                 slot = slotRawObject(&method->prototypeFrame)->slots + i;
-                // compilePyrLiteralNode((PyrLiteralNode*)vardef->mDefVal, &litval);
+                // compilePyrLiteralNode((PyrSlotNode*)vardef->mDefVal, &litval);
                 if (vardef->hasExpr(&litval))
                     hasVarExprs = true;
                 *slot = litval;
@@ -1457,7 +1473,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                 if (methargs[j] == slotRawSymbol(varslot)) {
                     error("Variable '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                           slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
+                    printErrorLine((PyrParseNode*)vardef);
                     compileErrors++;
                 }
             }
@@ -1466,7 +1482,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                 if (methvars[j] == slotRawSymbol(varslot)) {
                     error("Variable '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                           slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
+                    printErrorLine((PyrParseNode*)vardef);
                     compileErrors++;
                 }
             }
@@ -1504,28 +1520,28 @@ void PyrMethodNode::compile(PyrSlot* result) {
     } else if (slotRawSymbol(&gCompilingMethod->name) == s_doesNotUnderstand) {
         methType = methNormal;
     } else {
-        int bodyType = mBody->mClassno;
-        if (bodyType == pn_ReturnNode) {
+        auto bodyType = mBody->mClassno;
+        if (bodyType == PyrParseNodeType::ReturnNode) {
             PyrReturnNode* rnode;
             PyrParseNode* xnode;
-            int rtype;
+            PyrParseNodeType rtype;
             PyrSlot rslot;
 
             rnode = (PyrReturnNode*)mBody;
             xnode = (PyrParseNode*)rnode->mExpr;
             if (xnode) {
                 rtype = xnode->mClassno;
-                if (rtype == pn_PushLitNode) { // return literal ?
-                    compilePyrLiteralNode((PyrLiteralNode*)xnode, &rslot);
+                if (rtype == PyrParseNodeType::PushLitNode) { // return literal ?
+                    compilePyrLiteralNode((PyrSlotNode*)xnode, &rslot);
                     if (IsObj(&rslot) && slotRawObject(&rslot)->classptr == class_fundef) {
                         methType = methNormal;
                     } else {
                         methType = methReturnLiteral;
                         method->selectors = rslot;
                     }
-                } else if (rtype == pn_PushNameNode) {
+                } else if (rtype == PyrParseNodeType::PushNameNode) {
                     PyrSlot* rslot;
-                    rslot = &((PyrPushNameNode*)xnode)->mSlot;
+                    rslot = &((PyrSlotNode*)xnode)->mSlot;
                     if (slotRawSymbol(rslot) == s_this) { // return this
                         methType = methReturnSelf;
                     } else {
@@ -1542,7 +1558,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
                             methraw->specialIndex = index;
                         }
                     }
-                } else if (rtype == pn_CallNode) {
+                } else if (rtype == PyrParseNodeType::CallNode) {
                     // need to do this for binary opcodes too..
                     int specialIndex;
                     PyrCallNode* cnode;
@@ -1564,12 +1580,12 @@ void PyrMethodNode::compile(PyrSlot* result) {
             } else {
                 methType = methReturnSelf;
             }
-        } else if (bodyType == pn_AssignNode && numArgs == 2) { // assign inst var ?
+        } else if (bodyType == PyrParseNodeType::AssignNode && numArgs == 2) { // assign inst var ?
             PyrAssignNode* anode;
             // post("methAssignInstVar 1  %s:%s\n",
             //	slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
             anode = (PyrAssignNode*)mBody;
-            if (anode->mNext && anode->mNext->mClassno == pn_ReturnNode
+            if (anode->mNext && anode->mNext->mClassno == PyrParseNodeType::ReturnNode
                 && ((PyrReturnNode*)anode->mNext)->mExpr == nullptr) {
                 // post("methAssignInstVar 2  %s:%s\n",
                 //	slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
@@ -1663,13 +1679,6 @@ void PyrMethodNode::compile(PyrSlot* result) {
     // postfl("<-method '%s'\n", slotRawSymbol(&mMethodName->mSlot)->name);
 }
 
-PyrArgListNode* newPyrArgListNode(PyrVarDefNode* varDefs, PyrSlotNode* rest, PyrSlotNode* kwArgs) {
-    auto* node = ALLOCNODE(PyrArgListNode);
-    node->mVarDefs = varDefs;
-    node->mRest = rest;
-    node->mKeywordArgs = kwArgs;
-    return node;
-}
 
 void PyrArgListNode::compile(PyrSlot* result) {
     error("compilePyrArgListNode: shouldn't get here.\n");
@@ -1677,43 +1686,28 @@ void PyrArgListNode::compile(PyrSlot* result) {
 }
 
 
-PyrVarListNode* newPyrVarListNode(PyrVarDefNode* vardefs, int flags) {
-    PyrVarListNode* node = ALLOCNODE(PyrVarListNode);
-    node->mVarDefs = vardefs;
-    node->mFlags = flags;
-    return node;
-}
-
 void PyrVarListNode::compile(PyrSlot* result) {
     error("compilePyrVarListNode: shouldn't get here.\n");
     compileErrors++;
 }
 
-PyrVarDefNode* newPyrVarDefNode(PyrSlotNode* varName, PyrParseNode* defVal, int flags) {
-    PyrVarDefNode* node = ALLOCNODE(PyrVarDefNode);
-    node->mVarName = varName;
-    node->mDefVal = defVal;
-    node->mFlags = flags;
-    node->mDrop = true;
-    return node;
-}
 
 bool PyrVarDefNode::hasExpr(PyrSlot* result) {
     if (result)
         SetNil(result);
     if (!mDefVal)
         return false;
-    if (mDefVal->mClassno != pn_PushLitNode && mDefVal->mClassno != pn_LiteralNode) {
+    if (mDefVal->mClassno != PyrParseNodeType::PushLitNode && mDefVal->mClassno != PyrParseNodeType::LiteralNode) {
         // post("hasExpr A %s:%s %s %d\n", slotRawSymbol(&gCompilingClass->name)->name,
         // slotRawSymbol(&gCompilingMethod->name)->name, mVarName->slotRawSymbol(&mSlot)->name, mDefVal->mClassno);
         return true;
     }
-    PyrPushLitNode* node = (PyrPushLitNode*)mDefVal;
+    PyrSlotNode* node = (PyrSlotNode*)mDefVal;
 
     if (IsPtr(&node->mSlot)) {
         PyrParseNode* litnode = (PyrParseNode*)slotRawPtr(&node->mSlot);
         if (litnode) {
-            if (litnode->mClassno == pn_BlockNode) {
+            if (litnode->mClassno == PyrParseNodeType::BlockNode) {
                 // post("hasExpr B %s:%s %s %d\n", slotRawSymbol(&gCompilingClass->name)->name,
                 // slotRawSymbol(&gCompilingMethod->name)->name, mVarName->slotRawSymbol(&mSlot)->name, node->mClassno);
                 return true;
@@ -1757,24 +1751,11 @@ void PyrVarDefNode::compileArg(PyrSlot* result) {
     // compileErrors++;
 }
 
-
-PyrCallNode* newPyrCallNode(PyrSlotNode* selector, PyrParseNode* arglist, PyrParseNode* keyarglist,
-                            PyrParseNode* blocklist) {
-    PyrCallNode* node = ALLOCNODE(PyrCallNode);
-    node->mSelector = selector;
-
-    arglist = linkNextNode(arglist, blocklist);
-
-    node->mArglist = arglist;
-    node->mKeyarglist = keyarglist;
-    return node;
-}
-
 int PyrCallNode::isPartialApplication() {
     int sum = 0;
     PyrParseNode* argnode = mArglist;
     for (; argnode; argnode = argnode->mNext) {
-        if (argnode->mClassno == pn_CurryArgNode) {
+        if (argnode->mClassno == PyrParseNodeType::CurryArgNode) {
             ((PyrCurryArgNode*)argnode)->mArgNum = sum;
             sum++;
         }
@@ -1782,7 +1763,7 @@ int PyrCallNode::isPartialApplication() {
 
     PyrParseNode* keynode = mKeyarglist;
     for (; keynode; keynode = keynode->mNext) {
-        if (keynode->mClassno == pn_CurryArgNode) {
+        if (keynode->mClassno == PyrParseNodeType::CurryArgNode) {
             ((PyrCurryArgNode*)keynode)->mArgNum = sum;
             sum++;
         }
@@ -1892,7 +1873,7 @@ void PyrCallNodeBase::compile(PyrSlot* result) {
 }
 
 bool isSeries(PyrParseNode* node, PyrParseNode** args) {
-    if (node->mClassno != pn_CallNode)
+    if (node->mClassno != PyrParseNodeType::CallNode)
         return false;
     PyrCallNode* callnode = (PyrCallNode*)node;
     if (slotRawSymbol(&callnode->mSelector->mSlot) != s_series)
@@ -1986,8 +1967,9 @@ void PyrCallNode::compileCall(PyrSlot* result) {
         }
 
     } else {
-        PyrSymbol* varname =
-            (argnode->mClassno == pn_PushNameNode) ? slotRawSymbol(&((PyrPushNameNode*)argnode)->mSlot) : nullptr;
+        PyrSymbol* varname = (argnode->mClassno == PyrParseNodeType::PushNameNode)
+            ? slotRawSymbol(&((PyrSlotNode*)argnode)->mSlot)
+            : nullptr;
 
         if (varname == s_this)
             gFunctionCantBeClosed = true;
@@ -2066,7 +2048,7 @@ void PyrCallNode::compileCall(PyrSlot* result) {
 
             } else if (selectorSlotOrSpecialIndex == opmDo && isSeries(argnode, &argnode)) {
                 selectorSlotOrSpecialIndex = opmForSeries;
-                mArglist = linkNextNode(argnode, mArglist->mNext);
+                mArglist = linkNodes(argnode, mArglist->mNext);
                 numArgs = nodeListLength(mArglist);
                 goto special;
 
@@ -2141,13 +2123,13 @@ void PyrCallNode::compileCall(PyrSlot* result) {
             }
             argnode2 = argnode->mNext;
             if (selectorSlotOrSpecialIndex == static_cast<int>(OpBinaryMath::Add)
-                && argnode2->mClassno == pn_PushLitNode && IsInt(&((PyrPushLitNode*)argnode2)->mSlot)
-                && slotRawInt(&((PyrPushLitNode*)argnode2)->mSlot) == 1) {
+                && argnode2->mClassno == PyrParseNodeType::PushLitNode && IsInt(&((PyrSlotNode*)argnode2)->mSlot)
+                && slotRawInt(&((PyrSlotNode*)argnode2)->mSlot) == 1) {
                 COMPILENODE(argnode, &dummy, false);
                 PushOneAndAddOne.emit();
-            } else if (selectorSlotOrSpecialIndex == opSub && argnode2->mClassno == pn_PushLitNode
-                       && IsInt(&((PyrPushLitNode*)argnode2)->mSlot)
-                       && slotRawInt(&((PyrPushLitNode*)argnode2)->mSlot) == 1) {
+            } else if (selectorSlotOrSpecialIndex == opSub && argnode2->mClassno == PyrParseNodeType::PushLitNode
+                       && IsInt(&((PyrSlotNode*)argnode2)->mSlot)
+                       && slotRawInt(&((PyrSlotNode*)argnode2)->mSlot) == 1) {
                 COMPILENODE(argnode, &dummy, false);
                 PushOneAndSubtract.emit();
             } else {
@@ -2231,11 +2213,11 @@ void PyrCallNode::compileCall(PyrSlot* result) {
     }
 }
 
-ByteCodes compileSubExpression(PyrPushLitNode* litnode, bool onTailBranch) {
+ByteCodes compileSubExpression(PyrSlotNode* litnode, bool onTailBranch) {
     return compileSubExpressionWithGoto(litnode, 0, onTailBranch);
 }
 
-ByteCodes compileSubExpressionWithGoto(PyrPushLitNode* litnode, int branchLen, bool onTailBranch) {
+ByteCodes compileSubExpressionWithGoto(PyrSlotNode* litnode, int branchLen, bool onTailBranch) {
     PyrBlockNode* bnode = (PyrBlockNode*)slotRawPtr(&litnode->mSlot);
     return compileBodyWithGoto(bnode->mBody, branchLen, onTailBranch);
 }
@@ -2269,20 +2251,21 @@ ByteCodes compileBodyWithGoto(PyrParseNode* body, int branchLen, bool onTailBran
 
 bool isAnInlineableBlock(PyrParseNode* node) {
     bool res = false;
-    if (node->mClassno == pn_PushLitNode) {
-        PyrPushLitNode* anode;
+    if (node->mClassno == PyrParseNodeType::PushLitNode) {
+        PyrSlotNode* anode;
         PyrBlockNode* bnode;
-        anode = (PyrPushLitNode*)node;
-        if (IsPtr(&anode->mSlot) && (bnode = (PyrBlockNode*)(slotRawPtr(&anode->mSlot)))->mClassno == pn_BlockNode) {
+        anode = (PyrSlotNode*)node;
+        if (IsPtr(&anode->mSlot)
+            && (bnode = (PyrBlockNode*)(slotRawPtr(&anode->mSlot)))->mClassno == PyrParseNodeType::BlockNode) {
             if (bnode->mArglist || bnode->mVarlist) {
                 gNumUninlinedFunctions += 1;
                 if (SC_LanguageConfig::getPostInlineWarnings()) {
                     post("WARNING: FunctionDef contains variable declarations and so"
                          " will not be inlined.\n");
                     if (bnode->mArglist)
-                        nodePostErrorLine((PyrParseNode*)bnode->mArglist);
+                        printErrorLine((PyrParseNode*)bnode->mArglist);
                     else
-                        nodePostErrorLine((PyrParseNode*)bnode->mVarlist);
+                        printErrorLine((PyrParseNode*)bnode->mVarlist);
                 }
             } else
                 res = true;
@@ -2293,24 +2276,25 @@ bool isAnInlineableBlock(PyrParseNode* node) {
 
 bool isAnInlineableAtomicLiteralBlock(PyrParseNode* node) {
     bool res = false;
-    if (node->mClassno == pn_PushLitNode) {
-        PyrPushLitNode* anode;
+    if (node->mClassno == PyrParseNodeType::PushLitNode) {
+        PyrSlotNode* anode;
         PyrBlockNode* bnode;
-        anode = (PyrPushLitNode*)node;
-        if (IsPtr(&anode->mSlot) && (bnode = (PyrBlockNode*)(slotRawPtr(&anode->mSlot)))->mClassno == pn_BlockNode) {
+        anode = (PyrSlotNode*)node;
+        if (IsPtr(&anode->mSlot)
+            && (bnode = (PyrBlockNode*)(slotRawPtr(&anode->mSlot)))->mClassno == PyrParseNodeType::BlockNode) {
             if (bnode->mArglist || bnode->mVarlist) {
                 gNumUninlinedFunctions += 1;
                 if (SC_LanguageConfig::getPostInlineWarnings()) {
                     post("WARNING: FunctionDef contains variable declarations and so"
                          " will not be inlined.\n");
                     if (bnode->mArglist)
-                        nodePostErrorLine((PyrParseNode*)bnode->mArglist);
+                        printErrorLine((PyrParseNode*)bnode->mArglist);
                     else
-                        nodePostErrorLine((PyrParseNode*)bnode->mVarlist);
+                        printErrorLine((PyrParseNode*)bnode->mVarlist);
                 }
             } else {
-                if (bnode->mBody->mClassno == pn_DropNode
-                    && ((PyrDropNode*)bnode->mBody)->mExpr2->mClassno == pn_BlockReturnNode)
+                if (bnode->mBody->mClassno == PyrParseNodeType::DropNode
+                    && ((PyrDropNode*)bnode->mBody)->mExpr2->mClassno == PyrParseNodeType::BlockReturnNode)
                     res = isAtomicLiteral(((PyrDropNode*)bnode->mBody)->mExpr1);
                 else
                     res = false;
@@ -2322,9 +2306,9 @@ bool isAnInlineableAtomicLiteralBlock(PyrParseNode* node) {
 
 bool isAtomicLiteral(PyrParseNode* node) {
     bool res = false;
-    if (node->mClassno == pn_PushLitNode) {
-        PyrPushLitNode* anode;
-        anode = (PyrPushLitNode*)node;
+    if (node->mClassno == PyrParseNodeType::PushLitNode) {
+        PyrSlotNode* anode;
+        anode = (PyrSlotNode*)node;
         if (NotObj(&anode->mSlot) && !IsPtr(&anode->mSlot))
             res = true;
     }
@@ -2337,10 +2321,10 @@ enum struct UninlinableWarningOption { PostWarning, DontPostWarning };
 /// Will post a warning by default if it can't produce a value and is a block.
 template <UninlinableWarningOption Warning = UninlinableWarningOption::PostWarning>
 std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const PyrParseNode& node) {
-    if (node.mClassno != pn_PushLitNode)
+    if (node.mClassno != PyrParseNodeType::PushLitNode)
         return std::nullopt;
 
-    const auto& lit = static_cast<const PyrPushLitNode&>(node);
+    const auto& lit = static_cast<const PyrSlotNode&>(node);
     const auto& slot = lit.mSlot;
 
     // There are no literal objects, arrays don't currently count as literals.
@@ -2358,7 +2342,7 @@ std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const Py
     // We are now expecting a block node, then a drop node containing a literal (as expression 1) and a block node
     // return (as expression 2).
 
-    if (maybeBlock.mClassno != pn_BlockNode)
+    if (maybeBlock.mClassno != PyrParseNodeType::BlockNode)
         return std::nullopt;
 
     const auto& block = static_cast<const PyrBlockNode&>(maybeBlock);
@@ -2369,11 +2353,11 @@ std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const Py
         const auto postWarning = SC_LanguageConfig::getPostInlineWarnings();
         if (block.mArglist && postWarning) {
             post("WARNING: FunctionDef contains argument declarations and so will not be inlined.\n");
-            nodePostErrorLine((PyrParseNode*)block.mArglist);
+            printErrorLine((PyrParseNode*)block.mArglist);
         }
         if (block.mVarlist && postWarning) {
             post("WARNING: FunctionDef contains variable declarations and so will not be inlined.\n");
-            nodePostErrorLine((PyrParseNode*)block.mVarlist);
+            printErrorLine((PyrParseNode*)block.mVarlist);
         }
         if (block.mArglist || block.mVarlist) {
             gNumUninlinedFunctions += 1;
@@ -2384,19 +2368,19 @@ std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const Py
             return std::nullopt;
     }
 
-    if (block.mBody->mClassno != pn_DropNode)
+    if (block.mBody->mClassno != PyrParseNodeType::DropNode)
         return std::nullopt;
 
     const auto& dropNode = *static_cast<PyrDropNode*>(block.mBody);
 
     // Not a single return statement, e.g., { 1 },
-    if (dropNode.mExpr2->mClassno != pn_BlockReturnNode)
+    if (dropNode.mExpr2->mClassno != PyrParseNodeType::BlockReturnNode)
         return std::nullopt;
 
-    if (dropNode.mExpr1->mClassno != pn_PushLitNode)
+    if (dropNode.mExpr1->mClassno != PyrParseNodeType::PushLitNode)
         return std::nullopt;
 
-    const auto& blockedLit = static_cast<PyrPushLitNode&>(*dropNode.mExpr1);
+    const auto& blockedLit = static_cast<PyrSlotNode&>(*dropNode.mExpr1);
     const auto& blockedSlot = blockedLit.mSlot;
     if (blockedSlot.isObjectHdr())
         return std::nullopt;
@@ -2410,11 +2394,12 @@ std::optional<PyrSlot> getAtomicValueFromLiteralOrBlockMaybePostWarning(const Py
 
 bool isWhileTrue(PyrParseNode* node) {
     bool res = false;
-    if (node->mClassno == pn_PushLitNode) {
-        PyrPushLitNode* anode;
+    if (node->mClassno == PyrParseNodeType::PushLitNode) {
+        PyrSlotNode* anode;
         PyrBlockNode* bnode;
-        anode = (PyrPushLitNode*)node;
-        if (IsPtr(&anode->mSlot) && (bnode = (PyrBlockNode*)(slotRawPtr(&anode->mSlot)))->mClassno == pn_BlockNode) {
+        anode = (PyrSlotNode*)node;
+        if (IsPtr(&anode->mSlot)
+            && (bnode = (PyrBlockNode*)(slotRawPtr(&anode->mSlot)))->mClassno == PyrParseNodeType::BlockNode) {
             if (bnode->mArglist || bnode->mVarlist) {
                 /*
                 post("WARNING: FunctionDef contains variable declarations and so"
@@ -2423,7 +2408,8 @@ bool isWhileTrue(PyrParseNode* node) {
                 else nodePostErrorLine((PyrParseNode*)bnode->mVarlist);
                 */
             } else {
-                if (bnode->mBody->mClassno == pn_PushLitNode && IsTrue(&((PyrPushLitNode*)bnode->mBody)->mSlot)) {
+                if (bnode->mBody->mClassno == PyrParseNodeType::PushLitNode
+                    && IsTrue(&((PyrSlotNode*)bnode->mBody)->mSlot)) {
                     res = true;
                 }
             }
@@ -2438,7 +2424,7 @@ void compileAndMsg(PyrParseNode* arg1, PyrParseNode* arg2) {
     PyrSlot dummy;
     COMPILENODE(arg1, &dummy, false);
     if (isAnInlineableBlock(arg2)) {
-        ByteCodes trueByteCodes = compileSubExpression((PyrPushLitNode*)arg2, true);
+        ByteCodes trueByteCodes = compileSubExpression((PyrSlotNode*)arg2, true);
 
         const int jumpLen = byteCodeLength(trueByteCodes);
         JumpIfFalsePushFalse.emit(Operands::UnsignedInt<16, 1>::fromFull(jumpLen),
@@ -2456,7 +2442,7 @@ void compileOrMsg(PyrParseNode* arg1, PyrParseNode* arg2) {
     PyrSlot dummy;
     COMPILENODE(arg1, &dummy, false);
     if (isAnInlineableBlock(arg2)) {
-        ByteCodes falseByteCodes = compileSubExpression((PyrPushLitNode*)arg2, true);
+        ByteCodes falseByteCodes = compileSubExpression((PyrSlotNode*)arg2, true);
 
         const int jumpLen = byteCodeLength(falseByteCodes);
         JumpIfTruePushTrue.emit(Operands::UnsignedInt<16, 1>::fromFull(jumpLen),
@@ -2485,7 +2471,7 @@ void compileQQMsg(PyrParseNode* arg1, PyrParseNode* arg2) {
 
     COMPILENODE(arg1, &dummy, false);
     if (isAnInlineableBlock(arg2)) {
-        ByteCodes nilByteCodes = compileSubExpression((PyrPushLitNode*)arg2, true);
+        ByteCodes nilByteCodes = compileSubExpression((PyrSlotNode*)arg2, true);
         const int jumplen = byteCodeLength(nilByteCodes);
         Extended::DoubleQuestionMark.emit(
             { Operands::UnsignedInt<16, 1>::fromFull(jumplen), Operands::UnsignedInt<16, 0>::fromFull(jumplen) });
@@ -2504,7 +2490,7 @@ void compileXQMsg(PyrParseNode* arg1, PyrParseNode* arg2) {
     COMPILENODE(arg1, &dummy, false);
     if (isAnInlineableBlock(arg2)) {
         ByteCodes nilByteCodes;
-        nilByteCodes = compileSubExpression((PyrPushLitNode*)arg2, true);
+        nilByteCodes = compileSubExpression((PyrSlotNode*)arg2, true);
 
         const int jumplen = byteCodeLength(nilByteCodes);
         Extended::IfNilThenJumpElsePopNil.emit(
@@ -2520,7 +2506,7 @@ void compileXQMsg(PyrParseNode* arg1, PyrParseNode* arg2) {
 void compileAnyIfMsg(PyrCallNodeBase2* node) {
     PyrParseNode* arg1 = node->mArglist;
 
-    if (arg1->mClassno == pn_CallNode) {
+    if (arg1->mClassno == PyrParseNodeType::CallNode) {
         PyrCallNode* callNode = (PyrCallNode*)arg1;
         const int numCallArgs = nodeListLength(callNode->mArglist);
         const int numCallKeyArgs = nodeListLength(callNode->mKeyarglist);
@@ -2548,7 +2534,7 @@ void compileIfMsg(PyrCallNodeBase2* node) {
         if (isAnInlineableBlock(arg2)) {
             COMPILENODE(arg1, &dummy, false);
 
-            ByteCodes trueByteCodes = compileSubExpression((PyrPushLitNode*)arg2, true);
+            ByteCodes trueByteCodes = compileSubExpression((PyrSlotNode*)arg2, true);
             if (byteCodeLength(trueByteCodes)) {
                 const int jumpLen = byteCodeLength(trueByteCodes);
                 JumpIfFalsePushNil.emit(Operands::UnsignedInt<16, 1>::fromFull(jumpLen),
@@ -2570,9 +2556,9 @@ void compileIfMsg(PyrCallNodeBase2* node) {
         PyrParseNode* arg3 = arg2->mNext;
         if (isAnInlineableBlock(arg2) && isAnInlineableBlock(arg3)) {
             COMPILENODE(arg1, &dummy, false);
-            ByteCodes falseByteCodes = compileSubExpression((PyrPushLitNode*)arg3, true);
+            ByteCodes falseByteCodes = compileSubExpression((PyrSlotNode*)arg3, true);
             ByteCodes trueByteCodes =
-                compileSubExpressionWithGoto((PyrPushLitNode*)arg2, byteCodeLength(falseByteCodes), true);
+                compileSubExpressionWithGoto((PyrSlotNode*)arg2, byteCodeLength(falseByteCodes), true);
             if (byteCodeLength(falseByteCodes)) {
                 const int jumpLen = byteCodeLength(trueByteCodes);
                 JumpIfFalse.emit(Operands::UnsignedInt<16, 1>::fromFull(jumpLen),
@@ -2626,7 +2612,7 @@ void compileIfNilMsg(PyrCallNodeBase2* node, bool flag) {
             PyrCallNode* callNode = (PyrCallNode*)arg1;
             COMPILENODE(callNode->mArglist, &dummy, false);
 
-            ByteCodes trueByteCodes = compileSubExpression((PyrPushLitNode*)arg2, true);
+            ByteCodes trueByteCodes = compileSubExpression((PyrSlotNode*)arg2, true);
             const int jumplen = byteCodeLength(trueByteCodes);
             if (jumplen) {
                 if (flag)
@@ -2653,9 +2639,9 @@ void compileIfNilMsg(PyrCallNodeBase2* node, bool flag) {
             PyrCallNode* callNode = (PyrCallNode*)arg1;
             COMPILENODE(callNode->mArglist, &dummy, false);
 
-            ByteCodes falseByteCodes = compileSubExpression((PyrPushLitNode*)arg3, true);
+            ByteCodes falseByteCodes = compileSubExpression((PyrSlotNode*)arg3, true);
             const int falseLen = byteCodeLength(falseByteCodes);
-            ByteCodes trueByteCodes = compileSubExpressionWithGoto((PyrPushLitNode*)arg2, falseLen, true);
+            ByteCodes trueByteCodes = compileSubExpressionWithGoto((PyrSlotNode*)arg2, falseLen, true);
             const int trueLen = byteCodeLength(trueByteCodes);
             if (falseLen) {
                 if (flag)
@@ -2723,12 +2709,12 @@ PyrCallNode* buildCase(PyrParseNode* arg1) {
 
     PyrParseNode* arg2 = arg1->mNext;
 
-    PyrPushLitNode* litnode = (PyrPushLitNode*)arg1;
+    PyrSlotNode* litnode = (PyrSlotNode*)arg1;
     PyrBlockNode* bnode = (PyrBlockNode*)slotRawPtr(&litnode->mSlot);
     PyrParseNode* bbody = bnode->mBody;
-    if (bbody->mClassno == pn_DropNode) {
+    if (bbody->mClassno == PyrParseNodeType::DropNode) {
         PyrDropNode* dropNode = (PyrDropNode*)bbody;
-        if (dropNode->mExpr2->mClassno == pn_BlockReturnNode) {
+        if (dropNode->mExpr2->mClassno == PyrParseNodeType::BlockReturnNode) {
             arg1 = dropNode->mExpr1;
         } else {
             arg1 = dropNode;
@@ -2745,8 +2731,9 @@ PyrCallNode* buildCase(PyrParseNode* arg1) {
             PyrParseNode* arg4 = arg3->mNext;
             if (arg4) {
                 arg3 = buildCase(arg3);
-                PyrBlockNode* bnode = newPyrBlockNode(nullptr, nullptr, arg3, false);
-                arg3 = newPyrPushLitNode(nullptr, bnode);
+                PyrBlockNode* bnode = allocParseNode<PyrBlockNode>(arg1->location, nullptr, nullptr, arg3, false);
+                arg3 = allocParseNode<PyrSlotNode>(arg1->location, PyrSlot::make(static_cast<void*>(bnode)),
+                                                   PyrParseNodeType::PushLitNode);
                 arg2->mNext = arg3;
                 arg3->mNext = nullptr;
                 arg1->mTail = arg3;
@@ -2771,14 +2758,8 @@ PyrCallNode* buildCase(PyrParseNode* arg1) {
     DUMPNODE(arg1, 0);
     */
 
-    PyrSlot selector;
-    SetSymbol(&selector, gSpecialSelectors[opmIf]);
-    PyrSlotNode* selectorNode = newPyrSlotNode(&selector);
-    PyrCallNode* callNode = newPyrCallNode(selectorNode, arg1, nullptr, nullptr);
-
-    // post("<-buildCase %d\n", numArgs);
-
-    return callNode;
+    auto selector_node = allocParseNode<PyrSlotNode>(arg1->location, PyrSlot::make(gSpecialSelectors[opmIf]));
+    return allocParseNode<PyrCallNode>(arg1->location, selector_node, arg1);
 }
 
 void compileCaseMsg(PyrCallNodeBase2* node) {
@@ -2819,7 +2800,7 @@ void compileSwitchMsg(PyrCallNode* node) {
 
         if (numArgs <= 2) {
             error("Missing argument in switch statement");
-            nodePostErrorLine(node);
+            printErrorLine(node);
             compileErrors++;
         };
 
@@ -2888,18 +2869,18 @@ void compileSwitchMsg(PyrCallNode* node) {
         for (; argnode; argnode = nextargnode) {
             nextargnode = argnode->mNext;
             if (nextargnode != nullptr) {
-                ByteCodes byteCodes = compileSubExpressionWithGoto((PyrPushLitNode*)nextargnode, 0x6666, true);
+                ByteCodes byteCodes = compileSubExpressionWithGoto((PyrSlotNode*)nextargnode, 0x6666, true);
 
                 PyrSlot* key;
                 PyrSlot value;
                 SetInt(&value, offset);
-                PyrPushLitNode* keyargnode = (PyrPushLitNode*)argnode;
+                PyrSlotNode* keyargnode = (PyrSlotNode*)argnode;
                 if (isAtomicLiteral(argnode)) {
                     key = &keyargnode->mSlot;
                 } else {
                     PyrBlockNode* bnode = (PyrBlockNode*)slotRawPtr(&keyargnode->mSlot);
                     PyrDropNode* dropnode = (PyrDropNode*)bnode->mBody;
-                    PyrPushLitNode* litnode = (PyrPushLitNode*)dropnode->mExpr1;
+                    PyrSlotNode* litnode = (PyrSlotNode*)dropnode->mExpr1;
                     key = &litnode->mSlot;
                 }
 
@@ -2923,7 +2904,7 @@ void compileSwitchMsg(PyrCallNode* node) {
                     offset += 1;
                 }
             } else {
-                ByteCodes byteCodes = compileSubExpressionWithGoto((PyrPushLitNode*)argnode, 0, true);
+                ByteCodes byteCodes = compileSubExpressionWithGoto((PyrSlotNode*)argnode, 0, true);
 
                 lastOffset = offset;
                 if (byteCodes) {
@@ -2977,7 +2958,7 @@ void compileSwitchMsg(PyrCallNode* node) {
 void compileWhileMsg(PyrCallNodeBase2* node) {
     const int numArgs = nodeListLength(node->mArglist);
     if (numArgs == 1 && isAnInlineableBlock(node->mArglist)) {
-        ByteCodes whileByteCodes = compileSubExpression((PyrPushLitNode*)node->mArglist, false);
+        ByteCodes whileByteCodes = compileSubExpression((PyrSlotNode*)node->mArglist, false);
         const int whileByteCodeLen = byteCodeLength(whileByteCodes);
         compileAndFreeByteCodes(whileByteCodes);
 
@@ -2997,7 +2978,7 @@ void compileWhileMsg(PyrCallNodeBase2* node) {
 
 
     } else if (numArgs == 2 && isWhileTrue(node->mArglist) && isAnInlineableBlock(node->mArglist->mNext)) {
-        ByteCodes exprByteCodes = compileSubExpression((PyrPushLitNode*)node->mArglist->mNext, false);
+        ByteCodes exprByteCodes = compileSubExpression((PyrSlotNode*)node->mArglist->mNext, false);
         const int exprByteCodeLen = byteCodeLength(exprByteCodes);
         compileAndFreeByteCodes(exprByteCodes);
         // UNKNOWN: where does this '1' come from?
@@ -3007,8 +2988,8 @@ void compileWhileMsg(PyrCallNodeBase2* node) {
 
 
     } else if (numArgs == 2 && isAnInlineableBlock(node->mArglist) && isAnInlineableBlock(node->mArglist->mNext)) {
-        ByteCodes whileByteCodes = compileSubExpression((PyrPushLitNode*)node->mArglist, false);
-        ByteCodes exprByteCodes = compileSubExpression((PyrPushLitNode*)node->mArglist->mNext, false);
+        ByteCodes whileByteCodes = compileSubExpression((PyrSlotNode*)node->mArglist, false);
+        ByteCodes exprByteCodes = compileSubExpression((PyrSlotNode*)node->mArglist->mNext, false);
 
         const int whileByteCodeLen = byteCodeLength(whileByteCodes);
         compileAndFreeByteCodes(whileByteCodes);
@@ -3058,7 +3039,7 @@ void compileWhileMsg(PyrCallNodeBase2* node) {
 void compileLoopMsg(PyrCallNodeBase2* node) {
     const int numArgs = nodeListLength(node->mArglist);
     if (numArgs == 1 && isAnInlineableBlock(node->mArglist)) {
-        ByteCodes exprByteCodes = compileSubExpression((PyrPushLitNode*)node->mArglist, false);
+        ByteCodes exprByteCodes = compileSubExpression((PyrSlotNode*)node->mArglist, false);
 
         const int exprByteCodeLen = byteCodeLength(exprByteCodes);
         compileAndFreeByteCodes(exprByteCodes);
@@ -3083,21 +3064,12 @@ void compileLoopMsg(PyrCallNodeBase2* node) {
     }
 }
 
-PyrBinopCallNode* newPyrBinopCallNode(PyrSlotNode* selector, PyrParseNode* arg1, PyrParseNode* arg2,
-                                      PyrParseNode* arg3) {
-    PyrBinopCallNode* node = ALLOCNODE(PyrBinopCallNode);
-    node->mSelector = selector;
-    node->mArglist = arg1;
-    arg1->mNext = arg2;
-    arg2->mNext = arg3;
-    return node;
-}
 
 int PyrBinopCallNode::isPartialApplication() {
     int sum = 0;
     PyrParseNode* argnode = mArglist;
     for (; argnode; argnode = argnode->mNext) {
-        if (argnode->mClassno == pn_CurryArgNode) {
+        if (argnode->mClassno == PyrParseNodeType::CurryArgNode) {
             ((PyrCurryArgNode*)argnode)->mArgNum = sum;
             sum++;
         }
@@ -3176,14 +3148,14 @@ void PyrBinopCallNode::compileCall(PyrSlot* result) {
                 emitTailCall();
                 SpecialBinaryOpWithAdverb.emit(Operands::TrinaryMath::fromRaw(index));
 
-            } else if (index == opAdd && arg2->mClassno == pn_PushLitNode && IsInt(&((PyrPushLitNode*)arg2)->mSlot)
-                       && slotRawInt(&((PyrPushLitNode*)arg2)->mSlot) == 1) {
+            } else if (index == opAdd && arg2->mClassno == PyrParseNodeType::PushLitNode
+                       && IsInt(&((PyrSlotNode*)arg2)->mSlot) && slotRawInt(&((PyrSlotNode*)arg2)->mSlot) == 1) {
                 COMPILENODE(arg1, &dummy, false);
 
                 PushOneAndAddOne.emit();
 
-            } else if (index == opSub && arg2->mClassno == pn_PushLitNode && IsInt(&((PyrPushLitNode*)arg2)->mSlot)
-                       && slotRawInt(&((PyrPushLitNode*)arg2)->mSlot) == 1) {
+            } else if (index == opSub && arg2->mClassno == PyrParseNodeType::PushLitNode
+                       && IsInt(&((PyrSlotNode*)arg2)->mSlot) && slotRawInt(&((PyrSlotNode*)arg2)->mSlot) == 1) {
                 COMPILENODE(arg1, &dummy, false);
 
                 emitTailCall();
@@ -3240,13 +3212,6 @@ void PyrBinopCallNode::compileCall(PyrSlot* result) {
     }
 }
 
-PyrPushKeyArgNode* newPyrPushKeyArgNode(PyrSlotNode* selector, PyrParseNode* expr) {
-    PyrPushKeyArgNode* node = ALLOCNODE(PyrPushKeyArgNode);
-    node->mSelector = selector;
-    node->mExpr = expr;
-    return node;
-}
-
 void PyrPushKeyArgNode::compile(PyrSlot* result) {
     PyrSlot dummy;
     // postfl("->compilePyrPushKeyArgNode\n");
@@ -3256,12 +3221,6 @@ void PyrPushKeyArgNode::compile(PyrSlot* result) {
     COMPILENODE(mExpr, &dummy, false);
 }
 
-PyrDropNode* newPyrDropNode(PyrParseNode* expr1, PyrParseNode* expr2) {
-    PyrDropNode* node = ALLOCNODE(PyrDropNode);
-    node->mExpr1 = expr1;
-    node->mExpr2 = expr2;
-    return node;
-}
 
 void PyrDropNode::compile(PyrSlot* result) {
     PyrSlot dummy;
@@ -3269,22 +3228,22 @@ void PyrDropNode::compile(PyrSlot* result) {
     if (!mExpr2) {
         post("DROP EXPR2 NULL\n");
         COMPILENODE(mExpr1, &dummy, true);
-    } else if (mExpr2->mClassno == pn_BlockReturnNode) {
+    } else if (mExpr2->mClassno == PyrParseNodeType::BlockReturnNode) {
         // no drop before a block return
         COMPILENODE(mExpr1, &dummy, true);
-    } else if (mExpr1 && mExpr1->mClassno == pn_AssignNode) {
+    } else if (mExpr1 && mExpr1->mClassno == PyrParseNodeType::AssignNode) {
         // let the store do the drop
         ((PyrAssignNode*)mExpr1)->mDrop = 1;
         COMPILENODE(mExpr1, &dummy, false);
         COMPILENODE(mExpr2, &dummy, true);
-    } else if (mExpr1 && mExpr1->mClassno == pn_DropNode) {
+    } else if (mExpr1 && mExpr1->mClassno == PyrParseNodeType::DropNode) {
         // let the store do the drop, a bit more complex.
         // find the ultimate expression in the left subtree before the drop.
         PyrDropNode* znode = (PyrDropNode*)mExpr1;
-        while (znode->mExpr2 && znode->mExpr2->mClassno == pn_DropNode) {
+        while (znode->mExpr2 && znode->mExpr2->mClassno == PyrParseNodeType::DropNode) {
             znode = (PyrDropNode*)znode->mExpr2;
         }
-        if (znode->mExpr2->mClassno == pn_AssignNode) {
+        if (znode->mExpr2->mClassno == PyrParseNodeType::AssignNode) {
             ((PyrAssignNode*)znode->mExpr2)->mDrop = 1;
             COMPILENODE(mExpr1, &dummy, false);
             COMPILENODE(mExpr2, &dummy, true);
@@ -3299,19 +3258,6 @@ void PyrDropNode::compile(PyrSlot* result) {
         COMPILENODE(mExpr2, &dummy, true);
     }
 }
-
-PyrPushLitNode* newPyrPushLitNode(PyrSlotNode* literalSlot, PyrParseNode* literalObj) {
-    PyrPushLitNode* node;
-    if (literalSlot) {
-        node = literalSlot;
-        node->mClassno = pn_PushLitNode;
-    } else {
-        node = ALLOCSLOTNODE(PyrSlotNode, pn_PushLitNode);
-        SetPtr(&node->mSlot, (PyrObject*)literalObj);
-    }
-    return node;
-}
-
 
 void compilePushConstant(PyrParseNode* node, PyrSlot* slot) {
     const int index = conjureConstantIndex(node, gCompilingBlock, slot);
@@ -3369,7 +3315,7 @@ void PyrSlotNode::compilePushLit(PyrSlot* result) {
     if (IsPtr(&mSlot)) {
         PyrParseNode* literalObj = (PyrParseNode*)slotRawPtr(&mSlot);
 
-        if (literalObj->mClassno == pn_BlockNode) {
+        if (literalObj->mClassno == PyrParseNodeType::BlockNode) {
             ByteCodes savedBytes = saveByteCodeArray();
             PyrSlot slot;
             COMPILENODE(literalObj, &slot, false);
@@ -3419,19 +3365,7 @@ void PyrSlotNode::compilePushLit(PyrSlot* result) {
     }
 }
 
-PyrLiteralNode* newPyrLiteralNode(PyrSlotNode* literalSlot, PyrParseNode* literalObj) {
-    PyrLiteralNode* node;
-    if (literalSlot) {
-        node = literalSlot;
-        node->mClassno = pn_LiteralNode;
-    } else {
-        node = ALLOCSLOTNODE(PyrSlotNode, pn_LiteralNode);
-        SetPtr(&node->mSlot, (PyrObject*)literalObj);
-    }
-    return node;
-}
-
-void compilePyrLiteralNode(PyrLiteralNode* node, PyrSlot* result) {
+void compilePyrLiteralNode(PyrSlotNode* node, PyrSlot* result) {
     if (!node) {
         SetNil(result);
     } else {
@@ -3444,7 +3378,7 @@ void PyrSlotNode::compileLiteral(PyrSlot* result) {
 
     if (IsPtr(&mSlot)) {
         PyrParseNode* literalObj = (PyrParseNode*)slotRawPtr(&mSlot);
-        if (literalObj->mClassno == pn_BlockNode) {
+        if (literalObj->mClassno == PyrParseNodeType::BlockNode) {
             savedBytes = saveByteCodeArray();
             COMPILENODE(literalObj, result, false);
             restoreByteCodeArray(savedBytes);
@@ -3461,19 +3395,13 @@ void PyrSlotNode::compileLiteral(PyrSlot* result) {
     }
 }
 
-PyrReturnNode* newPyrReturnNode(PyrParseNode* expr) {
-    PyrReturnNode* node = ALLOCNODE(PyrReturnNode);
-    node->mExpr = expr;
-    return node;
-}
-
 
 void PyrReturnNode::compile(PyrSlot* result) {
     gFunctionCantBeClosed = true;
     if (!mExpr) {
         ReturnSelf.emit();
-    } else if (mExpr->mClassno == pn_PushLitNode) {
-        PyrPushLitNode* lit = (PyrPushLitNode*)mExpr;
+    } else if (mExpr->mClassno == PyrParseNodeType::PushLitNode) {
+        PyrSlotNode* lit = (PyrSlotNode*)mExpr;
         if (IsSym(&(lit->mSlot)) && slotRawSymbol(&lit->mSlot) == s_this) {
             ReturnSelf.emit();
         } else if (IsNil(&lit->mSlot)) {
@@ -3496,44 +3424,8 @@ void PyrReturnNode::compile(PyrSlot* result) {
     }
 }
 
-PyrBlockReturnNode* newPyrBlockReturnNode() {
-    PyrBlockReturnNode* node = ALLOCNODE(PyrBlockReturnNode);
-    return node;
-}
-
 
 void PyrBlockReturnNode::compile(PyrSlot* result) {}
-
-PyrAssignNode* newPyrAssignNode(PyrSlotNode* varName, PyrParseNode* expr, int flags) {
-    PyrAssignNode* node = ALLOCNODE(PyrAssignNode);
-    node->mVarName = varName;
-    node->mExpr = expr;
-    node->mDrop = 0;
-    return node;
-}
-
-PyrSetterNode* newPyrSetterNode(PyrSlotNode* selector, PyrParseNode* expr1, PyrParseNode* expr2) {
-    PyrSetterNode* node = ALLOCNODE(PyrSetterNode);
-    node->mSelector = selector;
-    node->mExpr1 = expr1;
-    node->mExpr2 = expr2;
-    return node;
-}
-
-PyrMultiAssignNode* newPyrMultiAssignNode(PyrMultiAssignVarListNode* varList, PyrParseNode* expr, int flags) {
-    PyrMultiAssignNode* node = ALLOCNODE(PyrMultiAssignNode);
-    node->mVarList = varList;
-    node->mExpr = expr;
-    node->mDrop = 0;
-    return node;
-}
-
-PyrMultiAssignVarListNode* newPyrMultiAssignVarListNode(PyrSlotNode* varNames, PyrSlotNode* rest) {
-    PyrMultiAssignVarListNode* node = ALLOCNODE(PyrMultiAssignVarListNode);
-    node->mVarNames = varNames;
-    node->mRest = rest;
-    return node;
-}
 
 bool isUnassignableSymbol(PyrSymbol* varName) {
     return varName == s_this || varName == s_super || varName == s_curProcess || varName == s_curThread
@@ -3543,13 +3435,13 @@ bool isUnassignableSymbol(PyrSymbol* varName) {
 void compileAssignVar(PyrParseNode* node, PyrSymbol* varName, bool drop) {
     if (isUnassignableSymbol(varName)) {
         error("You may not assign to '%s'.", varName->name);
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
         return;
     }
     if (std::isupper(varName->name[0])) {
         error("You may not assign to a class name.");
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
         return;
     }
@@ -3557,7 +3449,7 @@ void compileAssignVar(PyrParseNode* node, PyrSymbol* varName, bool drop) {
     const auto result = findVarName(gCompilingBlock, gCompilingClass, varName);
     if (!result) {
         error("Variable '%s' not defined.\n", varName->name);
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
         return;
     }
@@ -3597,7 +3489,7 @@ void compileAssignVar(PyrParseNode* node, PyrSymbol* varName, bool drop) {
 
     case varConst: {
         error("You may not assign to a constant.");
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
     } break;
 
@@ -3619,7 +3511,7 @@ void compileAssignVar(PyrParseNode* node, PyrSymbol* varName, bool drop) {
 
     default: {
         error("Should be impossible");
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
     } break;
     }
@@ -3636,11 +3528,11 @@ void PyrAssignNode::compile(PyrSlot* result) {
 
 int PyrSetterNode::isPartialApplication() {
     int sum = 0;
-    if (mExpr1->mClassno == pn_CurryArgNode) {
+    if (mExpr1->mClassno == PyrParseNodeType::CurryArgNode) {
         ((PyrCurryArgNode*)mExpr1)->mArgNum = sum;
         sum++;
     }
-    if (mExpr2->mClassno == pn_CurryArgNode) {
+    if (mExpr2->mClassno == PyrParseNodeType::CurryArgNode) {
         ((PyrCurryArgNode*)mExpr2)->mArgNum = sum;
         sum++;
     }
@@ -3653,7 +3545,7 @@ void PyrSetterNode::compileCall(PyrSlot* result) {
 
     if (nodeListLength(mExpr1) > 1) {
         error("Setter method called with too many arguments.\n");
-        nodePostErrorLine(mExpr1);
+        printErrorLine(mExpr1);
         compileErrors++;
         return;
     }
@@ -3708,21 +3600,12 @@ void PyrMultiAssignVarListNode::compile(PyrSlot* result) {
 }
 
 
-PyrDynDictNode* newPyrDynDictNode(PyrParseNode* elems) {
-    PyrDynDictNode* node;
-
-    // if (compilingCmdLine) post("newPyrDynDictNode\n");
-    node = ALLOCNODE(PyrDynDictNode);
-    node->mElems = elems;
-    return node;
-}
-
 int PyrDynDictNode::isPartialApplication() {
     int sum = 0;
     int numItems = nodeListLength(mElems);
     PyrParseNode* inode = mElems;
     for (int i = 0; i < numItems; ++i) {
-        if (inode->mClassno == pn_CurryArgNode) {
+        if (inode->mClassno == PyrParseNodeType::CurryArgNode) {
             ((PyrCurryArgNode*)inode)->mArgNum = sum;
             sum++;
         }
@@ -3753,21 +3636,13 @@ void PyrDynDictNode::compileCall(PyrSlot* result) {
     }
 }
 
-PyrDynListNode* newPyrDynListNode(PyrParseNode* classname, PyrParseNode* elems) {
-    PyrDynListNode* node;
-
-    node = ALLOCNODE(PyrDynListNode);
-    node->mClassname = classname;
-    node->mElems = elems;
-    return node;
-}
 
 int PyrDynListNode::isPartialApplication() {
     int sum = 0;
     int numItems = nodeListLength(mElems);
     PyrParseNode* inode = mElems;
     for (int i = 0; i < numItems; ++i) {
-        if (inode->mClassno == pn_CurryArgNode) {
+        if (inode->mClassno == PyrParseNodeType::CurryArgNode) {
             ((PyrCurryArgNode*)inode)->mArgNum = sum;
             sum++;
         }
@@ -3791,12 +3666,6 @@ void PyrDynListNode::compileCall(PyrSlot* result) {
     }
 }
 
-PyrLitListNode* newPyrLitListNode(PyrParseNode* classname, PyrParseNode* elems) {
-    PyrLitListNode* node = ALLOCNODE(PyrLitListNode);
-    node->mClassname = classname;
-    node->mElems = elems;
-    return node;
-}
 
 void PyrLitListNode::compile(PyrSlot* result) {
     PyrSlot* resultSlot;
@@ -3828,18 +3697,6 @@ void PyrLitListNode::compile(PyrSlot* result) {
 extern LongStack closedFuncCharNo;
 extern int lastClosedFuncCharNo;
 
-PyrBlockNode* newPyrBlockNode(PyrArgListNode* arglist, PyrVarListNode* varlist, PyrParseNode* body, bool isTopLevel) {
-    PyrBlockNode* node = ALLOCNODE(PyrBlockNode);
-    node->mArglist = arglist;
-    catVarLists(varlist);
-    node->mVarlist = varlist;
-    node->mBody = body;
-    node->mIsTopLevel = isTopLevel;
-
-    node->mBeginCharNo = lastClosedFuncCharNo;
-
-    return node;
-}
 
 void PyrBlockNode::compile(PyrSlot* slotResult) {
     PyrBlock *block, *prevBlock;
@@ -3876,12 +3733,6 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     methraw->unused1 = 0;
     methraw->unused2 = 0;
 
-    int endCharNo = linestarts[mLineno] + mCharno;
-    int stringLength = endCharNo - mBeginCharNo;
-    int lastChar = gCompilingText[mBeginCharNo + stringLength - 1];
-    if (lastChar == 0)
-        stringLength--;
-
     methraw->needsHeapContext = 0;
     if (mIsTopLevel) {
         gCompilingClass = class_interpreter;
@@ -3906,13 +3757,13 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
 
     if (numArgs > 255) {
         error("Too many arguments in function definition (> 255)\n");
-        nodePostErrorLine((PyrParseNode*)mArglist->mVarDefs);
+        printErrorLine((PyrParseNode*)mArglist->mVarDefs);
         compileErrors++;
     }
 
     if (numVars > 255) {
         error("Too many variables in function definition (> 255)\n");
-        nodePostErrorLine((PyrParseNode*)mVarlist->mVarDefs);
+        printErrorLine((PyrParseNode*)mVarlist->mVarDefs);
         compileErrors++;
     }
 
@@ -3963,7 +3814,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
                 if (blockargs[j] == slotRawSymbol(varslot)) {
                     error("Function argument '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                           slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
+                    printErrorLine((PyrParseNode*)vardef);
                     compileErrors++;
                 }
             }
@@ -3982,7 +3833,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
             if (blockargs[j] == slotRawSymbol(varslot)) {
                 error("Function argument '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                       slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 compileErrors++;
             }
         }
@@ -3998,7 +3849,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
                 if (blockargs[j] == slotRawSymbol(kwvarslot)) {
                     error("Argument '%s' already declared in %s:%s\n", slotRawSymbol(kwvarslot)->name,
                           slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)kwvarslot);
+                    printErrorLine((PyrParseNode*)kwvarslot);
                     compileErrors++;
                 }
             }
@@ -4018,31 +3869,31 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
             const PyrSymbol* name = slotRawSymbol(varslot);
             if (name == s_this) {
                 error("Cannot redefine 'this'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curProcess) {
                 error("Cannot redefine 'thisProcess'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curMethod) {
                 error("Cannot redefine 'thisMethod'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curBlock) {
                 error("Cannot redefine 'thisFunctionDef'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curClosure) {
                 error("Cannot redefine 'thisFunction'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_curThread) {
                 error("Cannot redefine 'thisThread'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             } else if (name == s_super) {
                 error("Cannot redefine 'super'\n");
-                nodePostErrorLine((PyrParseNode*)vardef);
+                printErrorLine((PyrParseNode*)vardef);
                 emitCompilerErrorFromVersion({ 3, 16, 0 });
             }
 
@@ -4051,7 +3902,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
                 if (blockargs[j] == slotRawSymbol(varslot)) {
                     error("Function variable '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                           slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
+                    printErrorLine((PyrParseNode*)vardef);
                     compileErrors++;
                 }
             }
@@ -4060,7 +3911,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
                 if (blockvars[j] == slotRawSymbol(varslot)) {
                     error("Function variable '%s' already declared in %s:%s\n", slotRawSymbol(varslot)->name,
                           slotRawSymbol(&gCompilingClass->name)->name, slotRawSymbol(&gCompilingMethod->name)->name);
-                    nodePostErrorLine((PyrParseNode*)vardef);
+                    printErrorLine((PyrParseNode*)vardef);
                     compileErrors++;
                 }
             }
@@ -4118,7 +3969,7 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
                 }
             }
         }
-        if (mBody->mClassno == pn_BlockReturnNode) {
+        if (mBody->mClassno == PyrParseNodeType::BlockReturnNode) {
             PushSpecialValue.emit(OpSpecialValue::Nil_);
         } else {
             COMPILENODE(mBody, &dummy, true);
@@ -4129,9 +3980,13 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
 
     if ((!gFunctionCantBeClosed && gFunctionHighestExternalRef == 0) || mIsTopLevel) {
         SetNil(&block->contextDef);
+    }
 
-        PyrString* string = newPyrStringN(compileGC(), stringLength, flags, false);
-        memcpy(string->s, gCompilingText + mBeginCharNo, stringLength);
+    // assign source code
+    {
+        const auto [ptr, sz] = (*getActiveCodePointStream())->source_range(this->location);
+        PyrString* string = newPyrStringN(compileGC(), sz, flags, false);
+        memcpy(string->s, ptr, sz);
         SetObject(&block->sourceCode, string);
     }
 
@@ -4143,30 +3998,12 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
 }
 
 
-PyrParseNode* linkNextNode(PyrParseNode* a, PyrParseNode* b) {
-    if (a == nullptr)
-        return b;
-    if (b) {
-        a->mTail->mNext = b;
-        a->mTail = b->mTail;
-    }
-    return a;
-}
-
-PyrParseNode* linkAfterHead(PyrParseNode* a, PyrParseNode* b) {
-    b->mNext = a->mNext;
-    if (!a->mNext)
-        a->mTail = b;
-    a->mNext = b;
-    return a;
-}
-
 bool isSuperObjNode(PyrParseNode* node) {
-    return node->mClassno == pn_PushNameNode && slotRawSymbol(&((PyrPushNameNode*)node)->mSlot) == s_super;
+    return node->mClassno == PyrParseNodeType::PushNameNode && slotRawSymbol(&((PyrSlotNode*)node)->mSlot) == s_super;
 }
 
 bool isThisObjNode(PyrParseNode* node) {
-    return node->mClassno == pn_PushNameNode && slotRawSymbol(&((PyrPushNameNode*)node)->mSlot) == s_this;
+    return node->mClassno == PyrParseNodeType::PushNameNode && slotRawSymbol(&((PyrSlotNode*)node)->mSlot) == s_this;
 }
 
 int nodeListLength(PyrParseNode* node) {
@@ -4258,7 +4095,7 @@ int conjureSelectorIndex(PyrParseNode* node, PyrBlock* func, bool isSuper, PyrSy
         error("Selector table too big: too many classes, method selectors or function definitions in this function. "
               "Simplify the function.\n");
         post("Next selector was: %s\n", selector->name);
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
         return 0;
     }
@@ -4309,7 +4146,7 @@ Byte conjureLiteralSlotIndex(PyrParseNode* node, PyrBlock* func, PyrSlot* slot) 
               "Simplify the function.\n");
         post("Next literal was:\n");
         dumpPyrSlot(slot);
-        nodePostErrorLine(node);
+        printErrorLine(node);
         compileErrors++;
         return 0;
     }

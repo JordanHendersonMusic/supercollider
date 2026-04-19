@@ -49,6 +49,7 @@
 #include <string.h>
 
 #include "PyrParseNode.h"
+#include "bisonHeaderInclude.hpp"
 #include "Bison/lang11d_tab.h"
 #include "SCBase.h"
 #include "PyrObject.h"
@@ -75,7 +76,7 @@
 struct ClassExtFile {
     struct ClassExtFile* next;
     PyrSymbol* fileSym;
-    int startPos, endPos, lineOffset;
+    sc::lex::FileCodeRange location_in_file_of_ext_classes;
 };
 
 typedef struct classdep {
@@ -85,7 +86,7 @@ typedef struct classdep {
     PyrSymbol* className;
     PyrSymbol* superClassName;
     PyrSymbol* fileSym;
-    int startPos, endPos, lineOffset;
+    sc::lex::FileCodeRange location_in_file;
 } ClassDependancy;
 
 int yyparse();
@@ -117,20 +118,15 @@ std::string printingCurrfilename; // for error reporting
 
 bool gCompilingCmdLine = false;
 
-// TODO: replace with yylval
-intptr_t zzval;
-
-// TODO: replace with yyloc
-int lineno, charno, linepos;
-int* linestarts;
-int maxlinestarts { 0 };
-
 // This is the text of the source file currently being tokenized.
 char* gCompilingText { nullptr };
 int textlen { 0 };
 int textpos { 0 };
+
+// TODO: remove was the meaning of these has been deduced.
 // I don't know what these do.
 int errLineOffset, errCharPosOffset;
+
 int gParseFailed = 0;
 bool gCompiledOK = false;
 std::set<fs::path> compiledDirectories;
@@ -174,8 +170,6 @@ double sc_strtof(const char* str, int n, int base) {
     return z;
 }
 
-bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos, int lineOffset);
-void startLexerCmdLine(char* textbuf, int textbuflen);
 void finiLexer();
 
 void initLexer() {
@@ -188,6 +182,7 @@ using namespace lex::literals;
 
 using TokenType = lex::TokenType;
 
+bool startLexer(PyrSymbol* fileSym, const fs::path& p, std::optional<sc::lex::FileCodeRange> range = {});
 
 [[nodiscard]] constexpr std::optional<yytokentype> convert_to_bison_tokentype(TokenType t) {
     const auto i = static_cast<int>(t);
@@ -588,8 +583,8 @@ private:
     }
 };
 
-void print_error_line(const lex::CodePointStream& char_stream, sc::lex::SourceCodeRange r,
-                      const char* short_description = nullptr) {
+void printErrorLine(const lex::CodePointStream& char_stream, sc::lex::SourceCodeRange r,
+                    const char* short_description) {
     const auto start_line_in_source = char_stream.line_start(r.begin);
 
     std::stringstream ss;
@@ -671,54 +666,46 @@ struct GlobalBisonLexerState {
     int mutate_global_state_for_return(const BisonLexerAction::Output& o) {
         // If you set this to 0 when not in use, the parse will segfault.
         // TODO: use yylval.
-        if (o.slot && !o.is_error())
-            zzval = (intptr_t)newPyrSlotNode(*o.slot);
 
-        // Yes it reads from the end point only. Very odd. Causes many issues.
-        textpos = o.range.end.absolute;
-        lineno = o.range.end.lineNumber + 1; // zero indexed to 1
-        linepos = char_stream.line_start(o.range.end).absolute;
-        charno = o.range.end.column;
-        if (maxlinestarts < o.range.end.lineNumber) {
-            maxlinestarts += maxlinestarts;
-            linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
-        }
-        linestarts[lineno] = linepos;
+        yylloc = o.range;
+        if (o.slot)
+            yylval.slotNode = allocParseNode<PyrSlotNode>(o.range, *o.slot);
+        else
+            yylval.empty = {}; // stop anything from continuing.
+
 
         if (o.is_error()) {
-            zzval = 0; // stop anything from continuing.
-
             post("\nLexing "
                  "Error:\n──────────────────────────────────────────────────────────────────────────────────\n");
             if (o.is(ExtendedErrors::GotCurlyExpectedParen) || o.is(ExtendedErrors::GotSquareExpectedParen)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(char_stream, *o.extra_range_of_error, "Parenthises opened here...");
-                    print_error_line(char_stream, o.range, "...was expected to be closed here with a ')'.");
+                    printErrorLine(char_stream, *o.extra_range_of_error, "Parenthises opened here...");
+                    printErrorLine(char_stream, o.range, "...was expected to be closed here with a ')'.");
                 }
             } else if (o.is(ExtendedErrors::GotCurlyExpectedSquare) || o.is(ExtendedErrors::GotParenExpectedSquare)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(char_stream, *o.extra_range_of_error, "Square bracket opened here...");
-                    print_error_line(char_stream, o.range, "...was expected to be closed here with a ']'.");
+                    printErrorLine(char_stream, *o.extra_range_of_error, "Square bracket opened here...");
+                    printErrorLine(char_stream, o.range, "...was expected to be closed here with a ']'.");
                 }
             } else if (o.is(ExtendedErrors::GotParenExpectedCurly) || o.is(ExtendedErrors::GotSquareExpectedCurly)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(char_stream, *o.extra_range_of_error, "Curly bracket opened here...");
-                    print_error_line(char_stream, o.range, "...was expected to be closed here with a '}'.");
+                    printErrorLine(char_stream, *o.extra_range_of_error, "Curly bracket opened here...");
+                    printErrorLine(char_stream, o.range, "...was expected to be closed here with a '}'.");
                 }
             } else if (o.is(ExtendedErrors::ExtraClosingCurlyBracket)) {
-                print_error_line(char_stream, o.range,
-                                 "Unexpected closing curly brace, could not find a matching opening one.");
+                printErrorLine(char_stream, o.range,
+                               "Unexpected closing curly brace, could not find a matching opening one.");
             } else if (o.is(ExtendedErrors::ExtraClosingParenBracket)) {
-                print_error_line(char_stream, o.range,
-                                 "Unexpected closing parenthesis, could not find a matching opening one.");
+                printErrorLine(char_stream, o.range,
+                               "Unexpected closing parenthesis, could not find a matching opening one.");
             } else if (o.is(ExtendedErrors::ExtraClosingSqaureBracket)) {
-                print_error_line(char_stream, o.range,
-                                 "Unexpected closing square bracket, could not find a matching opening one.");
+                printErrorLine(char_stream, o.range,
+                               "Unexpected closing square bracket, could not find a matching opening one.");
             } else if (o.is(TokenType::ErMissingExponent)) {
                 const auto [ptr, sz] = char_stream.source_range(o.range);
                 const std::string example { ptr, sz };
                 const auto desc = std::string { "Expected digits after the 'e', for example '" } + example + "10'.";
-                print_error_line(char_stream, o.range, desc.c_str());
+                printErrorLine(char_stream, o.range, desc.c_str());
             }
 
             else if (o.is(TokenType::ErSymbolQuoteUnclosed)) {
@@ -732,15 +719,15 @@ struct GlobalBisonLexerState {
                 const auto desc =
                     std::string { "This quoted symbol does not have a matching closing quote, perhaps you meant "
                                   + example + "'?" };
-                print_error_line(char_stream, o.range, desc.c_str());
+                printErrorLine(char_stream, o.range, desc.c_str());
             }
 
             else if (o.is(TokenType::ErInvalidUTF8)) {
-                print_error_line(char_stream, o.range,
-                                 "Invalid UTF8 encountered here, you probably want to delete this.");
+                printErrorLine(char_stream, o.range,
+                               "Invalid UTF8 encountered here, you probably want to delete this.");
             } else if (o.is(TokenType::ErInvalidToken)) {
-                print_error_line(char_stream, o.range,
-                                 "Invalid token encountered, supercollider does not know how to handle this.");
+                printErrorLine(char_stream, o.range,
+                               "Invalid token encountered, supercollider does not know how to handle this.");
             }
 
             else if (o.is(TokenType::ErStringUnclosed)) {
@@ -751,14 +738,14 @@ struct GlobalBisonLexerState {
                 const std::string example { ptr, i };
                 const auto desc =
                     std::string { "This string does not have a closing '\"', perhaps you meant " + example + "\"?" };
-                print_error_line(char_stream, o.range, desc.c_str());
+                printErrorLine(char_stream, o.range, desc.c_str());
             } else if (o.is(TokenType::ErMultilineCommentUnclosed)) {
                 const auto desc = std::string { "This multiline comment does not have a closing */." };
-                print_error_line(char_stream, o.range, desc.c_str());
+                printErrorLine(char_stream, o.range, desc.c_str());
             }
 
             else {
-                print_error_line(char_stream, o.range);
+                printErrorLine(char_stream, o.range);
             }
         }
         gParseFailed = o.is_error() ? 1 : 0;
@@ -768,6 +755,15 @@ struct GlobalBisonLexerState {
 };
 
 std::optional<GlobalBisonLexerState> global_bison_lexer_state {};
+
+std::optional<sc::lex::CodePointStream* const> getActiveCodePointStream() {
+    if (global_bison_lexer_state) {
+        auto p = &global_bison_lexer_state.value().char_stream;
+        assert(p);
+        return { p };
+    }
+    return std::nullopt;
+}
 
 // Must also advance through global state.
 // Requires having consumed the opening bracket.
@@ -793,7 +789,7 @@ bool scanForClosingBracket(char to_find) {
     }
 }
 
-void scan_for_end() {
+int scan_for_end() {
     assert(global_bison_lexer_state);
     GlobalBisonLexerState& s = *global_bison_lexer_state;
 
@@ -802,7 +798,7 @@ void scan_for_end() {
         out = lex::lexer(s.char_stream, s.action);
     } while (out.type != TokenType::EndOfFile && out.type != TokenType::ErUnexpected && !out.is_error());
 
-    s.mutate_global_state_for_return(out);
+    return s.mutate_global_state_for_return(out);
 }
 
 int yylex() {
@@ -824,7 +820,7 @@ int yylex() {
     if (out.type != TokenType::StringLine)
         return s.mutate_global_state_for_return(out);
 
-    sc::lex::SourceCodeLocation start { out.range.begin };
+    const auto start_range { out.range };
     std::string str {};
     str.reserve(128);
 
@@ -834,22 +830,13 @@ int yylex() {
         if (out.type != TokenType::StringLine) {
             assert(!s.cached.has_value());
 
-            // Yes it reads from the end point only. Very odd. Causes many issues.
-            textpos = prev.range.end.absolute;
-            lineno = prev.range.end.lineNumber + 1; // zero indexed to 1
-            linepos = s.char_stream.line_start(prev.range.end).absolute;
-            charno = prev.range.end.column;
-            if (maxlinestarts < prev.range.end.lineNumber) {
-                maxlinestarts += maxlinestarts;
-                linestarts = (int*)pyr_pool_compile->Realloc(linestarts, maxlinestarts * sizeof(int*));
-            }
-            linestarts[lineno] = linepos;
-
             // This is the one case in the whole lexer where we currently have to alloc using the GC.
             // This would be much better pushed into the compiler.
             const int flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
             auto sc_str = newPyrString(gMainVMGlobals->gc, str.c_str(), flags, false);
-            zzval = (intptr_t)newPyrSlotNode(PyrSlot::make(sc_str));
+            yylval.slotNode = allocParseNode<PyrSlotNode>(yylloc, PyrSlot::make(sc_str));
+
+            yylloc = start_range.span_to(prev.range);
             gParseFailed = prev.is_error() ? 1 : 0;
 
             s.cached = std::move(out); // save for next time.
@@ -1044,15 +1031,13 @@ int numClassDeps;
 static ClassExtFile* sClassExtFiles;
 static ClassExtFile* eClassExtFiles;
 
-ClassExtFile* newClassExtFile(PyrSymbol* fileSym, int startPos, int endPos);
-ClassExtFile* newClassExtFile(PyrSymbol* fileSym, int startPos, int endPos) {
+ClassExtFile* newClassExtFile(PyrSymbol* fileSym, sc::lex::FileCodeRange location) {
     ClassExtFile* classext;
     classext = (ClassExtFile*)pyr_pool_compile->Alloc(sizeof(ClassExtFile));
     MEMFAIL(classext);
     classext->fileSym = fileSym;
     classext->next = nullptr;
-    classext->startPos = startPos;
-    classext->endPos = endPos;
+    classext->location_in_file_of_ext_classes = location;
     if (!sClassExtFiles)
         sClassExtFiles = classext;
     else
@@ -1062,8 +1047,8 @@ ClassExtFile* newClassExtFile(PyrSymbol* fileSym, int startPos, int endPos) {
 }
 
 
-ClassDependancy* newClassDependancy(PyrSymbol* className, PyrSymbol* superClassName, PyrSymbol* fileSym, int startPos,
-                                    int endPos, int lineOffset) {
+ClassDependancy* newClassDependancy(PyrSymbol* className, PyrSymbol* superClassName, PyrSymbol* fileSym,
+                                    sc::lex::FileCodeRange location_in_file) {
     ClassDependancy* classdep;
 
     // post("classdep '%s' '%s' '%s' %d %d\n", className->name, superClassName->name,
@@ -1086,9 +1071,7 @@ ClassDependancy* newClassDependancy(PyrSymbol* className, PyrSymbol* superClassN
     classdep->next = nullptr;
     classdep->subclasses = nullptr;
 
-    classdep->startPos = startPos;
-    classdep->endPos = endPos;
-    classdep->lineOffset = lineOffset;
+    classdep->location_in_file = location_in_file;
 
     className->classdep = classdep;
     return classdep;
@@ -1131,7 +1114,6 @@ void traverseFullDepTree() {
 
     // parse and compile all files
     initParser(); // sets compiler errors to 0
-    gParserResult = -1;
 
     traverseDepTree(s_object->classdep, 0);
     compileDepTree(); // compiles backwards using the order defined in gClassCompileOrder
@@ -1139,7 +1121,6 @@ void traverseFullDepTree() {
 
     pyr_pool_compile->Free(gClassCompileOrder);
 
-    finiParser();
     // postfl("<-traverseFullDepTree\n"); fflush(stdout);
 }
 
@@ -1161,29 +1142,30 @@ void traverseDepTree(ClassDependancy* classdep, int level) {
         MEMFAIL(gClassCompileOrder);
     }
 
-    /*	postfl("traverse level:%d, gClassCompileOrderNum:%d, '%s' '%s' '%s'\n", level, gClassCompileOrderNum,
-       classdep->className->name, classdep->superClassName->name, classdep->fileSym->name); fflush(stdout);
-    */
+    // postfl("traverse level:%d, gClassCompileOrderNum:%d, '%s' '%s' '%s'\n", level, gClassCompileOrderNum,
+    //        classdep->className->name, classdep->superClassName->name, classdep->fileSym->name);
+    // fflush(stdout);
+
 
     gClassCompileOrder[gClassCompileOrderNum++] = classdep;
 }
 
 
-void compileClass(PyrSymbol* fileSym, int startPos, int endPos, int lineOffset) {
+void compileClass(PyrSymbol* fileSym, sc::lex::FileCodeRange range) {
     // fprintf(stderr, "compileClass: %d\n", fileSym->u.index);
 
     gCompilingFileSym = fileSym;
     gCompilingVMGlobals = nullptr;
     gRootParseNode = nullptr;
     initParserPool();
-    if (startLexer(fileSym, fs::path(), startPos, endPos, lineOffset)) {
+    if (startLexer(fileSym, fs::path(), range)) {
         // postfl("->Parsing %s\n", fileSym->name); fflush(stdout);
         gParseFailed = yyparse();
         // postfl("<-Parsing %s %d\n", fileSym->name, parseFailed); fflush(stdout);
         // post("parseFailed %d\n", parseFailed); fflush(stdout);
-        if (!gParseFailed && gRootParseNode) {
+        if (gParseFailed == 0 && gRootParseNode) {
             // postfl("Compiling nodes %p\n", gRootParseNode);fflush(stdout);
-            gCompilingCmdLine = false;
+            gCompilingCmdLine = false; // TODO: this line doesn't need to be here.
             compileNodeList(gRootParseNode, true);
             // postfl("done compiling\n");fflush(stdout);
         } else {
@@ -1207,7 +1189,7 @@ void compileDepTree() {
         classdep = gClassCompileOrder[i];
         /*postfl("compile %d '%s' '%s' '%s'...%d/%d/%d\n", i, classdep->className->name, classdep->superClassName->name,
             classdep->fileSym->name, classdep->startLine, classdep->endLine, classDep->lineOffset);*/
-        compileClass(classdep->fileSym, classdep->startPos, classdep->endPos, classdep->lineOffset);
+        compileClass(classdep->fileSym, classdep->location_in_file);
     }
     // postfl("<compile\n");
 }
@@ -1217,7 +1199,7 @@ void compileClassExtensions() {
         ClassExtFile* classext = sClassExtFiles;
         do {
             // postfl("compile class ext: %d/%d\n", classext->startPos, classext->endPos);
-            compileClass(classext->fileSym, classext->startPos, classext->endPos, -1);
+            compileClass(classext->fileSym, classext->location_in_file_of_ext_classes);
             classext = classext->next;
         } while (classext);
     }
@@ -1270,93 +1252,112 @@ void traverseFullDepTree2() {
 }
 
 bool parseOneClass(PyrSymbol* fileSym) {
-    int token;
-    PyrSymbol *className, *superClassName;
-    ClassDependancy* classdep;
-    bool res;
+    struct R {
+        int token;
+        YYSTYPE semantic_value;
+        Location location;
+    };
 
-    int startPos, startLineOffset;
+    const auto lex = []() -> std::optional<R> {
+        const auto t = yylex();
+        if (t == BADTOKEN)
+            return std::nullopt;
+        return { { t, yylval, yylloc } };
+    };
 
-    res = true;
+    const auto lex_scan_for_end = []() -> std::optional<R> {
+        const auto t = scan_for_end();
+        if (t == BADTOKEN)
+            return std::nullopt;
+        return { { t, yylval, yylloc } };
+    };
 
-    startPos = textpos;
-    startLineOffset = lineno - 1;
+    const auto lex_closing_bracket = [](char b) -> std::optional<R> {
+        if (!scanForClosingBracket(b))
+            return std::nullopt;
+        return { { b, yylval, yylloc } };
+    };
 
-    token = yylex();
-    if (token == CLASSNAME) {
-        className = slotRawSymbol(&((PyrSlotNode*)zzval)->mSlot);
-        // I think this is wrong: zzval is space pool alloced
-        // pyrfree((PyrSlot*)zzval);
 
-        token = yylex();
-        if (token == 0)
-            return false;
-        if (token == '[') {
-            scanForClosingBracket(']'); // eat indexing spec
-            token = yylex();
-            if (token == 0)
-                return false;
-        }
-        if (token == ':') {
-            token = yylex(); // get super class
-            if (token == 0)
-                return false;
-            if (token == CLASSNAME) {
-                superClassName = slotRawSymbol(&((PyrSlotNode*)zzval)->mSlot);
-                // I think this is wrong: zzval is space pool alloced
-                // pyrfree((PyrSlot*)zzval);
-                token = yylex();
-                if (token == 0)
-                    return false;
-                if (token == '{') {
-                    scanForClosingBracket('}'); // eat class body
-                    classdep =
-                        newClassDependancy(className, superClassName, fileSym, startPos, textpos, startLineOffset);
-                } else {
-                    compileErrors++;
-                    postfl("Expected %c.  got token: %d\n", '{', token);
-                    postErrorLine(lineno, linepos, charno);
-                    return false;
-                }
-            } else {
-                compileErrors++;
-                post("Expected superclass name.  got token: ' %d\n", token);
-                postErrorLine(lineno, linepos, charno);
-                return false;
-            }
-        } else if (token == '{') {
-            if (className == s_object)
-                superClassName = s_none;
-            else
-                superClassName = s_object;
-            scanForClosingBracket('}'); // eat class body
-            classdep = newClassDependancy(className, superClassName, fileSym, startPos, textpos, startLineOffset);
-        } else {
-            compileErrors++;
-            post("Expected ':' or %c.  got token: %d\n", '{', token);
-            postErrorLine(lineno, linepos, charno);
-            return false;
-        }
-    } else if (token == '+') {
-        token = yylex();
-        if (token == 0)
-            return false;
-
-        scan_for_end();
-
-        newClassExtFile(fileSym, startPos, textpos);
+    const auto t1 = lex();
+    if (!t1 || t1->token == 0)
         return false;
-    } else {
-        if (token != 0) {
-            compileErrors++;
-            post("Expected class name.  got token: %d\n", token);
-            postErrorLine(lineno, linepos, charno);
-            return false;
-        } else {
-            res = false;
-        }
+
+    if (t1->token != CLASSNAME && t1->token != '+') {
+        compileErrors++;
+        post("Expected class name or '+'.  got token: %d\n", t1->token);
+        // postErrorLine(lineno, linepos, charno);
+        return false;
     }
-    return res;
+
+    if (t1->token == '+') {
+        const auto t2 = lex();
+        if (!t2 || t2->token == 0)
+            return false;
+
+        const auto e = lex_scan_for_end();
+        if (!e)
+            return false;
+
+        // Mark file as being a class extention file and leave.
+        // The grammar means there are no more classes after this point.
+        const auto end = lex_scan_for_end();
+        if (!end)
+            return false;
+        const auto ext_range = t1->location.span_to(end->location);
+        newClassExtFile(fileSym, (*getActiveCodePointStream())->source_to_file(ext_range));
+        return false;
+    }
+
+    const auto classname = t1->semantic_value.slotNode->mSlot.getSymbol();
+    PyrSymbol* superclassname { classname == s_object ? s_none : s_object };
+
+    auto rolling_token = lex();
+    if (!rolling_token || rolling_token->token == 0)
+        return false;
+
+    if (rolling_token->token == '[') {
+        const auto closing_b = lex_closing_bracket(']');
+        if (!closing_b)
+            // ERROR: could not find closign bracket.
+            return false;
+
+
+        // carry on.
+        rolling_token = lex();
+        if (!rolling_token || rolling_token->token == 0)
+            return false;
+    }
+
+    if (rolling_token->token == ':') {
+        const auto t3 = lex();
+        if (!t3 || t3->token != CLASSNAME) {
+            // ERROR: expecting class name as super class.
+            return false;
+        }
+
+        superclassname = t3->semantic_value.slotNode->mSlot.getSymbol();
+        rolling_token = lex();
+        if (!rolling_token || rolling_token->token == 0)
+            return false;
+    }
+
+    if (rolling_token->token != '{') {
+        // ERROR: no body in class def.
+        return false;
+    }
+
+    const auto closing_b = lex_closing_bracket('}');
+    if (!closing_b) {
+        // ERROR: could not find closing bracket.
+        return false;
+    }
+
+    const sc::lex::SourceCodeRange loc = t1->location.span_to(closing_b->location);
+    const sc::lex::CodePointStream& cps = **getActiveCodePointStream();
+    const sc::lex::FileCodeRange loc_in_file = cps.source_to_file(loc);
+    newClassDependancy(classname, superclassname, fileSym, loc_in_file);
+    return true;
 }
 
 void initPassOne() {
@@ -1375,7 +1376,6 @@ void initPassOne() {
     initSpecialClasses();
     initClasses();
     initParserPool();
-    initParseNodes();
     initPrimitives();
 
     initLexer();
@@ -1582,7 +1582,7 @@ bool passOne_ProcessOneFile(const fs::path& path) {
         gNumCompiledFiles++;
         PyrSymbol* fileSym = getsym(path_c_str);
         fileSym->u.source = nullptr;
-        if (startLexer(fileSym, path, -1, -1, -1)) {
+        if (startLexer(fileSym, path)) {
             while (parseOneClass(fileSym)) {};
             finiLexer();
         } else {
@@ -1748,10 +1748,8 @@ SCLANG_DLLEXPORT_C void runLibrary(PyrSymbol* selector) {
     g->canCallOS = false;
 }
 
-bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos, int lineOffset) {
+bool startLexer(PyrSymbol* fileSym, const fs::path& p, std::optional<sc::lex::FileCodeRange> range) {
     const char* filename = fileSym->name;
-
-    textlen = -1;
 
     if (!fileSym->u.source) {
         try {
@@ -1773,43 +1771,36 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
     } else
         gCompilingText = fileSym->u.source;
 
-    if ((startPos >= 0) && (endPos > 0)) {
-        textlen = endPos - startPos;
-        gCompilingText += startPos;
-    } else if (textlen == -1)
+    if (range) {
+        gCompilingText += range->begin.absolute;
+        textlen = range->size();
+    } else {
         textlen = strlen(gCompilingText);
+    }
 
-    if (lineOffset > 0)
-        errLineOffset = lineOffset;
-    else
-        errLineOffset = 0;
+    // if (lineOffset > 0)
+    //     errLineOffset = lineOffset;
+    // else
+    //     errLineOffset = 0;
 
-    if (startPos > 0)
-        errCharPosOffset = startPos;
-    else
-        errCharPosOffset = 0;
+    // if (startPos > 0)
+    //     errCharPosOffset = startPos;
+    // else
+    //     errCharPosOffset = 0;
 
     initLongStack(&generatorStack);
     lastClosedFuncCharNo = 0;
     textpos = 0;
-    linepos = 0;
-    lineno = 1;
-    charno = 0;
 
-    zzval = 0;
     gParseFailed = 0;
     currfilename = fs::path(filename);
     printingCurrfilename = "file '" + SC_Codecvt::path_to_utf8_str(currfilename) + "'";
-    maxlinestarts = 1000;
-    linestarts = (int*)pyr_pool_compile->Alloc(maxlinestarts * sizeof(int*));
-    MEMFAIL(linestarts);
-    linestarts[0] = 0;
-    linestarts[1] = 0;
     gCompilingCmdLine = false;
 
     global_bison_lexer_state.emplace(
         std::move(BisonLexerAction { gCompilingText }),
-        std::move(lex::CodePointStream { true, gCompilingText, static_cast<size_t>(textlen), {} }));
+        std::move(lex::CodePointStream { true, gCompilingText, static_cast<size_t>(textlen),
+                                         range ? range->begin : sc::lex::FileCodeLocation {} }));
 
     return true;
 }
@@ -1822,20 +1813,12 @@ void startLexerForTestingClassLib(PyrSymbol* file_name_with_src) {
     initLongStack(&generatorStack);
     lastClosedFuncCharNo = 0;
     textpos = 0;
-    linepos = 0;
-    lineno = 1;
-    charno = 0;
     errLineOffset = 0;
     errCharPosOffset = 0;
 
     gParseFailed = 0;
     currfilename = fs::path();
     printingCurrfilename = "file '" + SC_Codecvt::path_to_utf8_str(currfilename) + "'";
-    maxlinestarts = 1000;
-    linestarts = (int*)pyr_pool_compile->Alloc(maxlinestarts * sizeof(int*));
-    MEMFAIL(linestarts);
-    linestarts[0] = 0;
-    linestarts[1] = 0;
 
     global_bison_lexer_state.emplace(
         std::move(BisonLexerAction { gCompilingText }),
@@ -1857,20 +1840,11 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
     initLongStack(&generatorStack);
     lastClosedFuncCharNo = 0;
     textpos = 0;
-    linepos = 0;
-    lineno = 1;
-    charno = 0;
 
     gCompilingCmdLine = true;
-    zzval = 0;
     gParseFailed = 0;
     currfilename = fs::path("interpreted text");
     printingCurrfilename = currfilename.string();
-    maxlinestarts = 1000;
-    linestarts = (int*)pyr_pool_compile->Alloc(maxlinestarts * sizeof(int*));
-    MEMFAIL(linestarts);
-    linestarts[0] = 0;
-    linestarts[1] = 0;
 
     errLineOffset = 0;
     errCharPosOffset = 0;
@@ -1882,6 +1856,5 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
 
 void finiLexer() {
     global_bison_lexer_state.reset();
-    pyr_pool_compile->Free(linestarts);
     freeLongStack(&generatorStack);
 }

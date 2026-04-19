@@ -575,7 +575,6 @@ int numClassVars(PyrClass* classobj) {
 }
 
 
-void objAddIndexedSlotGrow(PyrSlot* arraySlot, PyrSlot* addSlot);
 void objAddIndexedSlotGrow(PyrSlot* arraySlot, PyrSlot* addSlot) {
     PyrObject* obj;
     if (IsNil(arraySlot)) {
@@ -598,8 +597,8 @@ void objAddIndexedSlotGrow(PyrSlot* arraySlot, PyrSlot* addSlot) {
 }
 
 void addMethod(PyrClass* classobj, PyrMethod* method) {
-    PyrSlot slot;
-    SetObject(&slot, method);
+    PyrSlot slot = PyrSlot::make(method);
+    assert(method);
     objAddIndexedSlotGrow(&classobj->methods, &slot);
 }
 
