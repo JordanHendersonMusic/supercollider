@@ -335,26 +335,25 @@ public:
         return { PrivateTag(), Tags::charTag, static_cast<uint64_t>(details::bit_cast<uint8_t>(c)) };
     }
 
-    [[nodiscard]] inline static PyrSlot make(PyrObjectHdr* o) {
+    [[nodiscard]] inline static PyrSlot make(PyrObjectHdr* o) noexcept {
         return { PrivateTag(), Tags::objHdrTag, static_cast<uint64_t>(reinterpret_cast<uintptr_t>(o)) };
     }
-    [[nodiscard]] inline static PyrSlot make(PyrObjectHdr& o) {
+    [[nodiscard]] inline static PyrSlot make(PyrObjectHdr& o) noexcept {
         return { PrivateTag(), Tags::objHdrTag, static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&o)) };
     }
-    [[nodiscard]] inline static PyrSlot make(PyrObjectHdr o) = delete;
 
-    [[nodiscard]] inline static PyrSlot make(PyrSymbol* o) {
+    [[nodiscard]] inline static PyrSlot make(PyrSymbol* o) noexcept {
         return { PrivateTag(), Tags::symTag, static_cast<uint64_t>(reinterpret_cast<uintptr_t>(o)) };
     }
-    [[nodiscard]] inline static PyrSlot make(PyrSymbol& o) {
+    [[nodiscard]] inline static PyrSlot make(PyrSymbol& o) noexcept {
         return { PrivateTag(), Tags::symTag, static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&o)) };
     }
-    [[nodiscard]] inline static PyrSlot make(PyrSymbol o) = delete;
 
-    [[nodiscard]] inline static PyrSlot make(int32_t i) {
+    [[nodiscard]] inline static PyrSlot make(int32_t i) noexcept {
         return { PrivateTag(), Tags::intTag, static_cast<uint64_t>(details::bit_cast<uint32_t>(i)) };
     }
-    [[nodiscard]] inline static PyrSlot make(void* o) {
+    [[nodiscard]] inline static PyrSlot make(void* o) noexcept {
+        static_assert(sizeof(uintptr_t) <= sizeof(uint64_t)); // probably always true?
         return { PrivateTag(), Tags::ptrTag, static_cast<uint64_t>(reinterpret_cast<uintptr_t>(o)) };
     }
     [[nodiscard]] inline static PyrSlot make() noexcept { return {}; }
@@ -415,6 +414,8 @@ public:
         assert(isBoxed());
         if (isObjectHdr())
             return reinterpret_cast<T*>(u_objectHeader.getPtr());
+        // Previously, these values have all been used to mean nullptr. This is quite confusing, but would be a large
+        // breaking change that affected the langauge, so they remain.
         assert(isNil() || (isInt() && getInt() == 0) || (isDouble() && getDouble() == 0));
         return nullptr;
     }
