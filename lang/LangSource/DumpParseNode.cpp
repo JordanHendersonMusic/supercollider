@@ -30,6 +30,11 @@
 #    define PATH_MAX _MAX_PATH
 #endif
 
+#define DUMPNODE(node, level)                                                                                          \
+    do {                                                                                                               \
+        if (node)                                                                                                      \
+            (node)->dump(level);                                                                                       \
+    } while (false);
 
 void dumpNodeList(PyrParseNode* node) {
     for (; node; node = node->mNext) {

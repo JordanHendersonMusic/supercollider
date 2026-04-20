@@ -44,6 +44,12 @@
 #include "SC_Codecvt.hpp"
 #include "SpecialSelectorsOperatorsAndClasses.h"
 
+#define COMPILENODE(node, result, onTailBranch) (compileNode((node), (result), (onTailBranch)))
+#define DUMPNODE(node, level)                                                                                          \
+    do {                                                                                                               \
+        if (node)                                                                                                      \
+            (node)->dump(level);                                                                                       \
+    } while (false);
 namespace fs = std::filesystem;
 
 using namespace Opcode;
@@ -214,6 +220,13 @@ PyrLitListNode::PyrLitListNode(Tag t, Location l, PyrParseNode* mClassname, PyrP
     PyrParseNode(t, PyrParseNodeType::LitListNode, l),
     mClassname(mClassname),
     mElems(mElems) {}
+
+
+[[nodiscard]] sc::lex::FileCodeRange PyrParseNode::locationInFile() const {
+    auto cps = getActiveCodePointStream();
+    assert(cps);
+    return (*cps)->source_to_file(location);
+}
 
 
 extern bool gCompilingCmdLine;

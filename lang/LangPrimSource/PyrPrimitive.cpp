@@ -2335,7 +2335,7 @@ int prInstancesOfClassRespondTo(struct VMGlobals* g, int numArgsPushed) {
 }
 
 
-PyrMethod* GetFunctionCompileContext(VMGlobals* g);
+// TODO: this could be stored in the VMGlobals rather than looking it up every time.
 PyrMethod* GetFunctionCompileContext(VMGlobals* g) {
     PyrClass* classobj;
     PyrSymbol *classsym, *contextsym;
@@ -2388,7 +2388,7 @@ int prCompileString(struct VMGlobals* g, int numArgsPushed) {
     gParseFailed = yyparse();
     // assert(g->gc->SanityCheck());
     if (!gParseFailed && gRootParseNode) {
-        PyrSlot slotResult;
+        PyrSlot slotResult {};
 
         meth = GetFunctionCompileContext(g);
         if (!meth)
@@ -2396,8 +2396,7 @@ int prCompileString(struct VMGlobals* g, int numArgsPushed) {
 
         ((PyrBlockNode*)gRootParseNode)->mIsTopLevel = true;
 
-        SetNil(&slotResult);
-        COMPILENODE(gRootParseNode, &slotResult, true);
+        compileNode(gRootParseNode, &slotResult, true);
 
         if (NotObj(&slotResult) || slotRawObject(&slotResult)->classptr != class_fundef) {
             compileErrors++;

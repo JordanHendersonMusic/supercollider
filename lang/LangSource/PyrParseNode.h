@@ -50,27 +50,22 @@ enum struct ReadWriteAccessor {
 enum { varInst, varClass, varTemp, varConst, varPseudo, varLocal };
 
 enum struct PyrParseNodeType : char {
-    /* structural units */
     ClassNode,
     ClassExtNode,
     MethodNode,
     BlockNode,
     SlotNode,
 
-    /* variable declarations */
     VarListNode,
     VarDefNode,
     DynDictNode,
     DynListNode,
     LitListNode,
-    LitDictNode,
 
     ArgListNode,
 
-    /* selectors */
     LiteralNode,
 
-    /* code */
     PushLitNode,
     PushNameNode,
     PushKeyArgNode,
@@ -95,15 +90,8 @@ enum struct PyrParseNodeType : char {
 // There is a primitive that returns this value so it can be checked in sclang's unit tests.
 extern int gNumUninlinedFunctions;
 
-#define COMPILENODE(node, result, onTailBranch) (compileNode((node), (result), (onTailBranch)))
-#define DUMPNODE(node, level)                                                                                          \
-    do {                                                                                                               \
-        if (node)                                                                                                      \
-            (node)->dump(level);                                                                                       \
-    } while (false);
-
-
 extern AdvancingAllocPool gParseNodePool;
+
 // This is how you create parse nodes, this is the only way to do so.
 // It allocates them into gParseNodePool.
 template <typename T, typename... ARGS> T* allocParseNode(Location loc, ARGS... args);
@@ -127,9 +115,12 @@ public:
     PyrParseNode& operator=(PyrParseNode&&) = delete;
     PyrParseNode& operator=(const PyrParseNode&) = delete;
 
+    // TODO: remove the out arg here, instead call getConstant first.
     virtual void compile(PyrSlot* result) = 0;
     virtual void dump(int level) = 0;
 
+    // TODO: this is currently unimplemented.
+    // Can be nullptr, always check.
     virtual PyrSlot* getConstant() { return nullptr; }
 
     PyrParseNode* mNext;
@@ -138,11 +129,7 @@ public:
     PyrParseNodeType mClassno;
     unsigned char mParens { 0 };
 
-    [[nodiscard]] sc::lex::FileCodeRange locationInFile() const {
-        auto cps = getActiveCodePointStream();
-        assert(cps);
-        return (*cps)->source_to_file(location);
-    }
+    [[nodiscard]] sc::lex::FileCodeRange locationInFile() const;
 
     template <typename T, typename... ARGS> friend T* allocParseNode(Location loc, ARGS... args);
 };
@@ -550,14 +537,9 @@ template <typename T, typename... NODES> T* linkNodes(T* first, NODES*... nodes)
 
 extern int compileErrors;
 
-/// Creates a compiler error if current version is greater than or equal to 'version'.
-/// Otherwise posts a warning informing the user to fix their code before updating.
-void emitCompilerErrorFromVersion(SemanticVersion version);
-
 extern int numOverwrites;
 extern std::string overwriteMsg;
 
-extern PyrSymbol* ps_newlist;
 extern PyrSymbol* gSpecialUnarySelectors[opNumUnarySelectors];
 extern PyrSymbol* gSpecialBinarySelectors[opNumBinarySelectors];
 extern PyrSymbol* gSpecialSelectors[opmNumSpecialSelectors];
