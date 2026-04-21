@@ -1003,6 +1003,7 @@ HOT int blockValueWithKeys(struct VMGlobals* g, int allArgsPushed, int numKeyArg
     g->sp = args - 1;
     g->ip = slotRawInt8Array(&block->code)->b - 1;
     g->frame = frame;
+    g->frame->expected_stack_depth_after_return = PyrSlot::make(static_cast<int>(g->gc->StackDepth() + 1));
     g->block = block;
 
     return errNone;
@@ -3612,7 +3613,7 @@ void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
         // slotRawSymbol(&meth->name)->name);
         SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
         SetInt(&g->thread->primitiveError, err);
-        executeMethod(g, meth, numArgsNeeded, 0);
+        setupForMethod(g, meth, numArgsNeeded, 0);
     }
 #ifdef GC_SANITYCHECK
     g->gc->SanityCheck();
@@ -3658,7 +3659,7 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
             // post("primerr %d\n", err);
             SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
             SetInt(&g->thread->primitiveError, err);
-            executeMethod(g, meth, allArgsPushed, numKeyArgsPushed);
+            setupForMethod(g, meth, allArgsPushed, numKeyArgsPushed);
         }
 #ifdef GC_SANITYCHECK
         g->gc->SanityCheck();
@@ -3736,7 +3737,7 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         // post("primerr %d\n", err);
         SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
         SetInt(&g->thread->primitiveError, err);
-        executeMethod(g, meth, numArgsNeeded, 0);
+        setupForMethod(g, meth, numArgsNeeded, 0);
     }
 #ifdef GC_SANITYCHECK
     g->gc->SanityCheck();

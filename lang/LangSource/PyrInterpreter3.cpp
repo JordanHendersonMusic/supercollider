@@ -39,6 +39,7 @@
 #include <string.h>
 #include <signal.h>
 #include "SpecialSelectorsOperatorsAndClasses.h"
+#include "VMGlobals.h"
 
 #include <float.h>
 #define kBigBigFloat DBL_MAX
@@ -511,14 +512,24 @@ static inline void checkStackDepth(VMGlobals* g, PyrSlot* sp) {
 #    pragma GCC optimize("-fno-gcse")
 #endif
 
+// Enable this to print each opcode and the stack size
+#if 0
+#    include <iostream>
+#    define LogOpcode(NAME)                                                                                            \
+        { std::cout << NAME.name << ' ' << g->gc->StackDepth() << '\n'; };
+#else
+#    define LogOpcode(NAME)
+#endif
 
 /// Pass the name of an Opcode struct, e.g. InterpretOpcode(SendMsgX)
 /// Setups of a switch case and a label for the computed gotos.
 #define InterpretOpcode(NAME)                                                                                          \
     case NAME.code:                                                                                                    \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME);
 
-#define InterpretExtendedOpcode(NAME) case Extended::NAME.code:
+#define InterpretExtendedOpcode(NAME)                                                                                  \
+    case Extended::NAME.code:                                                                                          \
+        LogOpcode(NAME);
 
 /// Pass the name of an Opcode struct that has 16 variants in the second nibble, e.g. InterpretOpcode16(PushInstVar)
 /// Setups of a switch case and a label for the computed gotos.
@@ -539,7 +550,7 @@ static inline void checkStackDepth(VMGlobals* g, PyrSlot* sp) {
     case NAME.codeOffset<13>():                                                                                        \
     case NAME.codeOffset<14>():                                                                                        \
     case NAME.codeOffset<15>():                                                                                        \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME)
 
 #define InterpretOpcode15(NAME)                                                                                        \
     case NAME.codeOffset<0>():                                                                                         \
@@ -557,7 +568,7 @@ static inline void checkStackDepth(VMGlobals* g, PyrSlot* sp) {
     case NAME.codeOffset<12>():                                                                                        \
     case NAME.codeOffset<13>():                                                                                        \
     case NAME.codeOffset<14>():                                                                                        \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME)
 
 #define InterpretOpcode14(NAME)                                                                                        \
     case NAME.codeOffset<0>():                                                                                         \
@@ -574,7 +585,7 @@ static inline void checkStackDepth(VMGlobals* g, PyrSlot* sp) {
     case NAME.codeOffset<11>():                                                                                        \
     case NAME.codeOffset<12>():                                                                                        \
     case NAME.codeOffset<13>():                                                                                        \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME)
 
 #define InterpretOpcode7(NAME)                                                                                         \
     case NAME.codeOffset<0>():                                                                                         \
@@ -584,7 +595,7 @@ static inline void checkStackDepth(VMGlobals* g, PyrSlot* sp) {
     case NAME.codeOffset<4>():                                                                                         \
     case NAME.codeOffset<5>():                                                                                         \
     case NAME.codeOffset<6>():                                                                                         \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME)
 
 #define InterpretOpcode8(NAME)                                                                                         \
     case NAME.codeOffset<0>():                                                                                         \
@@ -595,7 +606,7 @@ static inline void checkStackDepth(VMGlobals* g, PyrSlot* sp) {
     case NAME.codeOffset<5>():                                                                                         \
     case NAME.codeOffset<6>():                                                                                         \
     case NAME.codeOffset<7>():                                                                                         \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME)
 
 #define InterpretOpcode9(NAME)                                                                                         \
     case NAME.codeOffset<0>():                                                                                         \
@@ -607,14 +618,14 @@ static inline void checkStackDepth(VMGlobals* g, PyrSlot* sp) {
     case NAME.codeOffset<6>():                                                                                         \
     case NAME.codeOffset<7>():                                                                                         \
     case NAME.codeOffset<8>():                                                                                         \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME)
 
 #define InterpretOpcode4(NAME)                                                                                         \
     case NAME.codeOffset<0>():                                                                                         \
     case NAME.codeOffset<1>():                                                                                         \
     case NAME.codeOffset<2>():                                                                                         \
     case NAME.codeOffset<3>():                                                                                         \
-        opcode_label_##NAME:
+        opcode_label_##NAME : LogOpcode(NAME)
 
 HOT void Interpret(VMGlobals* g) {
     // byte code values
@@ -2261,7 +2272,7 @@ HOT void Interpret(VMGlobals* g) {
 
             switch (methraw->methType) {
             case methNormal:
-                storeLoadSpAndIp([&]() { executeMethod(g, meth, numArgsPushed, 0); });
+                storeLoadSpAndIp([&]() { setupForMethod(g, meth, numArgsPushed, 0); });
                 break;
 
             case methReturnSelf:
@@ -2374,7 +2385,7 @@ HOT void Interpret(VMGlobals* g) {
 
             switch (methraw->methType) {
             case methNormal:
-                storeLoadSpAndIp([&]() { executeMethod(g, meth, numArgsPushed, numKeyArgsPushed); });
+                storeLoadSpAndIp([&]() { setupForMethod(g, meth, numArgsPushed, numKeyArgsPushed); });
                 break;
 
             case methReturnSelf:
