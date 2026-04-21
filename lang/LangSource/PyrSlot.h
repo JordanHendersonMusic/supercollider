@@ -319,8 +319,9 @@ public:
         // Doubles have odd comparison rules, otherwise compare the raw data.
         return (lhs.isDouble() && rhs.isDouble()) ? lhs.getDouble() == rhs.getDouble() : lhs.u_raw == rhs.u_raw;
     }
-
-    [[nodiscard]] inline uint64_t rawBytes() const noexcept { return u_raw; }
+    [[nodiscard]] friend inline bool operator<(PyrSlot lhs, PyrSlot rhs) noexcept {
+        return (lhs.isDouble() && rhs.isDouble()) ? lhs.getDouble() < rhs.getDouble() : lhs.u_raw <= rhs.u_raw;
+    }
 
     template <AssertDouble Check = AssertDouble::Okay> [[nodiscard]] inline static PyrSlot make(double d) noexcept {
         // There are many safe nan values, but a few are not safe.
