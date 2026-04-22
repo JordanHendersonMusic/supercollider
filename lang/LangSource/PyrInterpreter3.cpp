@@ -2454,10 +2454,6 @@ HOT void Interpret(VMGlobals* g) {
                 sp = g->sp;
                 selector = slotRawSymbol(&meth->selectors);
                 classobj = slotRawSymbol(&slotRawClass(&meth->ownerclass)->superclass)->u.classobj;
-                classobj = slotRawSymbol(&slotRawClass(&meth->ownerclass)->superclass)->u.classobj;
-
-                classobj = slotRawSymbol(&slotRawClass(&meth->ownerclass)->superclass)->u.classobj;
-
                 goto msg_lookup;
 
             case methForwardInstVar:
@@ -2469,10 +2465,6 @@ HOT void Interpret(VMGlobals* g) {
                 index = methraw->specialIndex;
                 slotCopy(slot, &slotRawObject(slot)->slots[index]);
                 classobj = classOfSlot(slot);
-                classobj = classOfSlot(slot);
-
-                classobj = classOfSlot(slot);
-
                 goto msg_lookup;
 
             case methForwardClassVar:
@@ -2483,10 +2475,6 @@ HOT void Interpret(VMGlobals* g) {
                 selector = slotRawSymbol(&meth->selectors);
                 slotCopy(slot, &g->classvars->slots[methraw->specialIndex]);
                 classobj = classOfSlot(slot);
-                classobj = classOfSlot(slot);
-
-                classobj = classOfSlot(slot);
-
                 goto msg_lookup;
 
             case methPrimitive:
