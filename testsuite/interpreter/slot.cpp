@@ -7,6 +7,8 @@
 #include "PyrObject.h"
 #include "PyrKernel.h"
 
+BOOST_TEST_DONT_PRINT_LOG_VALUE(PyrSlot)
+
 BOOST_AUTO_TEST_CASE(slot_test) { { PyrSlot i = PyrSlot::make(static_cast<int32_t>(32));
 BOOST_TEST_REQUIRE(i.isInt());
 BOOST_TEST_REQUIRE(!i.isPtr());
@@ -163,4 +165,20 @@ BOOST_AUTO_TEST_CASE(bool_test) {
     BOOST_TEST(false_slot.isFalse());
     BOOST_TEST(!true_slot.isFalse());
     BOOST_TEST(!false_slot.isTrue());
+}
+
+BOOST_AUTO_TEST_CASE(ordering_test) {
+    const auto a = PyrSlot::make(0.1);
+    const auto b = PyrSlot::make(0.2);
+    const auto c = PyrSlot::make(2);
+
+    BOOST_TEST(a < b);
+    BOOST_TEST(a <= b);
+
+    // strict weak ordering
+    BOOST_TEST((a < a) == false);
+
+    BOOST_TEST((a < b));
+    BOOST_TEST(b < c);
+    BOOST_TEST(a < c);
 }

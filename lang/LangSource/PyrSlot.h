@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <functional>
+#include <algorithm>
 #include <string>
 #include <cstdint>
 #include <type_traits>
@@ -307,6 +309,13 @@ private:
         return getTagAsU16(u_raw) == getTagAsU16(T);
     }
 
+    // Because doubles have odd rules we need to process them differently.
+    // Try to avoid introducing any more types with strange comparison rules.
+    template <template <typename> typename OP>
+    [[nodiscard]] static decltype(auto) apply_binary_op(PyrSlot a, PyrSlot b) noexcept {
+        return a.isDouble() && b.isDouble() ? OP {}(a.getDouble(), b.getDouble()) : OP {}(a.u_raw, b.u_raw);
+    }
+
 public:
     PyrSlot() noexcept: u_raw(Tags::nilTag) {}
     ~PyrSlot() noexcept = default;
@@ -315,13 +324,27 @@ public:
     PyrSlot& operator=(PyrSlot&&) noexcept = default;
     PyrSlot& operator=(const PyrSlot&) noexcept = default;
 
+    // This is identity, not equality in supercollider.
     [[nodiscard]] friend inline bool operator==(PyrSlot lhs, PyrSlot rhs) noexcept {
-        // This is identity, not equality in supercollider.
-        // Doubles have odd comparison rules, otherwise compare the raw data.
-        return (lhs.isDouble() && rhs.isDouble()) ? lhs.getDouble() == rhs.getDouble() : lhs.u_raw == rhs.u_raw;
+        return apply_binary_op<std::equal_to>(lhs, rhs);
     }
+    [[nodiscard]] friend inline bool operator!=(PyrSlot lhs, PyrSlot rhs) noexcept {
+        return apply_binary_op<std::not_equal_to>(lhs, rhs);
+    }
+
+    // NOTE: these comparisons do NOT compare the value in the slot.
+    // They are used for sorting and ordering slots.
     [[nodiscard]] friend inline bool operator<(PyrSlot lhs, PyrSlot rhs) noexcept {
-        return (lhs.isDouble() && rhs.isDouble()) ? lhs.getDouble() < rhs.getDouble() : lhs.u_raw <= rhs.u_raw;
+        return apply_binary_op<std::less>(lhs, rhs);
+    }
+    [[nodiscard]] friend inline bool operator<=(PyrSlot lhs, PyrSlot rhs) noexcept {
+        return apply_binary_op<std::less_equal>(lhs, rhs);
+    }
+    [[nodiscard]] friend inline bool operator>(PyrSlot lhs, PyrSlot rhs) noexcept {
+        return apply_binary_op<std::greater>(lhs, rhs);
+    }
+    [[nodiscard]] friend inline bool operator>=(PyrSlot lhs, PyrSlot rhs) noexcept {
+        return apply_binary_op<std::greater_equal>(lhs, rhs);
     }
 
     template <AssertDouble Check = AssertDouble::Okay> [[nodiscard]] inline static PyrSlot make(double d) noexcept {
