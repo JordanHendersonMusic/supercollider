@@ -52,7 +52,7 @@ using namespace sc::lex;
     return absolute >= o.absolute;
 }
 
-[[nodiscard]] static SourceCodeRange range(SourceCodeRange left, SourceCodeRange right) {
+[[nodiscard]] SourceCodeRange SourceCodeRange::range(SourceCodeRange left, SourceCodeRange right) {
     return { left.begin, right.end };
 }
 

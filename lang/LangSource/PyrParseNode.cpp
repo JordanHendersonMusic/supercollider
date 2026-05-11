@@ -42,6 +42,7 @@
 #include "SC_LanguageConfig.hpp"
 #include "SC_Codecvt.hpp"
 #include "SpecialSelectorsOperatorsAndClasses.h"
+#include "text_location.hpp"
 
 namespace fs = std::filesystem;
 
@@ -215,8 +216,6 @@ PyrParseNode::PyrParseNode(int inClassNo) {
     mClassno = inClassNo;
     mNext = nullptr;
     mTail = this;
-    mCharno = ::charno;
-    mLineno = ::lineno;
     mParens = 0;
 }
 
@@ -231,9 +230,13 @@ void compileNodeList(PyrParseNode* node, bool onTailBranch) {
     // postfl("<-compileNodeList\n");
 }
 
-void nodePostErrorLine(PyrParseNode* node) { postErrorLine(node->mLineno, linestarts[node->mLineno], node->mCharno); }
+void nodePostErrorLine(PyrParseNode* node) {
+    postErrorLine(node->location.begin.lineNumber + 1, linestarts[node->location.begin.lineNumber + 1],
+                  node->location.begin.column);
+}
 
-PyrPushNameNode* newPyrPushNameNode(PyrSlotNode* slotNode) {
+PyrPushNameNode* newPyrPushNameNode(sc::lex::SourceCodeRange loc, PyrSlotNode* slotNode) {
+    slotNode->location = loc;
     slotNode->mClassno = pn_PushNameNode;
     return (PyrPushNameNode*)slotNode;
 }
@@ -334,8 +337,9 @@ void compilePushVar(PyrParseNode* node, PyrSymbol* varName) {
     }
 }
 
-PyrCurryArgNode* newPyrCurryArgNode() {
+PyrCurryArgNode* newPyrCurryArgNode(sc::lex::SourceCodeRange loc) {
     PyrCurryArgNode* node = ALLOCNODE(PyrCurryArgNode);
+    node->location = loc;
     return node;
 }
 
@@ -349,10 +353,11 @@ void PyrCurryArgNode::compile(PyrSlot* result) {
     }
 }
 
-PyrSlotNode* newPyrSlotNode(PyrSlot* slot) { return newPyrSlotNode(*slot); }
-PyrSlotNode* newPyrSlotNode(PyrSlot slot) {
+PyrSlotNode* newPyrSlotNode(sc::lex::SourceCodeRange loc, PyrSlot* slot) { return newPyrSlotNode(loc, *slot); }
+PyrSlotNode* newPyrSlotNode(sc::lex::SourceCodeRange loc, PyrSlot slot) {
     PyrSlotNode* node = ALLOCNODE(PyrSlotNode);
     node->mSlot = slot;
+    node->location = loc;
     return node;
 }
 
@@ -371,11 +376,12 @@ void PyrSlotNode::compile(PyrSlot* result) {
     }
 }
 
-PyrClassExtNode* newPyrClassExtNode(PyrSlotNode* className, PyrMethodNode* methods) {
+PyrClassExtNode* newPyrClassExtNode(sc::lex::SourceCodeRange loc, PyrSlotNode* className, PyrMethodNode* methods) {
     PyrClassExtNode* node = ALLOCNODE(PyrClassExtNode);
     node->mClassName = className;
 
     node->mMethods = methods;
+    node->location = loc;
     return node;
 }
 
@@ -407,9 +413,10 @@ void compileExtNodeMethods(PyrClassExtNode* node) {
     gInliningLevel = 0;
 }
 
-PyrClassNode* newPyrClassNode(PyrSlotNode* className, PyrSlotNode* superClassName, PyrVarListNode* varlists,
-                              PyrMethodNode* methods, PyrSlotNode* indexType) {
+PyrClassNode* newPyrClassNode(sc::lex::SourceCodeRange loc, PyrSlotNode* className, PyrSlotNode* superClassName,
+                              PyrVarListNode* varlists, PyrMethodNode* methods, PyrSlotNode* indexType) {
     PyrClassNode* node = ALLOCNODE(PyrClassNode);
+    node->location = loc;
     node->mClassName = className;
     node->mIndexType = indexType;
 
@@ -649,7 +656,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     SetObject(&method->ownerclass, classobj);
                     if (gCompilingFileSym)
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
+                    SetInt(&method->charPos,
+                           linestarts[vardef->mVarName->location.begin.lineNumber + 1] + errCharPosOffset);
                     slotCopy(&method->name, &vardef->mVarName->mSlot);
                     methraw->methType = methReturnInstVar;
                     methraw->specialIndex = instVarIndex;
@@ -680,7 +688,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     SetSymbol(&method->name, setterSym);
                     if (gCompilingFileSym)
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
+                    SetInt(&method->charPos,
+                           linestarts[vardef->mVarName->location.begin.lineNumber + 1] + errCharPosOffset);
 
                     methraw->methType = methAssignInstVar;
                     methraw->specialIndex = instVarIndex;
@@ -717,7 +726,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     SetSymbol(&method->selectors, slotRawSymbol(&classobj->name));
                     if (gCompilingFileSym)
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
+                    SetInt(&method->charPos,
+                           linestarts[vardef->mVarName->location.begin.lineNumber + 1] + errCharPosOffset);
 
                     methraw->methType = methReturnClassVar;
                     methraw->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
@@ -747,7 +757,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     SetSymbol(&method->selectors, slotRawSymbol(&classobj->name));
                     if (gCompilingFileSym)
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
+                    SetInt(&method->charPos,
+                           linestarts[vardef->mVarName->location.begin.lineNumber + 1] + errCharPosOffset);
 
                     methraw->methType = methAssignClassVar;
                     methraw->specialIndex = classVarIndex + slotRawInt(&classobj->classVarIndex);
@@ -783,7 +794,8 @@ void fillClassPrototypes(PyrClassNode* node, PyrClass* classobj, PyrClass* super
                     slotCopy(&method->name, &vardef->mVarName->mSlot);
                     if (gCompilingFileSym)
                         SetSymbol(&method->filenameSym, gCompilingFileSym);
-                    SetInt(&method->charPos, linestarts[vardef->mVarName->mLineno] + errCharPosOffset);
+                    SetInt(&method->charPos,
+                           linestarts[vardef->mVarName->location.begin.lineNumber + 1] + errCharPosOffset);
 
                     methraw->methType = methReturnLiteral;
                     slotCopy(&method->selectors, &litslot);
@@ -1001,9 +1013,9 @@ void PyrClassNode::compile(PyrSlot* result) {
     gCurrentMetaClass = metaclassobj;
     if (gCompilingFileSym) {
         SetSymbol(&classobj->filenameSym, gCompilingFileSym);
-        SetInt(&classobj->charPos, linestarts[mClassName->mLineno] + errCharPosOffset);
+        SetInt(&classobj->charPos, linestarts[mClassName->location.begin.lineNumber + 1] + errCharPosOffset);
         SetSymbol(&metaclassobj->filenameSym, gCompilingFileSym);
-        SetInt(&metaclassobj->charPos, linestarts[mClassName->mLineno] + errCharPosOffset);
+        SetInt(&metaclassobj->charPos, linestarts[mClassName->location.begin.lineNumber + 1] + errCharPosOffset);
     } else {
         SetNil(&classobj->filenameSym);
         SetNil(&metaclassobj->filenameSym);
@@ -1046,10 +1058,12 @@ void catVarLists(PyrVarListNode* varlist) {
     }
 }
 
-PyrMethodNode* newPyrMethodNode(PyrSlotNode* methodName, PyrSlotNode* primitiveName, PyrArgListNode* arglist,
-                                PyrVarListNode* varlist, PyrParseNode* body, int isClassMethod) {
+PyrMethodNode* newPyrMethodNode(sc::lex::SourceCodeRange loc, PyrSlotNode* methodName, PyrSlotNode* primitiveName,
+                                PyrArgListNode* arglist, PyrVarListNode* varlist, PyrParseNode* body,
+                                int isClassMethod) {
     PyrMethodNode* node = ALLOCNODE(PyrMethodNode);
     node->mMethodName = methodName;
+    node->location = loc;
     node->mPrimitiveName = primitiveName;
     node->mArglist = arglist;
     catVarLists(varlist);
@@ -1291,7 +1305,7 @@ void PyrMethodNode::compile(PyrSlot* result) {
     method->name = mMethodName->mSlot;
     if (gCompilingFileSym)
         SetSymbol(&method->filenameSym, gCompilingFileSym);
-    SetInt(&method->charPos, linestarts[mMethodName->mLineno] + errCharPosOffset);
+    SetInt(&method->charPos, linestarts[mMethodName->location.begin.lineNumber + 1] + errCharPosOffset);
     if (mPrimitiveName) {
         hasPrimitive = true;
         method->primitiveName = mPrimitiveName->mSlot;
@@ -1663,11 +1677,13 @@ void PyrMethodNode::compile(PyrSlot* result) {
     // postfl("<-method '%s'\n", slotRawSymbol(&mMethodName->mSlot)->name);
 }
 
-PyrArgListNode* newPyrArgListNode(PyrVarDefNode* varDefs, PyrSlotNode* rest, PyrSlotNode* kwArgs) {
+PyrArgListNode* newPyrArgListNode(sc::lex::SourceCodeRange loc, PyrVarDefNode* varDefs, PyrSlotNode* rest,
+                                  PyrSlotNode* kwArgs) {
     auto* node = ALLOCNODE(PyrArgListNode);
     node->mVarDefs = varDefs;
     node->mRest = rest;
     node->mKeywordArgs = kwArgs;
+    node->location = loc;
     return node;
 }
 
@@ -1677,10 +1693,11 @@ void PyrArgListNode::compile(PyrSlot* result) {
 }
 
 
-PyrVarListNode* newPyrVarListNode(PyrVarDefNode* vardefs, int flags) {
+PyrVarListNode* newPyrVarListNode(sc::lex::SourceCodeRange loc, PyrVarDefNode* vardefs, int flags) {
     PyrVarListNode* node = ALLOCNODE(PyrVarListNode);
     node->mVarDefs = vardefs;
     node->mFlags = flags;
+    node->location = loc;
     return node;
 }
 
@@ -1689,12 +1706,13 @@ void PyrVarListNode::compile(PyrSlot* result) {
     compileErrors++;
 }
 
-PyrVarDefNode* newPyrVarDefNode(PyrSlotNode* varName, PyrParseNode* defVal, int flags) {
+PyrVarDefNode* newPyrVarDefNode(sc::lex::SourceCodeRange loc, PyrSlotNode* varName, PyrParseNode* defVal, int flags) {
     PyrVarDefNode* node = ALLOCNODE(PyrVarDefNode);
     node->mVarName = varName;
     node->mDefVal = defVal;
     node->mFlags = flags;
     node->mDrop = true;
+    node->location = loc;
     return node;
 }
 
@@ -1758,8 +1776,8 @@ void PyrVarDefNode::compileArg(PyrSlot* result) {
 }
 
 
-PyrCallNode* newPyrCallNode(PyrSlotNode* selector, PyrParseNode* arglist, PyrParseNode* keyarglist,
-                            PyrParseNode* blocklist) {
+PyrCallNode* newPyrCallNode(sc::lex::SourceCodeRange loc, PyrSlotNode* selector, PyrParseNode* arglist,
+                            PyrParseNode* keyarglist, PyrParseNode* blocklist) {
     PyrCallNode* node = ALLOCNODE(PyrCallNode);
     node->mSelector = selector;
 
@@ -1767,6 +1785,7 @@ PyrCallNode* newPyrCallNode(PyrSlotNode* selector, PyrParseNode* arglist, PyrPar
 
     node->mArglist = arglist;
     node->mKeyarglist = keyarglist;
+    node->location = loc;
     return node;
 }
 
@@ -2745,8 +2764,8 @@ PyrCallNode* buildCase(PyrParseNode* arg1) {
             PyrParseNode* arg4 = arg3->mNext;
             if (arg4) {
                 arg3 = buildCase(arg3);
-                PyrBlockNode* bnode = newPyrBlockNode(nullptr, nullptr, arg3, false);
-                arg3 = newPyrPushLitNode(nullptr, bnode);
+                PyrBlockNode* bnode = newPyrBlockNode(arg3->location, nullptr, nullptr, arg3, false);
+                arg3 = newPyrPushLitNode(arg3->location, nullptr, bnode);
                 arg2->mNext = arg3;
                 arg3->mNext = nullptr;
                 arg1->mTail = arg3;
@@ -2773,8 +2792,8 @@ PyrCallNode* buildCase(PyrParseNode* arg1) {
 
     PyrSlot selector;
     SetSymbol(&selector, gSpecialSelectors[opmIf]);
-    PyrSlotNode* selectorNode = newPyrSlotNode(&selector);
-    PyrCallNode* callNode = newPyrCallNode(selectorNode, arg1, nullptr, nullptr);
+    PyrSlotNode* selectorNode = newPyrSlotNode(arg1->location, &selector);
+    PyrCallNode* callNode = newPyrCallNode(arg1->location, selectorNode, arg1, nullptr, nullptr);
 
     // post("<-buildCase %d\n", numArgs);
 
@@ -3131,13 +3150,14 @@ void compileLoopMsg(PyrCallNodeBase2* node) {
     }
 }
 
-PyrBinopCallNode* newPyrBinopCallNode(PyrSlotNode* selector, PyrParseNode* arg1, PyrParseNode* arg2,
-                                      PyrParseNode* arg3) {
+PyrBinopCallNode* newPyrBinopCallNode(sc::lex::SourceCodeRange loc, PyrSlotNode* selector, PyrParseNode* arg1,
+                                      PyrParseNode* arg2, PyrParseNode* arg3) {
     PyrBinopCallNode* node = ALLOCNODE(PyrBinopCallNode);
     node->mSelector = selector;
     node->mArglist = arg1;
     arg1->mNext = arg2;
     arg2->mNext = arg3;
+    node->location = loc;
     return node;
 }
 
@@ -3288,10 +3308,11 @@ void PyrBinopCallNode::compileCall(PyrSlot* result) {
     }
 }
 
-PyrPushKeyArgNode* newPyrPushKeyArgNode(PyrSlotNode* selector, PyrParseNode* expr) {
+PyrPushKeyArgNode* newPyrPushKeyArgNode(sc::lex::SourceCodeRange loc, PyrSlotNode* selector, PyrParseNode* expr) {
     PyrPushKeyArgNode* node = ALLOCNODE(PyrPushKeyArgNode);
     node->mSelector = selector;
     node->mExpr = expr;
+    node->location = loc;
     return node;
 }
 
@@ -3304,10 +3325,11 @@ void PyrPushKeyArgNode::compile(PyrSlot* result) {
     COMPILENODE(mExpr, &dummy, false);
 }
 
-PyrDropNode* newPyrDropNode(PyrParseNode* expr1, PyrParseNode* expr2) {
+PyrDropNode* newPyrDropNode(sc::lex::SourceCodeRange loc, PyrParseNode* expr1, PyrParseNode* expr2) {
     PyrDropNode* node = ALLOCNODE(PyrDropNode);
     node->mExpr1 = expr1;
     node->mExpr2 = expr2;
+    node->location = loc;
     return node;
 }
 
@@ -3348,7 +3370,7 @@ void PyrDropNode::compile(PyrSlot* result) {
     }
 }
 
-PyrPushLitNode* newPyrPushLitNode(PyrSlotNode* literalSlot, PyrParseNode* literalObj) {
+PyrPushLitNode* newPyrPushLitNode(sc::lex::SourceCodeRange loc, PyrSlotNode* literalSlot, PyrParseNode* literalObj) {
     PyrPushLitNode* node;
     if (literalSlot) {
         node = literalSlot;
@@ -3357,6 +3379,7 @@ PyrPushLitNode* newPyrPushLitNode(PyrSlotNode* literalSlot, PyrParseNode* litera
         node = ALLOCSLOTNODE(PyrSlotNode, pn_PushLitNode);
         SetPtr(&node->mSlot, (PyrObject*)literalObj);
     }
+    node->location = loc;
     return node;
 }
 
@@ -3467,7 +3490,7 @@ void PyrSlotNode::compilePushLit(PyrSlot* result) {
     }
 }
 
-PyrLiteralNode* newPyrLiteralNode(PyrSlotNode* literalSlot, PyrParseNode* literalObj) {
+PyrLiteralNode* newPyrLiteralNode(sc::lex::SourceCodeRange loc, PyrSlotNode* literalSlot, PyrParseNode* literalObj) {
     PyrLiteralNode* node;
     if (literalSlot) {
         node = literalSlot;
@@ -3476,6 +3499,7 @@ PyrLiteralNode* newPyrLiteralNode(PyrSlotNode* literalSlot, PyrParseNode* litera
         node = ALLOCSLOTNODE(PyrSlotNode, pn_LiteralNode);
         SetPtr(&node->mSlot, (PyrObject*)literalObj);
     }
+    node->location = loc;
     return node;
 }
 
@@ -3509,9 +3533,10 @@ void PyrSlotNode::compileLiteral(PyrSlot* result) {
     }
 }
 
-PyrReturnNode* newPyrReturnNode(PyrParseNode* expr) {
+PyrReturnNode* newPyrReturnNode(sc::lex::SourceCodeRange loc, PyrParseNode* expr) {
     PyrReturnNode* node = ALLOCNODE(PyrReturnNode);
     node->mExpr = expr;
+    node->location = loc;
     return node;
 }
 
@@ -3544,42 +3569,50 @@ void PyrReturnNode::compile(PyrSlot* result) {
     }
 }
 
-PyrBlockReturnNode* newPyrBlockReturnNode() {
+PyrBlockReturnNode* newPyrBlockReturnNode(sc::lex::SourceCodeRange loc) {
     PyrBlockReturnNode* node = ALLOCNODE(PyrBlockReturnNode);
+    node->location = loc;
     return node;
 }
 
 
 void PyrBlockReturnNode::compile(PyrSlot* result) {}
 
-PyrAssignNode* newPyrAssignNode(PyrSlotNode* varName, PyrParseNode* expr, int flags) {
+PyrAssignNode* newPyrAssignNode(sc::lex::SourceCodeRange loc, PyrSlotNode* varName, PyrParseNode* expr, int flags) {
     PyrAssignNode* node = ALLOCNODE(PyrAssignNode);
     node->mVarName = varName;
     node->mExpr = expr;
     node->mDrop = 0;
+    node->location = loc;
     return node;
 }
 
-PyrSetterNode* newPyrSetterNode(PyrSlotNode* selector, PyrParseNode* expr1, PyrParseNode* expr2) {
+PyrSetterNode* newPyrSetterNode(sc::lex::SourceCodeRange loc, PyrSlotNode* selector, PyrParseNode* expr1,
+                                PyrParseNode* expr2) {
     PyrSetterNode* node = ALLOCNODE(PyrSetterNode);
     node->mSelector = selector;
     node->mExpr1 = expr1;
     node->mExpr2 = expr2;
+    node->location = loc;
     return node;
 }
 
-PyrMultiAssignNode* newPyrMultiAssignNode(PyrMultiAssignVarListNode* varList, PyrParseNode* expr, int flags) {
+PyrMultiAssignNode* newPyrMultiAssignNode(sc::lex::SourceCodeRange loc, PyrMultiAssignVarListNode* varList,
+                                          PyrParseNode* expr, int flags) {
     PyrMultiAssignNode* node = ALLOCNODE(PyrMultiAssignNode);
     node->mVarList = varList;
     node->mExpr = expr;
     node->mDrop = 0;
+    node->location = loc;
     return node;
 }
 
-PyrMultiAssignVarListNode* newPyrMultiAssignVarListNode(PyrSlotNode* varNames, PyrSlotNode* rest) {
+PyrMultiAssignVarListNode* newPyrMultiAssignVarListNode(sc::lex::SourceCodeRange loc, PyrSlotNode* varNames,
+                                                        PyrSlotNode* rest) {
     PyrMultiAssignVarListNode* node = ALLOCNODE(PyrMultiAssignVarListNode);
     node->mVarNames = varNames;
     node->mRest = rest;
+    node->location = loc;
     return node;
 }
 
@@ -3756,12 +3789,13 @@ void PyrMultiAssignVarListNode::compile(PyrSlot* result) {
 }
 
 
-PyrDynDictNode* newPyrDynDictNode(PyrParseNode* elems) {
+PyrDynDictNode* newPyrDynDictNode(sc::lex::SourceCodeRange loc, PyrParseNode* elems) {
     PyrDynDictNode* node;
 
     // if (compilingCmdLine) post("newPyrDynDictNode\n");
     node = ALLOCNODE(PyrDynDictNode);
     node->mElems = elems;
+    node->location = loc;
     return node;
 }
 
@@ -3801,12 +3835,13 @@ void PyrDynDictNode::compileCall(PyrSlot* result) {
     }
 }
 
-PyrDynListNode* newPyrDynListNode(PyrParseNode* classname, PyrParseNode* elems) {
+PyrDynListNode* newPyrDynListNode(sc::lex::SourceCodeRange loc, PyrParseNode* classname, PyrParseNode* elems) {
     PyrDynListNode* node;
 
     node = ALLOCNODE(PyrDynListNode);
     node->mClassname = classname;
     node->mElems = elems;
+    node->location = loc;
     return node;
 }
 
@@ -3839,10 +3874,11 @@ void PyrDynListNode::compileCall(PyrSlot* result) {
     }
 }
 
-PyrLitListNode* newPyrLitListNode(PyrParseNode* classname, PyrParseNode* elems) {
+PyrLitListNode* newPyrLitListNode(sc::lex::SourceCodeRange loc, PyrParseNode* classname, PyrParseNode* elems) {
     PyrLitListNode* node = ALLOCNODE(PyrLitListNode);
     node->mClassname = classname;
     node->mElems = elems;
+    node->location = loc;
     return node;
 }
 
@@ -3876,13 +3912,15 @@ void PyrLitListNode::compile(PyrSlot* result) {
 extern LongStack closedFuncCharNo;
 extern int lastClosedFuncCharNo;
 
-PyrBlockNode* newPyrBlockNode(PyrArgListNode* arglist, PyrVarListNode* varlist, PyrParseNode* body, bool isTopLevel) {
+PyrBlockNode* newPyrBlockNode(sc::lex::SourceCodeRange loc, PyrArgListNode* arglist, PyrVarListNode* varlist,
+                              PyrParseNode* body, bool isTopLevel) {
     PyrBlockNode* node = ALLOCNODE(PyrBlockNode);
     node->mArglist = arglist;
     catVarLists(varlist);
     node->mVarlist = varlist;
     node->mBody = body;
     node->mIsTopLevel = isTopLevel;
+    node->location = loc;
 
     node->mBeginCharNo = lastClosedFuncCharNo;
 
@@ -3923,13 +3961,6 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     methraw = METHRAW(block);
     methraw->unused1 = 0;
     methraw->unused2 = 0;
-
-    // TODO: this is very wrong due to look ahead parsing. Use yyloc.
-    int endCharNo = linestarts[mLineno] + mCharno - 1;
-    int stringLength = endCharNo - mBeginCharNo;
-    int lastChar = gCompilingText[mBeginCharNo + stringLength - 1];
-    if (lastChar == 0 && stringLength > 0)
-        stringLength--;
 
     methraw->needsHeapContext = 0;
     if (mIsTopLevel) {
@@ -4179,8 +4210,8 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     if ((!gFunctionCantBeClosed && gFunctionHighestExternalRef == 0) || mIsTopLevel) {
         SetNil(&block->contextDef);
 
-        PyrString* string = newPyrStringN(compileGC(), stringLength, flags, false);
-        memcpy(string->s, gCompilingText + mBeginCharNo, stringLength);
+        PyrString* string = newPyrStringN(compileGC(), location.size(), flags, false);
+        memcpy(string->s, gCompilingText + location.begin.absolute, location.size());
         SetObject(&block->sourceCode, string);
     }
 

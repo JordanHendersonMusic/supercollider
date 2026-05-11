@@ -742,7 +742,9 @@ struct GlobalBisonLexerState {
         // If you set this to 0 when not in use, the parse will segfault.
         // TODO: use yylval.
         if (o.slot && !o.is_error())
-            zzval = (intptr_t)newPyrSlotNode(*o.slot);
+            zzval = (intptr_t)newPyrSlotNode(o.range, *o.slot);
+
+        yylloc = o.range;
 
         // Yes it reads from the end point only. Very odd. Causes many issues.
         textpos = o.range.end.absolute;
@@ -940,7 +942,8 @@ int yylex() {
             // This would be much better pushed into the compiler.
             const int flags = gCompilingCmdLine ? obj_immutable : obj_permanent | obj_immutable;
             auto sc_str = newPyrString(gMainVMGlobals->gc, str.c_str(), flags, false);
-            zzval = (intptr_t)newPyrSlotNode(PyrSlot::make(sc_str));
+            zzval = (intptr_t)newPyrSlotNode(out.range, PyrSlot::make(sc_str));
+            yylloc = out.range;
             gParseFailed = prev.is_error() ? 1 : 0;
 
             s.cached = std::move(out); // save for next time.
