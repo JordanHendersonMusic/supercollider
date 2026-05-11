@@ -1,13 +1,14 @@
 #define BOOST_TEST_MODULE sc_lexer_tests
 #include <boost/test/included/unit_test.hpp>
-#include "codepoint.hpp"
 #include <cstddef>
 #include <source_utils.hpp>
 #include <lexer.hpp>
 
 using namespace sc::lex;
+// MSVC needs this.
+using TT = sc::lex::TokenType;
 
-BOOST_TEST_DONT_PRINT_LOG_VALUE(TokenType);
+BOOST_TEST_DONT_PRINT_LOG_VALUE(sc::lex::TokenType);
 
 BOOST_AUTO_TEST_CASE(codepointer_iterator_forward) {
     using CPI = utils::CodePointIterator;
@@ -133,18 +134,18 @@ BOOST_AUTO_TEST_CASE(line_iter_backwards) {
 
 
 static constexpr std::array default_gobble {
-    TokenType::Space, TokenType::NewLine, TokenType::Tab, TokenType::Comment, TokenType::MultilineComment,
+    TT::Space, TT::NewLine, TT::Tab, TT::Comment, TT::MultilineComment,
 };
 
 template <size_t N, size_t M>
-void match(const char* text, const std::array<TokenType, N>& to_find, const std::array<TokenType, M>& to_gobble) {
+void match(const char* text, const std::array<TT, N>& to_find, const std::array<TT, M>& to_gobble) {
     const auto text_len = strlen(text);
 
     CodePointStream stream { text, text_len, {} };
 
     sc::lex::actions::TypeAndLocationAction action {};
 
-    for (const TokenType t : to_find) {
+    for (const TT t : to_find) {
         auto o = lexer(stream, action);
 
         while (std::find(to_gobble.begin(), to_gobble.end(), o.type) != to_gobble.end()) {
@@ -155,11 +156,11 @@ void match(const char* text, const std::array<TokenType, N>& to_find, const std:
     }
 
     auto o = lexer(stream, action);
-    while (std::find(to_gobble.begin(), to_gobble.end(), o.type) != to_gobble.end() && o.type != TokenType::EndOfFile) {
+    while (std::find(to_gobble.begin(), to_gobble.end(), o.type) != to_gobble.end() && o.type != TT::EndOfFile) {
         o = lexer(stream, action);
     }
 
-    BOOST_TEST(o.type == TokenType::EndOfFile);
+    BOOST_TEST(o.type == TT::EndOfFile);
 }
 
 BOOST_AUTO_TEST_CASE(basic) {
@@ -171,47 +172,47 @@ BOOST_AUTO_TEST_CASE(basic) {
     // NO gobble
     match(text,
           std::array {
-              TokenType::Space,
-              TokenType::Name,
-              TokenType::Space,
-              TokenType::Float,
-              TokenType::Space,
-              TokenType::SymbolSlash,
-              TokenType::Space,
-              TokenType::NewLine,
-              TokenType::Space,
-              TokenType::SymbolQuote,
-              TokenType::SemiColon,
-              TokenType::Space,
-              TokenType::NewLine,
-              TokenType::Minus,
-              TokenType::Float,
-              TokenType::Space,
-              TokenType::Tab,
-              TokenType::Space,
-              TokenType::PrimitiveName,
-              TokenType::Space,
-              TokenType::ClassName,
-              TokenType::Space,
-              TokenType::KeywordBinaryOperator,
-              TokenType::SymbolSlash,
-              TokenType::OpenParen,
-              TokenType::Space,
-              TokenType::EndOfFile,
+              TT::Space,
+              TT::Name,
+              TT::Space,
+              TT::Float,
+              TT::Space,
+              TT::SymbolSlash,
+              TT::Space,
+              TT::NewLine,
+              TT::Space,
+              TT::SymbolQuote,
+              TT::SemiColon,
+              TT::Space,
+              TT::NewLine,
+              TT::Minus,
+              TT::Float,
+              TT::Space,
+              TT::Tab,
+              TT::Space,
+              TT::PrimitiveName,
+              TT::Space,
+              TT::ClassName,
+              TT::Space,
+              TT::KeywordBinaryOperator,
+              TT::SymbolSlash,
+              TT::OpenParen,
+              TT::Space,
+              TT::EndOfFile,
           },
-          std::array<TokenType, 0> {});
+          std::array<TT, 0> {});
 
-    match("    *new ", std::array { TokenType::Multiply, TokenType::Name }, default_gobble);
+    match("    *new ", std::array { TT::Multiply, TT::Name }, default_gobble);
 
     match("    const nl = \"\\n\"; \n\t*new ",
           std::array {
-              TokenType::Const,
-              TokenType::Name,
-              TokenType::EqualsSign,
-              TokenType::StringLine,
-              TokenType::SemiColon,
-              TokenType::Multiply,
-              TokenType::Name,
+              TT::Const,
+              TT::Name,
+              TT::EqualsSign,
+              TT::StringLine,
+              TT::SemiColon,
+              TT::Multiply,
+              TT::Name,
           },
           default_gobble);
 }
@@ -221,50 +222,48 @@ BOOST_AUTO_TEST_CASE(fn) {
 
     match(text,
           std::array {
-              TokenType::Var,
-              TokenType::Name,
-              TokenType::EqualsSign,
-              TokenType::OpenCurly,
-              TokenType::Pipe,
-              TokenType::Name,
-              TokenType::Comma,
-              TokenType::Name,
-              TokenType::Comma,
-              TokenType::Name,
-              TokenType::Pipe,
-              TokenType::Name,
-              TokenType::Add,
-              TokenType::Name,
-              TokenType::Add,
-              TokenType::Name,
-              TokenType::CloseCurly,
-              TokenType::SemiColon,
+              TT::Var,
+              TT::Name,
+              TT::EqualsSign,
+              TT::OpenCurly,
+              TT::Pipe,
+              TT::Name,
+              TT::Comma,
+              TT::Name,
+              TT::Comma,
+              TT::Name,
+              TT::Pipe,
+              TT::Name,
+              TT::Add,
+              TT::Name,
+              TT::Add,
+              TT::Name,
+              TT::CloseCurly,
+              TT::SemiColon,
           },
           default_gobble);
 }
 
 BOOST_AUTO_TEST_CASE(strings) {
-    match(R"%(   "(\""   )%", std::array { TokenType::StringLine }, default_gobble);
-    match(R"%( "(\"" )%", std::array { TokenType::StringLine }, default_gobble);
-    match(R"%( "\")" abs )%", std::array { TokenType::StringLine, TokenType::Name }, default_gobble);
-    match(R"%( "◎" bang )%", std::array { TokenType::StringLine, TokenType::Name }, default_gobble);
+    match(R"%(   "(\""   )%", std::array { TT::StringLine }, default_gobble);
+    match(R"%( "(\"" )%", std::array { TT::StringLine }, default_gobble);
+    match(R"%( "\")" abs )%", std::array { TT::StringLine, TT::Name }, default_gobble);
+    match(R"%( "◎" bang )%", std::array { TT::StringLine, TT::Name }, default_gobble);
     match(R"%( 
 			"The function % should behave the same for a PatternProxy and its source:\n%\n"
     )%",
-          std::array { TokenType::StringLine }, default_gobble);
+          std::array { TT::StringLine }, default_gobble);
 }
 
-BOOST_AUTO_TEST_CASE(symbol) {
-    match("\\)", std::array { TokenType::SymbolSlash, TokenType::CloseParen }, default_gobble);
-}
+BOOST_AUTO_TEST_CASE(symbol) { match("\\)", std::array { TT::SymbolSlash, TT::CloseParen }, default_gobble); }
 
 BOOST_AUTO_TEST_CASE(ascii) {
-    match("$a", std::array { TokenType::Ascii }, default_gobble);
-    match("$a)", std::array { TokenType::Ascii, TokenType::CloseParen }, default_gobble);
-    match("$\\n", std::array { TokenType::Ascii }, default_gobble);
-    match("$\\n)", std::array { TokenType::Ascii, TokenType::CloseParen }, default_gobble);
-    match("$ ", std::array { TokenType::Ascii }, default_gobble);
-    match("$    bang  ", std::array { TokenType::Ascii, TokenType::Name }, default_gobble);
+    match("$a", std::array { TT::Ascii }, default_gobble);
+    match("$a)", std::array { TT::Ascii, TT::CloseParen }, default_gobble);
+    match("$\\n", std::array { TT::Ascii }, default_gobble);
+    match("$\\n)", std::array { TT::Ascii, TT::CloseParen }, default_gobble);
+    match("$ ", std::array { TT::Ascii }, default_gobble);
+    match("$    bang  ", std::array { TT::Ascii, TT::Name }, default_gobble);
 }
 
 BOOST_AUTO_TEST_CASE(larger_obj) {
@@ -276,19 +275,19 @@ Object {
 
 	*new { arg maxSize = 0; _BasicNew
     )%%";
-    using T = TokenType;
+    using T = TT;
     // clang-format off
     match(txt,
           std::array {
-              T::ClassName,  TokenType::OpenCurly, 
+              T::ClassName,  TT::OpenCurly, 
               T::ClassVar,
-              TokenType::LessThan, T::Name, TokenType::Comma,
-              T::Name, TokenType::Comma,
-              T::Name,TokenType::Comma, 
-              TokenType::LessThan, T::Name,TokenType::SemiColon, 
-              T::Const, T::Name, TokenType::EqualsSign, T::StringLine, TokenType::SemiColon,
-              TokenType::Multiply, T::Name, TokenType::OpenCurly,
-              T::Arg, T::Name, TokenType::EqualsSign, T::Integer, TokenType::SemiColon,
+              TT::LessThan, T::Name, TT::Comma,
+              T::Name, TT::Comma,
+              T::Name,TT::Comma, 
+              TT::LessThan, T::Name,TT::SemiColon, 
+              T::Const, T::Name, TT::EqualsSign, T::StringLine, TT::SemiColon,
+              TT::Multiply, T::Name, TT::OpenCurly,
+              T::Arg, T::Name, TT::EqualsSign, T::Integer, TT::SemiColon,
               T::PrimitiveName
           },
           default_gobble);
@@ -303,24 +302,24 @@ Recorder {
 	var >recHeaderFormat, >recSampleFormat, >recBufSize;
 	var recordBuf, recordNode, synthDef;
     )%%";
-    using T = TokenType;
+    using T = TT;
     // clang-format off
     match(txt,
           std::array {
-              T::ClassName,  TokenType::OpenCurly, 
+              T::ClassName,  TT::OpenCurly, 
               T::Var,
-              TokenType::LessThan, T::Name, TokenType::Comma,
-              T::ReadWriteVar, T::Name, TokenType::SemiColon,
+              TT::LessThan, T::Name, TT::Comma,
+              T::ReadWriteVar, T::Name, TT::SemiColon,
 
               T::Var,
-              TokenType::GreaterThan, T::Name, TokenType::Comma,
-              TokenType::GreaterThan, T::Name, TokenType::Comma,
-              TokenType::GreaterThan, T::Name, TokenType::SemiColon,
+              TT::GreaterThan, T::Name, TT::Comma,
+              TT::GreaterThan, T::Name, TT::Comma,
+              TT::GreaterThan, T::Name, TT::SemiColon,
 
               T::Var,
-              T::Name, TokenType::Comma,
-              T::Name, TokenType::Comma,
-              T::Name, TokenType::SemiColon,
+              T::Name, TT::Comma,
+              T::Name, TT::Comma,
+              T::Name, TT::SemiColon,
           },
           default_gobble);
     // clang-format on
