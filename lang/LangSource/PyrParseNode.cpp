@@ -3994,7 +3994,6 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
     gPartiallyAppliedFunction = nullptr;
 
 
-
     // PyrMethodRaw holds meta data about the function def in a smaller format.
     auto* methraw = METHRAW(block);
     methraw->needsHeapContext = 0;
