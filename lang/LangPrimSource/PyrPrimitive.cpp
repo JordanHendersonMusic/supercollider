@@ -2382,13 +2382,12 @@ int prCompileString(struct VMGlobals* g, int numArgsPushed) {
     // assert(g->gc->SanityCheck());
     startLexerCmdLine(string->s, string->size);
     compileErrors = 0;
-    compilingCmdLine = true;
+    gCompilingCmdLine = true;
     gCompilingVMGlobals = g;
-    compilingCmdLineErrorWindow = false;
     // assert(g->gc->SanityCheck());
-    parseFailed = yyparse();
+    gParseFailed = yyparse();
     // assert(g->gc->SanityCheck());
-    if (!parseFailed && gRootParseNode) {
+    if (!gParseFailed && gRootParseNode) {
         PyrSlot slotResult;
 
         meth = GetFunctionCompileContext(g);
@@ -2420,7 +2419,7 @@ int prCompileString(struct VMGlobals* g, int numArgsPushed) {
             SetObject(a, closure);
         }
     } else {
-        if (parseFailed) {
+        if (gParseFailed) {
             compileErrors++;
             error("Command line parse failed\n");
         } else {
@@ -2433,9 +2432,9 @@ int prCompileString(struct VMGlobals* g, int numArgsPushed) {
 
     pyr_pool_compile->FreeAll();
     // flushErrors();
-    compilingCmdLine = false;
+    gCompilingCmdLine = false;
 
-    return !(parseFailed || compileErrors) ? errNone : errFailed;
+    return !(gParseFailed || compileErrors) ? errNone : errFailed;
 }
 #endif
 

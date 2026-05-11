@@ -1,15 +1,17 @@
-%token	NAME INTEGER SC_FLOAT ACCIDENTAL SYMBOL STRING ASCII PRIMITIVENAME CLASSNAME CURRYARG
+%token  OPENCURLY CLOSECURLY OPENSQUARE CLOSESQUARE OPENPAREN CLOSEPAREN 
+%token  SEMICOLON NONLOCALRETURN COMMA HASH TILDE
+%token	NAME INTEGER SC_FLOAT ACCIDENTAL SYMBOL STRING ASCII PRIMITIVENAME CLASSNAME CURRYARG 
 %token  VAR ARG CLASSVAR SC_CONST
 %token	NILOBJ TRUEOBJ FALSEOBJ
 %token	PSEUDOVAR
 %token  ELLIPSIS DOTDOT PIE BEGINCLOSEDFUNC
 %token  BADTOKEN INTERPRET
-%token  BEGINGENERATOR LEFTARROW WHILE
-%left	':'
-%right  '='
-%left	BINOP KEYBINOP '-' '<' '>' '*' '+' '|' READWRITEVAR
-%left	'.'
-%right  '`'
+%token  LEFTARROW WHILE
+%left	COLON
+%right  EQUALSSIGN
+%left	BINOP KEYBINOP MINUS LESSTHAN GREATERTHAN MULTIPLY ADD PIPE READWRITEVAR
+%left	DOT
+%right  BACKTICK
 %right  UMINUS
 %start  root
 
@@ -54,18 +56,18 @@ classextensions : classextension
 				{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$2); }
 				;
 
-classdef	: classname superclass '{' classvardecls methods '}'
+classdef	: classname superclass OPENCURLY classvardecls methods CLOSECURLY
 				{ $$ = (intptr_t)newPyrClassNode((PyrSlotNode*)$1, (PyrSlotNode*)$2,
 					(PyrVarListNode*)$4, (PyrMethodNode*)$5, 0);
 				}
-			| classname '[' optname ']' superclass '{' classvardecls methods '}'
+			| classname OPENSQUARE optname CLOSESQUARE superclass OPENCURLY classvardecls methods CLOSECURLY
 				{ $$ = (intptr_t)newPyrClassNode((PyrSlotNode*)$1, (PyrSlotNode*)$5,
 					(PyrVarListNode*)$7, (PyrMethodNode*)$8,
 					(PyrSlotNode*)$3);
 				}
 			;
 
-classextension : '+' classname '{' methods '}'
+classextension : ADD classname OPENCURLY methods CLOSECURLY
 				{
 					$$ = (intptr_t)newPyrClassExtNode((PyrSlotNode*)$2, (PyrMethodNode*)$4);
 				}
@@ -76,7 +78,7 @@ optname		: { $$ = 0; }
 			;
 
 superclass	: { $$ = 0; }
-			| ':' classname
+			| COLON classname
 				{ $$ = $2; }
 			;
 
@@ -85,11 +87,11 @@ classvardecls	: { $$ = 0; }
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$2); }
 				;
 
-classvardecl	: CLASSVAR rwslotdeflist ';'
+classvardecl	: CLASSVAR rwslotdeflist SEMICOLON
 					{ $$ = (intptr_t)newPyrVarListNode((PyrVarDefNode*)$2, varClass); }
-				| VAR rwslotdeflist ';'
+				| VAR rwslotdeflist SEMICOLON
 					{ $$ = (intptr_t)newPyrVarListNode((PyrVarDefNode*)$2, varInst); }
-				| SC_CONST constdeflist ';'
+				| SC_CONST constdeflist SEMICOLON
 					{ $$ = (intptr_t)newPyrVarListNode((PyrVarDefNode*)$2, varConst); }
 				;
 
@@ -98,30 +100,30 @@ methods		: { $$ = 0; }
 				{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$2); }
 			;
 
-methoddef	: name '{' argdecls funcvardecls primitive methbody '}'
+methoddef	: name OPENCURLY argdecls funcvardecls primitive methbody CLOSECURLY
 				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$1, (PyrSlotNode*)$5,
 					(PyrArgListNode*)$3, (PyrVarListNode*)$4, (PyrParseNode*)$6, 0); }
-			| '*' name '{' argdecls funcvardecls primitive methbody '}'
+			| MULTIPLY name OPENCURLY argdecls funcvardecls primitive methbody CLOSECURLY
 				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$2, (PyrSlotNode*)$6,
 					(PyrArgListNode*)$4, (PyrVarListNode*)$5, (PyrParseNode*)$7, 1); }
-			| binop '{' argdecls funcvardecls primitive methbody '}'
+			| binop OPENCURLY argdecls funcvardecls primitive methbody CLOSECURLY
 				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$1, (PyrSlotNode*)$5,
 					(PyrArgListNode*)$3, (PyrVarListNode*)$4, (PyrParseNode*)$6, 0); }
-			| '*' binop '{' argdecls funcvardecls primitive methbody '}'
+			| MULTIPLY binop OPENCURLY argdecls funcvardecls primitive methbody CLOSECURLY
 				{ $$ = (intptr_t)newPyrMethodNode((PyrSlotNode*)$2, (PyrSlotNode*)$6,
 					(PyrArgListNode*)$4, (PyrVarListNode*)$5, (PyrParseNode*)$7, 1); }
 			;
 
 optsemi		:
-			| ';'
+			| SEMICOLON
 			;
 
 optcomma	:
-			| ','
+			| COMMA
 			;
 
 optequal	:
-			| '='
+			| EQUALSSIGN
 			;
 
 funcbody	: funretval
@@ -129,11 +131,11 @@ funcbody	: funretval
 				{ $$ = (intptr_t)newPyrDropNode((PyrParseNode*)$1, (PyrParseNode*)$2); }
 			;
 
-cmdlinecode	: '(' argdecls1 funcvardecls1 funcbody ')'
+cmdlinecode	: OPENPAREN argdecls1 funcvardecls1 funcbody CLOSEPAREN
 				{ $$ = (intptr_t)newPyrBlockNode((PyrArgListNode*)$2, (PyrVarListNode*)$3, (PyrParseNode*)$4, false); }
-			| '(' argdecls1 funcbody ')'
+			| OPENPAREN argdecls1 funcbody CLOSEPAREN
 				{ $$ = (intptr_t)newPyrBlockNode((PyrArgListNode*)$2, NULL, (PyrParseNode*)$3, false); }
-			| '(' funcvardecls1 funcbody ')'
+			| OPENPAREN funcvardecls1 funcbody CLOSEPAREN
 				{ $$ = (intptr_t)newPyrBlockNode(NULL, (PyrVarListNode*)$2, (PyrParseNode*)$3, false); }
 			| argdecls1 funcvardecls1 funcbody
 				{ $$ = (intptr_t)newPyrBlockNode((PyrArgListNode*)$1, (PyrVarListNode*)$2, (PyrParseNode*)$3, false); }
@@ -157,13 +159,13 @@ primitive	: { $$ = 0; }
 
 retval	:
 			{ $$ = (intptr_t)newPyrReturnNode(NULL); }
-		| '^' expr optsemi
+		| NONLOCALRETURN expr optsemi
 			{ $$ = (intptr_t)newPyrReturnNode((PyrParseNode*)$2); }
 		;
 
 funretval	:
 			{ $$ = (intptr_t)newPyrBlockReturnNode(); }
-		| '^' expr optsemi
+		| NONLOCALRETURN expr optsemi
 			{ $$ = (intptr_t)newPyrReturnNode((PyrParseNode*)$2); }
 		;
 
@@ -186,29 +188,29 @@ msgsend : name blocklist1
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$1, (PyrParseNode*)$2, 0, 0);
 			}
-		| '(' binop2 ')' blocklist1
+		| OPENPAREN binop2 CLOSEPAREN blocklist1
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$2, (PyrParseNode*)$4, 0, 0);
 			}
-		| name '(' ')' blocklist1
+		| name OPENPAREN CLOSEPAREN blocklist1
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$1, NULL, NULL, (PyrParseNode*)$4);
 			}
-		| name '(' arglist1 optkeyarglist ')' blocklist
+		| name OPENPAREN arglist1 optkeyarglist CLOSEPAREN blocklist
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$1, (PyrParseNode*)$3,
 						(PyrParseNode*)$4, (PyrParseNode*)$6);
 			}
-		| '(' binop2 ')' '(' ')' blocklist1
+		| OPENPAREN binop2 CLOSEPAREN OPENPAREN CLOSEPAREN blocklist1
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$2, NULL, NULL, (PyrParseNode*)$6);
 			}
-		| '(' binop2 ')' '(' arglist1 optkeyarglist ')' blocklist
+		| OPENPAREN binop2 CLOSEPAREN OPENPAREN arglist1 optkeyarglist CLOSEPAREN blocklist
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$2, (PyrParseNode*)$5,
 						(PyrParseNode*)$6, (PyrParseNode*)$8);
 			}
-		| name '(' arglistv1 optkeyarglist ')'
+		| name OPENPAREN arglistv1 optkeyarglist CLOSEPAREN
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -226,7 +228,7 @@ msgsend : name blocklist1
 					newPyrPushLitNode((PyrSlotNode*)$1, NULL));
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, (PyrParseNode*)$4, 0);
 			}
-		| '(' binop2 ')' '(' arglistv1 optkeyarglist ')'
+		| OPENPAREN binop2 CLOSEPAREN OPENPAREN arglistv1 optkeyarglist CLOSEPAREN
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -239,7 +241,7 @@ msgsend : name blocklist1
 					newPyrPushLitNode((PyrSlotNode*)$2, NULL));
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, (PyrParseNode*)$6, 0);
 			}
-		| classname '[' arrayelems ']'
+		| classname OPENSQUARE arrayelems CLOSESQUARE
 			{ $$ = (intptr_t)newPyrDynListNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 		| classname blocklist1
 			{
@@ -252,7 +254,7 @@ msgsend : name blocklist1
 				args = (PyrParseNode*)newPyrPushNameNode((PyrSlotNode*)$1);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, (PyrParseNode*)$2);
 			}
-		| classname '(' ')' blocklist
+		| classname OPENPAREN CLOSEPAREN blocklist
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -263,7 +265,7 @@ msgsend : name blocklist1
 				args = (PyrParseNode*)newPyrPushNameNode((PyrSlotNode*)$1);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, NULL, (PyrParseNode*)$4);
 			}
-		| classname '(' keyarglist1 optcomma ')' blocklist
+		| classname OPENPAREN keyarglist1 optcomma CLOSEPAREN blocklist
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -274,7 +276,7 @@ msgsend : name blocklist1
 				args = (PyrParseNode*)newPyrPushNameNode((PyrSlotNode*)$1);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, (PyrParseNode*)$3, (PyrParseNode*)$6);
 			}
-		| classname '(' arglist1 optkeyarglist ')' blocklist
+		| classname OPENPAREN arglist1 optkeyarglist CLOSEPAREN blocklist
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -287,7 +289,7 @@ msgsend : name blocklist1
 					(PyrParseNode*)$3);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, (PyrParseNode*)$4, (PyrParseNode*)$6);
 			}
-		| classname '(' arglistv1 optkeyarglist ')'
+		| classname OPENPAREN arglistv1 optkeyarglist CLOSEPAREN
 			{
 				PyrSlotNode *selectornode, *selectornode2;
 				PyrSlot slot, slot2;
@@ -308,7 +310,7 @@ msgsend : name blocklist1
 				args = linkNextNode(args, (PyrParseNode*)$3);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, (PyrParseNode*)$5, 0);
 			}
-		| expr '.' '(' ')' blocklist
+		| expr DOT OPENPAREN CLOSEPAREN blocklist
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -317,7 +319,7 @@ msgsend : name blocklist1
 				selectornode = newPyrSlotNode(&slot);
 				$$ = (intptr_t)newPyrCallNode(selectornode, (PyrParseNode*)$1, NULL, (PyrParseNode*)$5);
 			}
-		| expr '.' '(' keyarglist1 optcomma ')' blocklist
+		| expr DOT OPENPAREN keyarglist1 optcomma CLOSEPAREN blocklist
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -326,12 +328,12 @@ msgsend : name blocklist1
 				selectornode = newPyrSlotNode(&slot);
 				$$ = (intptr_t)newPyrCallNode(selectornode, (PyrParseNode*)$1, (PyrParseNode*)$4, (PyrParseNode*)$7);
 			}
-		| expr '.' name '(' keyarglist1 optcomma ')' blocklist
+		| expr DOT name OPENPAREN keyarglist1 optcomma CLOSEPAREN blocklist
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$3, (PyrParseNode*)$1,
 					(PyrParseNode*)$5, (PyrParseNode*)$8);
 			}
-		| expr '.' '(' arglist1 optkeyarglist ')' blocklist
+		| expr DOT OPENPAREN arglist1 optkeyarglist CLOSEPAREN blocklist
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -345,7 +347,7 @@ msgsend : name blocklist1
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, (PyrParseNode*)$5, (PyrParseNode*)$7);
 			}
 
-		| expr '.' '(' arglistv1 optkeyarglist ')'
+		| expr DOT OPENPAREN arglistv1 optkeyarglist CLOSEPAREN
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot, slot2;
@@ -367,17 +369,17 @@ msgsend : name blocklist1
 			}
 
 
-		| expr '.' name '(' ')' blocklist
+		| expr DOT name OPENPAREN CLOSEPAREN blocklist
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$3, (PyrParseNode*)$1, NULL, (PyrParseNode*)$6);
 			}
-		| expr '.' name '(' arglist1 optkeyarglist ')' blocklist
+		| expr DOT name OPENPAREN arglist1 optkeyarglist CLOSEPAREN blocklist
 			{
 				PyrParseNode* args;
 				args = linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$5);
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$3, args, (PyrParseNode*)$6, (PyrParseNode*)$8);
 			}
-		| expr '.' name '(' arglistv1 optkeyarglist ')'
+		| expr DOT name OPENPAREN arglistv1 optkeyarglist CLOSEPAREN
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -395,13 +397,13 @@ msgsend : name blocklist1
 				args = linkNextNode(args, (PyrParseNode*)$5);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, (PyrParseNode*)$6, 0);
 			}
-		| expr '.' name blocklist
+		| expr DOT name blocklist
 			{
 				$$ = (intptr_t)newPyrCallNode((PyrSlotNode*)$3, (PyrParseNode*)$1, 0, (PyrParseNode*)$4);
 			}
 		;
 
-generator : '{' ':' exprseq { pushls(&generatorStack, $3); pushls(&generatorStack, 1); } ',' qual '}'
+generator : OPENCURLY COLON exprseq { pushls(&generatorStack, $3); pushls(&generatorStack, 1); } COMMA qual CLOSECURLY
 			{
 				PyrSlot slot;
 				SetSymbol(&slot, getsym("r"));
@@ -411,7 +413,7 @@ generator : '{' ':' exprseq { pushls(&generatorStack, $3); pushls(&generatorStac
 				PyrParseNode *blocklit = (PyrParseNode*)newPyrPushLitNode(NULL, block);
 				$$ = (intptr_t)newPyrCallNode(selectornode, (PyrParseNode*)blocklit, 0, 0);
 			}
-		| '{' ';' exprseq { pushls(&generatorStack, $3); pushls(&generatorStack, 2); } ',' qual '}'
+		| OPENCURLY SEMICOLON exprseq { pushls(&generatorStack, $3); pushls(&generatorStack, 2); } COMMA qual CLOSECURLY
 			{
 				$$ = $6;
 			}
@@ -439,7 +441,7 @@ nextqual	:
 						} break;
 					}
 				}
-			| ',' qual
+			| COMMA qual
 				{ $$ = $2; }
 			;
 
@@ -515,7 +517,7 @@ qual	: name LEFTARROW exprseq nextqual
 					$$ = (intptr_t)newPyrCallNode(selectornode, args2, 0, 0);
 				}
 			}
-		| VAR name '=' exprseq nextqual
+		| VAR name EQUALSSIGN exprseq nextqual
 			{
 				PyrSlot slot;
 				SetSymbol(&slot, s_value);
@@ -540,11 +542,11 @@ qual	: name LEFTARROW exprseq nextqual
 
 				$$ = (intptr_t)newPyrCallNode(selectornode, args2, 0, 0);
 			}
-		| ':' ':' exprseq nextqual
+		| COLON COLON exprseq nextqual
 			{
 				$$ = (intptr_t)newPyrDropNode((PyrParseNode*)$3, (PyrParseNode*)$4);
 			}
-		| ':' WHILE exprseq nextqual
+		| COLON WHILE exprseq nextqual
 			{
 				PyrSlot slot;
 				SetSymbol(&slot, getsym("alwaysYield"));
@@ -575,13 +577,13 @@ expr1	: pushliteral
 		| pushname
 		| curryarg
 		| msgsend
-		| '(' exprseq ')'
+		| OPENPAREN exprseq CLOSEPAREN
 			{
 				PyrParseNode* node = (PyrParseNode*)$2;
 				node->mParens = 1;
 				$$ = $2;
 			}
-		| '~' name
+		| TILDE name
 			{
 				PyrParseNode* argnode;
 				PyrSlotNode* selectornode;
@@ -591,17 +593,17 @@ expr1	: pushliteral
 				selectornode = newPyrSlotNode(&slot);
 				$$ = (intptr_t)newPyrCallNode(selectornode, argnode, 0, 0);
 			}
-		|  '[' arrayelems ']'
+		|  OPENSQUARE arrayelems CLOSESQUARE
 			{ $$ = (intptr_t)newPyrDynListNode(0, (PyrParseNode*)$2); }
-		|	'(' valrange2 ')'
+		|	OPENPAREN valrange2 CLOSEPAREN
 			{ $$ = $2; }
-		|	'(' ':' valrange3 ')'
+		|	OPENPAREN COLON valrange3 CLOSEPAREN
 			{ $$ = $3; }
-		|	'(' dictslotlist ')'
+		|	OPENPAREN dictslotlist CLOSEPAREN
 			{ $$ = (intptr_t)newPyrDynDictNode((PyrParseNode*)$2); }
 		| pseudovar
 			{ $$ = (intptr_t)newPyrPushNameNode((PyrSlotNode*)$1); }
-		| expr1 '[' arglist1 ']'
+		| expr1 OPENSQUARE arglist1 CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -617,7 +619,7 @@ expr1	: pushliteral
 		| valrangex1
 		;
 
-valrangex1	: expr1 '[' arglist1 DOTDOT ']'
+valrangex1	: expr1 OPENSQUARE arglist1 DOTDOT CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -644,7 +646,7 @@ valrangex1	: expr1 '[' arglist1 DOTDOT ']'
 				args = linkNextNode(args, nilnode2);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr1 '[' DOTDOT exprseq ']'
+		| expr1 OPENSQUARE DOTDOT exprseq CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -662,7 +664,7 @@ valrangex1	: expr1 '[' arglist1 DOTDOT ']'
 				args = linkNextNode(args, (PyrParseNode*)$4);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr1 '[' arglist1 DOTDOT exprseq ']'
+		| expr1 OPENSQUARE arglist1 DOTDOT exprseq CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1;
@@ -689,7 +691,7 @@ valrangex1	: expr1 '[' arglist1 DOTDOT ']'
 			}
 		;
 
-valrangeassign : expr1 '[' arglist1 DOTDOT ']' '=' expr
+valrangeassign : expr1 OPENSQUARE arglist1 DOTDOT CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -717,7 +719,7 @@ valrangeassign : expr1 '[' arglist1 DOTDOT ']' '=' expr
 				args = linkNextNode(args, (PyrParseNode*)$7);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr1 '[' DOTDOT exprseq ']' '=' expr
+		| expr1 OPENSQUARE DOTDOT exprseq CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -736,7 +738,7 @@ valrangeassign : expr1 '[' arglist1 DOTDOT ']' '=' expr
 				args = linkNextNode(args, (PyrParseNode*)$7);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr1 '[' arglist1 DOTDOT exprseq ']' '=' expr
+		| expr1 OPENSQUARE arglist1 DOTDOT exprseq CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1;
@@ -764,7 +766,7 @@ valrangeassign : expr1 '[' arglist1 DOTDOT ']' '=' expr
 			}
 	;
 
-valrangexd	: expr '.' '[' arglist1 DOTDOT ']'
+valrangexd	: expr DOT OPENSQUARE arglist1 DOTDOT CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -791,7 +793,7 @@ valrangexd	: expr '.' '[' arglist1 DOTDOT ']'
 				args = linkNextNode(args, nilnode2);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr '.' '[' DOTDOT exprseq ']'
+		| expr DOT OPENSQUARE DOTDOT exprseq CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -809,7 +811,7 @@ valrangexd	: expr '.' '[' arglist1 DOTDOT ']'
 				args = linkNextNode(args, (PyrParseNode*)$5);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr '.' '[' arglist1 DOTDOT exprseq ']'
+		| expr DOT OPENSQUARE arglist1 DOTDOT exprseq CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1;
@@ -834,7 +836,7 @@ valrangexd	: expr '.' '[' arglist1 DOTDOT ']'
 				args = linkNextNode(args, (PyrParseNode*)$6);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr '.' '[' arglist1 DOTDOT ']' '=' expr
+		| expr DOT OPENSQUARE arglist1 DOTDOT CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -862,7 +864,7 @@ valrangexd	: expr '.' '[' arglist1 DOTDOT ']'
 				args = linkNextNode(args, (PyrParseNode*)$8);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr '.' '[' DOTDOT exprseq ']' '=' expr
+		| expr DOT OPENSQUARE DOTDOT exprseq CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1, *nilnode2;
@@ -881,7 +883,7 @@ valrangexd	: expr '.' '[' arglist1 DOTDOT ']'
 				args = linkNextNode(args, (PyrParseNode*)$8);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr '.' '[' arglist1 DOTDOT exprseq ']' '=' expr
+		| expr DOT OPENSQUARE arglist1 DOTDOT exprseq CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode1;
@@ -964,7 +966,7 @@ valrange2	: exprseq DOTDOT
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
 
-		| exprseq ',' exprseq DOTDOT exprseq
+		| exprseq COMMA exprseq DOTDOT exprseq
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot selectorSlot;
@@ -978,7 +980,7 @@ valrange2	: exprseq DOTDOT
 				args = linkNextNode(args, (PyrParseNode*)$5);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| exprseq ',' exprseq DOTDOT
+		| exprseq COMMA exprseq DOTDOT
 			{
 				// if this is not used in a 'do' or list comprehension, then should return an error.
 				PyrSlotNode *selectornode;
@@ -1053,7 +1055,7 @@ valrange3	: DOTDOT exprseq
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
 
-		| exprseq ',' exprseq DOTDOT
+		| exprseq COMMA exprseq DOTDOT
 			{
 				PyrSlotNode *selectornode;
 				PyrPushLitNode *nilnode;
@@ -1069,7 +1071,7 @@ valrange3	: DOTDOT exprseq
 				args = linkNextNode(args, nilnode);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| exprseq ',' exprseq DOTDOT exprseq
+		| exprseq COMMA exprseq DOTDOT exprseq
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot selectorSlot;
@@ -1089,7 +1091,7 @@ expr	: expr1
 		| valrangexd
 		| valrangeassign
 		| classname { $$ = (intptr_t)newPyrPushNameNode((PyrSlotNode*)$1); }
-		| expr '.' '[' arglist1 ']'
+		| expr DOT OPENSQUARE arglist1 CLOSESQUARE
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -1102,7 +1104,7 @@ expr	: expr1
 					(PyrParseNode*)$4);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| '`' expr
+		| BACKTICK expr
 			{
 				PyrParseNode *node, *args;
 				PyrSlotNode *slotnode;
@@ -1121,11 +1123,11 @@ expr	: expr1
 				$$ = (intptr_t)newPyrBinopCallNode((PyrSlotNode*)$2,
 						(PyrParseNode*)$1, (PyrParseNode*)$4, (PyrParseNode*)$3);
 			}
-		| name '=' expr
+		| name EQUALSSIGN expr
 			{
 				$$ = (intptr_t)newPyrAssignNode((PyrSlotNode*)$1, (PyrParseNode*)$3, 0);
 			}
-		| '~' name '=' expr
+		| TILDE name EQUALSSIGN expr
 			{
 				PyrParseNode *argnode, *args;
 				PyrSlotNode* selectornode;
@@ -1136,12 +1138,12 @@ expr	: expr1
 				selectornode = newPyrSlotNode(&slot);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr '.' name '=' expr
+		| expr DOT name EQUALSSIGN expr
 			{
 				$$ = (intptr_t)newPyrSetterNode((PyrSlotNode*)$3,
 						(PyrParseNode*)$1, (PyrParseNode*)$5);
 			}
-		| name '(' arglist1 optkeyarglist ')' '=' expr
+		| name OPENPAREN arglist1 optkeyarglist CLOSEPAREN EQUALSSIGN expr
 			{
 				if ($4 != 0) {
 					error("Setter method called with keyword arguments.\n");
@@ -1151,12 +1153,12 @@ expr	: expr1
 				$$ = (intptr_t)newPyrSetterNode((PyrSlotNode*)$1,
 						(PyrParseNode*)$3, (PyrParseNode*)$7);
 			}
-		| '#' mavars '=' expr
+		| HASH mavars EQUALSSIGN expr
 			{
 				$$ = (intptr_t)newPyrMultiAssignNode((PyrMultiAssignVarListNode*)$2,
 					(PyrParseNode*)$4, 0);
 			}
-		| expr1 '[' arglist1 ']' '=' expr
+		| expr1 OPENSQUARE arglist1 CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -1170,7 +1172,7 @@ expr	: expr1
 				args = linkNextNode( args, (PyrParseNode*)$6);
 				$$ = (intptr_t)newPyrCallNode(selectornode, args, 0, 0);
 			}
-		| expr '.' '[' arglist1 ']' '=' expr
+		| expr DOT OPENSQUARE arglist1 CLOSESQUARE EQUALSSIGN expr
 			{
 				PyrSlotNode *selectornode;
 				PyrSlot slot;
@@ -1187,13 +1189,13 @@ expr	: expr1
 		;
 
 adverb  : { $$ = 0; }
-		| '.' name { $$ = (intptr_t)newPyrPushLitNode((PyrSlotNode*)$2, NULL); }
-		| '.' integer { $$ = (intptr_t)newPyrPushLitNode((PyrSlotNode*)$2, NULL); }
-		| '.' '(' exprseq ')' { $$ = $3; }
+		| DOT name { $$ = (intptr_t)newPyrPushLitNode((PyrSlotNode*)$2, NULL); }
+		| DOT integer { $$ = (intptr_t)newPyrPushLitNode((PyrSlotNode*)$2, NULL); }
+		| DOT OPENPAREN exprseq CLOSEPAREN { $$ = $3; }
 		;
 
 exprn	: expr
-		| exprn ';' expr
+		| exprn SEMICOLON expr
 			{
 				$$ = (intptr_t)newPyrDropNode((PyrParseNode*)$1, (PyrParseNode*)$3);
 			}
@@ -1208,23 +1210,23 @@ arrayelems	: { $$ = 0; }
 			;
 
 arrayelems1	: exprseq
-			| exprseq ':' exprseq
+			| exprseq COLON exprseq
 				{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			| keybinop exprseq
 				{
 					PyrParseNode* key = newPyrPushLitNode((PyrSlotNode*)$1, NULL);
 					$$ = (intptr_t)linkNextNode(key, (PyrParseNode*)$2);
 				}
-			| arrayelems1 ',' exprseq
+			| arrayelems1 COMMA exprseq
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
-			| arrayelems1 ',' keybinop exprseq
+			| arrayelems1 COMMA keybinop exprseq
 				{
 					PyrParseNode* elems;
 					PyrParseNode* key = newPyrPushLitNode((PyrSlotNode*)$3, NULL);
 					elems = (PyrParseNode*)linkNextNode(key, (PyrParseNode*)$4);
 					$$ = (intptr_t)linkNextNode((PyrParseNode*)$1, elems);
 				}
-			| arrayelems1 ',' exprseq ':' exprseq
+			| arrayelems1 COMMA exprseq COLON exprseq
 				{
 					PyrParseNode* elems;
 					elems = (PyrParseNode*)linkNextNode((PyrParseNode*)$3, (PyrParseNode*)$5);
@@ -1233,18 +1235,18 @@ arrayelems1	: exprseq
 			;
 
 arglist1	: exprseq
-			| arglist1 ',' exprseq
+			| arglist1 COMMA exprseq
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			;
 
-arglistv1	: '*' exprseq
+arglistv1	: MULTIPLY exprseq
 				{ $$ = $2; }
-			| arglist1 ',' '*' exprseq
+			| arglist1 COMMA MULTIPLY exprseq
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$4); }
 			;
 
 keyarglist1	: keyarg
-			| keyarglist1 ',' keyarg
+			| keyarglist1 COMMA keyarg
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			;
 
@@ -1253,7 +1255,7 @@ keyarg	: keybinop exprseq
 		;
 
 optkeyarglist	: optcomma { $$ = 0; }
-				| ',' keyarglist1 optcomma { $$ = $2; }
+				| COMMA keyarglist1 optcomma { $$ = $2; }
 				;
 
 mavars	: mavarlist
@@ -1263,7 +1265,7 @@ mavars	: mavarlist
 		;
 
 mavarlist	: name
-			| mavarlist ',' name
+			| mavarlist COMMA name
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			;
 
@@ -1308,10 +1310,10 @@ listliteral	: integer	{ $$ = (intptr_t)newPyrLiteralNode((PyrSlotNode*)$1, NULL)
 			| listlit2	{ $$ = (intptr_t)newPyrLiteralNode(NULL, (PyrParseNode*)$1); }
 			;
 
-block	: '{' argdecls funcvardecls funcbody '}'
+block	: OPENCURLY argdecls funcvardecls funcbody CLOSECURLY
 				{ $$ = (intptr_t)newPyrBlockNode((PyrArgListNode*)$2, (PyrVarListNode*)$3,
 					(PyrParseNode*)$4, false); }
-		| BEGINCLOSEDFUNC argdecls funcvardecls funcbody '}'
+		| BEGINCLOSEDFUNC argdecls funcvardecls funcbody CLOSECURLY
 				{ $$ = (intptr_t)newPyrBlockNode((PyrArgListNode*)$2, (PyrVarListNode*)$3,
 					(PyrParseNode*)$4, true); }
 		;
@@ -1326,50 +1328,50 @@ funcvardecls1	: funcvardecl
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$2); }
 				;
 
-funcvardecl	: VAR vardeflist ';'
+funcvardecl	: VAR vardeflist SEMICOLON
 				{ $$ = (intptr_t)newPyrVarListNode((PyrVarDefNode*)$2, varLocal); }
 			;
 
 argdecls	: { $$ = 0; }
-			| ARG vardeflist ';'
+			| ARG vardeflist SEMICOLON
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, NULL, NULL);
 				}
-			| ARG vardeflist0 ELLIPSIS name ';'
+			| ARG vardeflist0 ELLIPSIS name SEMICOLON
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, (PyrSlotNode*)$4, NULL);
 				}
-			| '|' slotdeflist '|'
+			| PIPE slotdeflist PIPE
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, NULL, NULL);
 				}
-			| '|' slotdeflist0 ELLIPSIS name '|'
+			| PIPE slotdeflist0 ELLIPSIS name PIPE
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, (PyrSlotNode*)$4, NULL);
 				}
-			| '|' slotdeflist0 ELLIPSIS name ',' name '|'
+			| PIPE slotdeflist0 ELLIPSIS name COMMA name PIPE
 			    {
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, (PyrSlotNode*)$4, (PyrSlotNode*)$6);
 			    }
 			;
 
-argdecls1	: ARG vardeflist ';'
+argdecls1	: ARG vardeflist SEMICOLON
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, NULL, NULL);
 				}
-			| ARG vardeflist0 ELLIPSIS name ';'
+			| ARG vardeflist0 ELLIPSIS name SEMICOLON
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, (PyrSlotNode*)$4, NULL);
 				}
-			| '|' slotdeflist '|'
+			| PIPE slotdeflist PIPE
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, NULL, NULL);
 				}
-			| '|' slotdeflist0 ELLIPSIS name '|'
+			| PIPE slotdeflist0 ELLIPSIS name PIPE
 				{
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, (PyrSlotNode*)$4, NULL);
 				}
-			| '|' slotdeflist0 ELLIPSIS name ',' name '|'
+			| PIPE slotdeflist0 ELLIPSIS name COMMA name PIPE
 			    {
 					$$ = (intptr_t)newPyrArgListNode((PyrVarDefNode*)$2, (PyrSlotNode*)$4, (PyrSlotNode*)$6);
 			    }
@@ -1381,7 +1383,7 @@ constdeflist	: constdef
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 				;
 
-constdef	: rspec name '=' slotliteral
+constdef	: rspec name EQUALSSIGN slotliteral
 				{ $$ = (intptr_t)newPyrVarDefNode((PyrSlotNode*)$2, (PyrParseNode*)$4, $1); }
 			;
 
@@ -1398,7 +1400,7 @@ slotdef		: name
 				{ $$ = (intptr_t)newPyrVarDefNode((PyrSlotNode*)$1, NULL, 0); }
 			| name optequal slotliteral
 				{ $$ = (intptr_t)newPyrVarDefNode((PyrSlotNode*)$1, (PyrParseNode*)$3, 0); }
-			| name optequal '(' exprseq ')'
+			| name optequal OPENPAREN exprseq CLOSEPAREN
 				{
 					PyrParseNode* node = (PyrParseNode*)$4;
 					node->mParens = 1;
@@ -1411,15 +1413,15 @@ vardeflist0 	: { $$ = 0; }
 				;
 
 vardeflist      : vardef
-                        | vardeflist ',' vardef
+                        | vardeflist COMMA vardef
                                 { $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
                         ;
 
 vardef          : name
                                 { $$ = (intptr_t)newPyrVarDefNode((PyrSlotNode*)$1, NULL, 0); }
-                        | name '=' expr
+                        | name EQUALSSIGN expr
                                 { $$ = (intptr_t)newPyrVarDefNode((PyrSlotNode*)$1, (PyrParseNode*)$3, 0); }
-                        | name '(' exprseq ')'
+                        | name OPENPAREN exprseq CLOSEPAREN
                                 {
 									PyrParseNode* node = (PyrParseNode*)$3;
 									node->mParens = 1;
@@ -1427,7 +1429,7 @@ vardef          : name
 								}
                         ;
 
-dictslotdef	: exprseq ':' exprseq
+dictslotdef	: exprseq COLON exprseq
 				{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			| keybinop exprseq
 				{
@@ -1437,7 +1439,7 @@ dictslotdef	: exprseq ':' exprseq
 			;
 
 dictslotlist1	: dictslotdef
-				| dictslotlist1 ',' dictslotdef
+				| dictslotlist1 COMMA dictslotdef
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 				;
 
@@ -1446,17 +1448,17 @@ dictslotlist	: { $$ = 0; }
 				;
 
 rwslotdeflist	: rwslotdef
-				| rwslotdeflist ',' rwslotdef
+				| rwslotdeflist COMMA rwslotdef
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 				;
 
 rwslotdef		: rwspec name
 					{ $$ = (intptr_t)newPyrVarDefNode((PyrSlotNode*)$2, NULL, $1); }
-				| rwspec name '=' slotliteral
+				| rwspec name EQUALSSIGN slotliteral
 					{ $$ = (intptr_t)newPyrVarDefNode((PyrSlotNode*)$2, (PyrParseNode*)$4, $1); }
 				;
 
-litdictslotdef	: listliteral ':' listliteral
+litdictslotdef	: listliteral COLON listliteral
 				{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			| keybinop listliteral
 				{
@@ -1466,7 +1468,7 @@ litdictslotdef	: listliteral ':' listliteral
 			;
 
 litdictslotlist1	: litdictslotdef
-				| litdictslotlist1 ',' litdictslotdef
+				| litdictslotlist1 COMMA litdictslotdef
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 				;
 
@@ -1475,16 +1477,15 @@ litdictslotlist	: { $$ = 0; }
 				;
 
 
-
-listlit	: '#' '[' literallistc ']'
+listlit	: HASH OPENSQUARE literallistc CLOSESQUARE
 				{ $$ = (intptr_t)newPyrLitListNode(0, (PyrParseNode*)$3); }
-		| '#' classname  '[' literallistc ']'
+		| HASH classname  OPENSQUARE literallistc CLOSESQUARE
 				{ $$ = (intptr_t)newPyrLitListNode((PyrParseNode*)$2, (PyrParseNode*)$4); }
 		;
 
-listlit2	: '[' literallistc ']'
+listlit2	: OPENSQUARE literallistc CLOSESQUARE
 				{ $$ = (intptr_t)newPyrLitListNode(0, (PyrParseNode*)$2); }
-			| classname  '[' literallistc ']'
+			| classname  OPENSQUARE literallistc CLOSESQUARE
 				{ $$ = (intptr_t)newPyrLitListNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 			;
 
@@ -1493,26 +1494,26 @@ literallistc	: { $$ = 0; }
 				;
 
 literallist1	: listliteral
-				| literallist1 ',' listliteral
+				| literallist1 COMMA listliteral
 					{ $$ = (intptr_t)linkNextNode((PyrParseNode*)$1, (PyrParseNode*)$3); }
 				;
 
 rwspec	:  { $$ = rwPrivate; }
-		| '<'
+		| LESSTHAN
 			{ $$ = rwReadOnly; }
 		| READWRITEVAR
 			{ $$ = rwReadWrite; }
-		| '>'
+		| GREATERTHAN
 			{ $$ = rwWriteOnly; }
 		;
 
 rspec	:  { $$ = rwPrivate; }
-		| '<'
+		| LESSTHAN
 			{ $$ = rwReadOnly; }
 		;
 
 integer	: INTEGER { $$ = zzval; }
-		| '-'INTEGER %prec UMINUS
+		| MINUS INTEGER %prec UMINUS
 			{
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)zzval;
@@ -1522,7 +1523,7 @@ integer	: INTEGER { $$ = zzval; }
 	;
 
 floatr	: SC_FLOAT { $$ = zzval; }
-		| '-' SC_FLOAT %prec UMINUS
+		| MINUS SC_FLOAT %prec UMINUS
 			{
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)zzval;
@@ -1532,7 +1533,7 @@ floatr	: SC_FLOAT { $$ = zzval; }
 	;
 
 accidental : ACCIDENTAL { $$ = zzval; }
-			| '-' ACCIDENTAL %prec UMINUS
+			| MINUS ACCIDENTAL %prec UMINUS
 				{
 					PyrSlotNode *node;
 					double intval, fracval;
@@ -1569,7 +1570,7 @@ floatp	: floatr
 				SetFloat(&node->mSlot, pi);
 				$$ = zzval;
 			}
-		| '-' pie
+		| MINUS pie
 			{
 				PyrSlotNode *node;
 				node = (PyrSlotNode*)zzval;
@@ -1611,12 +1612,12 @@ pseudovar	: PSEUDOVAR { $$ = zzval; }
 
 binop	: BINOP { $$ = zzval; }
 		| READWRITEVAR { $$ = zzval; }
-		| '<'  { $$ = zzval; }
-		| '>'  { $$ = zzval; }
-		| '-'  { $$ = zzval; }
-		| '*'  { $$ = zzval; }
-		| '+'  { $$ = zzval; }
-		| '|'  { $$ = zzval; }
+		| LESSTHAN  { $$ = zzval; }
+		| GREATERTHAN  { $$ = zzval; }
+		| MINUS  { $$ = zzval; }
+		| MULTIPLY  { $$ = zzval; }
+		| ADD  { $$ = zzval; }
+		| PIPE  { $$ = zzval; }
 	;
 
 keybinop : KEYBINOP { $$ = zzval; }
@@ -1626,5 +1627,5 @@ binop2  : binop
 		| keybinop
 		;
 
-curryarg : CURRYARG { $$ = zzval; }
+curryarg : CURRYARG { $$ =(intptr_t)newPyrCurryArgNode(); }
 

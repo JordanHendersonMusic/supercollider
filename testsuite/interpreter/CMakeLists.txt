@@ -71,4 +71,5 @@ foreach(test ${negative_tests})
          WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 	set_tests_properties(failing_${test_name} PROPERTIES WILL_FAIL TRUE)
+	set_property(TARGET ${test_name} PROPERTY FOLDER Test/Interpreter)
 endforeach(test)

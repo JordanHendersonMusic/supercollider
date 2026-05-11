@@ -27,6 +27,10 @@ if(MSVC) # hide warnings from 3rd party libraries
 	)
 endif()
 
+add_subdirectory(utf8proc)
+
+set_property(TARGET utf8proc PROPERTY FOLDER 3rdparty)
+
 if(NOT SYSTEM_PORTAUDIO)
     message(STATUS "PortAudio: building static library")
     add_subdirectory(portaudio)

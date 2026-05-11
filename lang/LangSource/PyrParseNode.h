@@ -387,7 +387,7 @@ extern intptr_t gParserResult;
 extern bool gIsTailCodeBranch;
 extern bool gTailIsMethodReturn;
 
-extern bool compilingCmdLine;
+extern bool gCompilingCmdLine;
 
 extern const char* nodename[];
 
@@ -409,6 +409,7 @@ inline void compileNode(PyrParseNode* node, PyrSlot* result, bool onTailBranch) 
 
 void initParseNodes();
 
+PyrSlotNode* newPyrSlotNode(PyrSlot slot);
 PyrSlotNode* newPyrSlotNode(PyrSlot* slot);
 PyrCurryArgNode* newPyrCurryArgNode();
 PyrClassNode* newPyrClassNode(PyrSlotNode* className, PyrSlotNode* superClassName, PyrVarListNode* varlists,

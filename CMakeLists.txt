@@ -447,6 +447,7 @@ else()
 endif()
 
 add_subdirectory(server)
+add_subdirectory(langutils)
 add_subdirectory(lang)
 add_subdirectory(platform)
 add_subdirectory(editors)
