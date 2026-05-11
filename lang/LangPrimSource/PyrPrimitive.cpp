@@ -18,6 +18,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include "PyrErrors.h"
 #include "PyrKernel.h"
 #include "PyrObject.h"
 #include "PyrPrimitive.h"
@@ -37,6 +38,7 @@
 #include "SC_AudioDevicePrim.hpp"
 #include "SC_LanguageConfig.hpp"
 #include "SC_Filesystem.hpp"
+#include "VMGlobals.h"
 
 #include <iterator>
 #include <map>
@@ -3748,17 +3750,72 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         }
         g->gc->exitDelayedCollectionContext();
 
-    if (err <= errNone)
-        g->sp -= g->numpop;
-    else {
-        // post("primerr %d\n", err);
-        SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
-        SetInt(&g->thread->primitiveError, err);
-        setupForMethod(g, meth, numArgsOnStack, 0);
+        if (err <= errNone)
+            g->sp -= g->numpop;
+        else {
+            // post("primerr %d\n", err);
+            SetInt(&g->thread->primitiveIndex, methraw->specialIndex);
+            SetInt(&g->thread->primitiveError, err);
+            setupForMethod(g, meth, numArgsOnStack, 0);
+        }
     }
 #ifdef GC_SANITYCHECK
     g->gc->SanityCheck();
 #endif
+}
+
+
+namespace sc::primitive_test {
+
+int noKwNoVarArgs(VMGlobals* g, int numArgs) {
+    if (numArgs != 4)
+        return errFailed;
+
+    PyrSlot* a = g->sp - 3;
+    PyrSlot* b = g->sp - 2;
+    PyrSlot* c = g->sp - 1;
+    PyrSlot* d = g->sp;
+
+    auto array = newPyrArray(g->gc, 4, 0, false);
+    array->slots[0] = *a;
+    array->slots[1] = *b;
+    array->slots[2] = *c;
+    array->slots[3] = *d;
+    array->size = 4;
+    *a = PyrSlot::make(array);
+    return errNone;
+}
+
+int noKwWithVarArgs(VMGlobals* g, int numArgs) {
+    if (numArgs < 4)
+        return errFailed;
+    auto array = newPyrArray(g->gc, numArgs, 0, false);
+    std::copy(g->sp - (numArgs - 1), g->sp + 1, array->slots);
+    array->size = numArgs;
+    *(g->sp - numArgs + 1) = PyrSlot::make(array);
+    return errNone;
+}
+
+int kwWithVarArgsSansKw(VMGlobals* g, int numArgs) {
+    if (numArgs < 4)
+        return errFailed;
+    auto array = newPyrArray(g->gc, numArgs, 0, false);
+    std::copy(g->sp - (numArgs - 1), g->sp + 1, array->slots);
+    array->size = numArgs;
+    *(g->sp - numArgs + 1) = PyrSlot::make(array);
+    return errNone;
+}
+
+int kwWithVarArgs(VMGlobals* g, int numArgs, int numKw) {
+    if (numArgs < 4)
+        return errFailed;
+    auto array = newPyrArray(g->gc, numArgs, 0, false);
+    std::copy(g->sp - (numArgs - 1), g->sp + 1, array->slots);
+    array->size = numArgs;
+    *(g->sp - numArgs + 1) = PyrSlot::make(array);
+    return errNone;
+}
+
 }
 
 void initPrimitives() {
@@ -3891,10 +3948,10 @@ void initPrimitives() {
     index = 0;
 
     // tests
-    definePrimitive(base, index++, "_PrimitiveTestNoKwargsNoVarArg", primitiveTests::noKwNoVarArgs, 4, 0);
-    definePrimitive(base, index++, "_PrimitiveTestNoKwargsWithVarArgs", primitiveTests::noKwWithVarArgs, 4, 1);
-    definePrimitiveWithVariableKeys(base, index, "_PrimitiveTestWithKwargs", primitiveTests::kwWithVarArgsSansKw,
-                                    primitiveTests::kwWithVarArgs, 4);
+    definePrimitive(base, index++, "_PrimitiveTestNoKwargsNoVarArg", sc::primitive_test::noKwNoVarArgs, 4, 0);
+    definePrimitive(base, index++, "_PrimitiveTestNoKwargsWithVarArgs", sc::primitive_test::noKwWithVarArgs, 4, 1);
+    definePrimitiveWithVariableKeys(base, index, "_PrimitiveTestWithKwargs", sc::primitive_test::kwWithVarArgsSansKw,
+                                    sc::primitive_test::kwWithVarArgs, 4);
     index += 2;
 
 
