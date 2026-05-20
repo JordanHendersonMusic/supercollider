@@ -35,6 +35,7 @@ repos:
         name: Run Bison parser checking for any errors
         # NOTE: this command is a copy from tools/generate_parser_bison.sh
         entry: bison -Werror --defines=lang/LangSource/Bison/lang11d_tab.h --output=lang/LangSource/Bison/lang11d_tab.cpp lang/LangSource/Bison/lang11d
-        files: lang/LangSource/Bison/*
+        files: lang/LangSource/Bison/.+
         pass_filenames: false
         language: system
+        stages: [pre-commit, pre-merge-commit, pre-push]
