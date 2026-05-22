@@ -3618,14 +3618,9 @@ void doPrimitive(VMGlobals* g, PyrMethod* meth, int numArgsPushed) {
 }
 
 void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int numKeyArgsPushed) {
-    const auto maybe_gc_sanitycheck = [&]() {
 #ifdef GC_SANITYCHECK
-        g->gc->SanityCheck();
+    g->gc->SanityCheck();
 #endif
-    };
-
-    maybe_gc_sanitycheck();
-
     const int numNormalArgsGiven = allArgsPushed - (numKeyArgsPushed * 2);
 
     PyrMethodRaw* methraw = METHRAW(meth);
@@ -3634,15 +3629,15 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
     g->primitiveIndex = primIndex - def->base;
     g->primitiveMethod = meth;
 
-    PyrSlot* reciever = g->sp - allArgsPushed + 1;
+    PyrSlot* receiver = g->sp - allArgsPushed + 1;
 
     // Remove kwargs from stack to temporary stack.
     if (numKeyArgsPushed > 0) {
-        PyrSlot* first_kwarg = g->sp - (numKeyArgsPushed * 2) + 1;
+        PyrSlot* firstKwarg = g->sp - (numKeyArgsPushed * 2) + 1;
         for (size_t i { 0 }; i < numKeyArgsPushed * 2; i += 2) {
-            temporaryKeywordStack[i] = first_kwarg[i];
-            assert(first_kwarg[i].isSymbol());
-            temporaryKeywordStack[i + 1] = first_kwarg[i + 1];
+            temporaryKeywordStack[i] = firstKwarg[i];
+            assert(firstKwarg[i].isSymbol());
+            temporaryKeywordStack[i + 1] = firstKwarg[i + 1];
         }
         g->sp -= numKeyArgsPushed * 2;
     }
@@ -3665,9 +3660,8 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
             }
         } else {
             const unsigned int needed = numNeededArgs - numNormalArgsGiven;
-            const auto disFromSPToReciever = std::distance(g->sp, reciever);
             if (maybeReallocStack(g, needed)) {
-                reciever = g->sp + disFromSPToReciever;
+                receiver = g->sp + std::distance(g->sp, receiver);
             }
             PyrSlot* from = slotRawObject(&meth->prototypeFrame)->slots + numNormalArgsGiven - 1;
             PyrSlot* to = g->sp;
@@ -3679,7 +3673,7 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         }
     }
 
-    int num_variable_kwargs = 0;
+    int numVariadicKwargs = 0;
     // Put keywords back on the stack, overriding what was already there on the stack.
     if (numKeyArgsPushed && methraw->totalNumberArguments) {
         PyrSymbol** argNames = slotRawSymbolArray(&meth->argNames)->symbols;
@@ -3690,7 +3684,7 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
             // We start at one here because you can't override 'this'.
             for (size_t argN { 1 }; argN < methraw->numNormalArguments; ++argN) {
                 if (key == argNames[argN]) {
-                    reciever[argN] = temporaryKeywordStack[keyword + 1];
+                    receiver[argN] = temporaryKeywordStack[keyword + 1];
                     goto found;
                 }
             }
@@ -3701,7 +3695,7 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
                          slotRawSymbol(&slotRawClass(&meth->ownerclass)->name)->name, slotRawSymbol(&meth->name)->name);
                 }
             } else {
-                num_variable_kwargs += 1;
+                numVariadicKwargs += 1;
                 g->sp += 1;
                 g->sp[0] = temporaryKeywordStack[keyword];
                 g->sp += 1;
@@ -3712,12 +3706,12 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
         }
     }
 
-    if (num_variable_kwargs) {
+    if (numVariadicKwargs) {
         g->numpop = numArgsOnStack - 1;
         g->gc->enterDelayedCollectionContext();
         int err;
         try {
-            err = ((PrimitiveWithKeysHandler)def[1].func)(g, numArgsOnStack, num_variable_kwargs);
+            err = ((PrimitiveWithKeysHandler)def[1].func)(g, numArgsOnStack, numVariadicKwargs);
         } catch (std::exception& ex) {
             g->lastExceptions[g->thread] = std::make_pair(std::current_exception(), meth);
             err = errException;
@@ -3759,6 +3753,7 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
             setupForMethod(g, meth, numArgsOnStack, 0);
         }
     }
+
 #ifdef GC_SANITYCHECK
     g->gc->SanityCheck();
 #endif
