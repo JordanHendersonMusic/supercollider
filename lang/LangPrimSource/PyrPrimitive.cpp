@@ -3660,8 +3660,10 @@ void doPrimitiveWithKeys(VMGlobals* g, PyrMethod* meth, int allArgsPushed, int n
             }
         } else {
             const unsigned int needed = numNeededArgs - numNormalArgsGiven;
+            // distance is cached here because we are about to reallocate the stack.
+            const auto disFromSPToReciever = std::distance(g->sp, receiver);
             if (maybeReallocStack(g, needed)) {
-                receiver = g->sp + std::distance(g->sp, receiver);
+                receiver = g->sp + disFromSPToReciever;
             }
             PyrSlot* from = slotRawObject(&meth->prototypeFrame)->slots + numNormalArgsGiven - 1;
             PyrSlot* to = g->sp;
