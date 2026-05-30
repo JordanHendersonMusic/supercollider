@@ -138,6 +138,10 @@
         return "ErInvalidUTF8";
     case TokenType::ErUnknown:
         return "ErUnknown";
+    case TokenType::ErFoundInvalidNewlineCharaceter:
+        return "ErFoundInvalidNewlineCharaceter";
+    case TokenType::ErUnicodeInCharacter:
+        return "ErUnicodeInCharacter";
     default:
         return "Unknown token";
     }

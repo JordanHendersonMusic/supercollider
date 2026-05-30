@@ -33,10 +33,9 @@ inline constexpr CodePoint invalid_utf8_flag { std::numeric_limits<CodePoint>::m
 
 
 // Note: these are supercollider's defintions, not unicode's.
-[[nodiscard]] bool is_newline(CodePoint c) noexcept;
+[[nodiscard]] bool is_single_newline(CodePoint c) noexcept;
 [[nodiscard]] bool is_space(CodePoint c) noexcept;
 [[nodiscard]] bool is_tab(CodePoint c) noexcept;
-[[nodiscard]] bool is_whitespace(CodePoint c) noexcept;
 [[nodiscard]] bool is_control_code(CodePoint c) noexcept;
 [[nodiscard]] bool is_lower(CodePoint c) noexcept;
 [[nodiscard]] bool is_upper(CodePoint c) noexcept;

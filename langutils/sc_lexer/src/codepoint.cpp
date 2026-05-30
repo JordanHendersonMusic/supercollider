@@ -13,6 +13,7 @@ namespace sc::lex {
     if (width_or_error < 0)
         // Note: all these '1' need to be initalised like std::uint8_t{1} because MSVC thinks '1' is an int and can't
         // see the conversion is fine.
+        // Zero is valid ONLY when dealing with the null terminator.
         return { invalid_utf8_flag, std::uint8_t { 1 } };
     else
         return { cp, width };
@@ -37,10 +38,9 @@ namespace sc::lex {
     CodePoint cp;
     const auto width_or_error = utf8proc_iterate(c, count, &cp);
     const auto width { static_cast<std::uint8_t>(width_or_error) };
-    if (width_or_error < 0)
-        return { invalid_utf8_flag, std::uint8_t { 1 } };
-    else
-        return { cp, width };
+    // Zero is valid ONLY when dealing with the null terminator.
+    return width_or_error < 0 ? std::tuple<CodePoint, std::uint8_t> { invalid_utf8_flag, std::uint8_t { 1 } }
+                              : std::tuple<CodePoint, std::uint8_t> { cp, width };
 }
 
 [[nodiscard]] std::uint8_t codepoint_size(CodePoint uc) noexcept {
@@ -87,11 +87,12 @@ namespace sc::lex {
         ;
 }
 
-[[nodiscard]] bool is_newline(CodePoint c) noexcept {
+// Does not work for \r\n
+[[nodiscard]] bool is_single_newline(CodePoint c) noexcept {
+    // Carriage return does not count.
+    // Code that used a bare carriage return for a new line must be updated.
+    // Likewise vertical tab and form feed are not counted, replace these with a '\n'.
     return c == '\n' // line feed
-        || c == '\v' // vertical tab (not classified as a tab)
-        || c == '\f' // form feed
-        || c == '\r' // carrage return
         || c == 0x0085 // next line
         || c == 0x2028 // line separator
         || c == 0x2029 // paragraph separator
@@ -99,8 +100,6 @@ namespace sc::lex {
 }
 
 [[nodiscard]] bool is_tab(CodePoint c) noexcept { return c == '\t'; }
-
-[[nodiscard]] bool is_whitespace(CodePoint c) noexcept { return is_newline(c) || is_space(c) || is_tab(c); }
 
 [[nodiscard]] bool is_control_code(CodePoint c) noexcept {
     return (1 <= c && c <= 8) || (14 <= c && c <= 31) || c == 127;

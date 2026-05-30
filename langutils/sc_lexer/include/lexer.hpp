@@ -262,6 +262,23 @@ decltype(auto) lexer_digits(CodePointStream& stream, Action& action, SourceCodeL
 
 }
 
+inline void consume_new_lines(CodePointStream& stream) {
+    while (true) {
+        const auto [c, n] = stream.peek_n<2>().characters;
+        if (is_single_newline(c)) {
+            stream.advance();
+            continue;
+        } else if (c == '\r' && n == '\n') {
+            stream.advance();
+            stream.advance();
+            continue;
+        }
+        return;
+    }
+}
+
+
+// Before calling this, you must ensure validate_source_format has been called.
 template <typename Action> auto lexer(CodePointStream& stream, Action& action) noexcept -> typename Action::Output {
     using namespace details;
 
@@ -290,11 +307,22 @@ next_token : {
         return *r;
     }
 
-    if (is_newline(code_point)) {
-        stream.advance_while(is_newline);
-        return_orelse_next_token(action.template process<TokenType::NewLine>({ token_start, stream.end_token() }));
+    if (code_point == '\r') {
+        const auto n = stream.peek();
+        if (n == '\n') {
+            stream.advance(); // consume '\n'
+            consume_new_lines(stream);
+            return_orelse_next_token(action.template process<TokenType::NewLine>({ token_start, stream.end_token() }));
+        } else {
+            return_orelse_next_token(action.template process<TokenType::ErFoundInvalidNewlineCharaceter>(
+                { token_start, stream.end_token() }));
+        }
     }
 
+    if (is_single_newline(code_point)) {
+        consume_new_lines(stream);
+        return_orelse_next_token(action.template process<TokenType::NewLine>({ token_start, stream.end_token() }));
+    }
 
     if (code_point == '\t') {
         stream.advance_while(is_tab);
@@ -306,7 +334,6 @@ next_token : {
         return_orelse_next_token(action.template process<TokenType::Space>({ token_start, stream.end_token() }));
     }
 
-    // ASCII tokens. Their ASCII value is their token type value.
     switch (code_point) {
     case '^':
         return_orelse_next_token(
@@ -333,6 +360,10 @@ next_token : {
         return_orelse_next_token(action.template process<TokenType::CloseSquare>({ token_start, stream.end_token() }));
     case '}':
         return_orelse_next_token(action.template process<TokenType::CloseCurly>({ token_start, stream.end_token() }));
+    case '\v':
+    case '\f':
+        return_orelse_next_token(
+            action.template process<TokenType::ErFoundInvalidNewlineCharaceter>({ token_start, stream.end_token() }));
     }
 
     if (code_point == '#') {
@@ -351,37 +382,54 @@ next_token : {
 
         // '/*'
         if (p == '*') {
-            stream.advance();
-            CodePoint it_1 = 0, it = 0;
+            stream.advance(); // consume '*';
             size_t level = 1;
-            stream.advance_while([&](auto c) {
-                it_1 = it;
-                it = c;
-                if (it_1 == '/' && it == '*') {
-                    level += 1;
-                    it = 0; // consume
-                    return true;
-                }
-                if (it_1 == '*' && it == '/') {
+            while (true) {
+                const auto [c, n] = stream.peek_n<2>().characters;
+                if (c == '*' && n == '/') {
+                    stream.advance();
+                    stream.advance();
                     level -= 1;
-                    it = 0; // consume
-                    return level != 0;
+                    if (level == 0) {
+                        return_orelse_next_token(
+                            action.template process<TokenType::MultilineComment>({ token_start, stream.end_token() }));
+                    }
+                    continue;
+                } else if (c == '/' && n == '*') {
+                    stream.advance();
+                    stream.advance();
+                    level += 1;
+                    continue;
+                } else if ((c == '\r' && n != '\n') || c == '\v' || c == '\f') {
+                    stream.advance();
+                    return_orelse_next_token(action.template process<TokenType::ErFoundInvalidNewlineCharaceter>(
+                        { token_start, stream.end_token() }));
+                } else if (c == 0) {
+                    return_orelse_next_token(action.template process<TokenType::ErMultilineCommentUnclosed>(
+                        { token_start, stream.end_token() }));
+                } else {
+                    stream.advance();
+                    continue;
                 }
-                return true;
-            });
-            const auto delimit = stream.advance();
-            if (delimit == 0) {
-                return_orelse_next_token(action.template process<TokenType::ErMultilineCommentUnclosed>(
-                    { token_start, stream.end_token() }));
             }
-            return_orelse_next_token(
-                action.template process<TokenType::MultilineComment>({ token_start, stream.end_token() }));
         }
 
         // '//'
         else if (p == '/') {
-            stream.advance_while([](auto c) { return !is_newline(c); });
-            return_orelse_next_token(action.template process<TokenType::Comment>({ token_start, stream.end_token() }));
+            while (true) {
+                const auto [c, n] = stream.peek_n<2>().characters;
+                if ((c == '\r' && n != '\n') || c == '\v' || c == '\f') {
+                    stream.advance();
+                    return_orelse_next_token(action.template process<TokenType::ErFoundInvalidNewlineCharaceter>(
+                        { token_start, stream.end_token() }));
+                } else if ((c == '\r' && n == '\n') || is_single_newline(c) || c == 0) {
+                    return_orelse_next_token(
+                        action.template process<TokenType::Comment>({ token_start, stream.end_token() }));
+                } else {
+                    stream.advance();
+                    continue;
+                }
+            }
         }
 
         // Its a binary operator.
@@ -400,13 +448,26 @@ next_token : {
     if (code_point == '$') {
         if (stream.peek() == '\\') {
             stream.advance(); // consume '\'
-            stream.advance(); // consume whatever happens after it.
+        }
+        const auto [c, n] = stream.peek_n<2>().characters;
+        if (c > 127 || c < 0) {
+            // Can only be ascii.
+            return_orelse_next_token(
+                action.template process<TokenType::ErUnicodeInCharacter>({ token_start, stream.end_token() }));
+        }
+        if (c == '\r' && n == '\n') {
+            stream.advance(); // consume \r
+            stream.advance(); // consume \n
+            return_orelse_next_token(action.template process<TokenType::ErFoundInvalidNewlineCharaceter>(
+                { token_start, stream.end_token() }));
+        } else if (c == '\r' || c == '\v' || c == '\f' || is_single_newline(c) || c == 0 || is_tab(c)) {
+            stream.advance(); // consume white space
+            return_orelse_next_token(action.template process<TokenType::ErFoundInvalidNewlineCharaceter>(
+                { token_start, stream.end_token() }));
+        } else {
+            stream.advance(); // consume
             return_orelse_next_token(action.template process<TokenType::Ascii>({ token_start, stream.end_token() }));
         }
-
-        stream.advance(); // consume whatever character comes after the '$'
-
-        return_orelse_next_token(action.template process<TokenType::Ascii>({ token_start, stream.end_token() }));
     }
 
     if (is_starting_identifier(code_point) || code_point == '_')
@@ -422,21 +483,32 @@ next_token : {
 
     // Strings
     if (code_point == '"') {
-        const auto end = stream.advance_while([escaped = false](auto c) mutable {
-            if (c == '\\' && !escaped) {
+        bool escaped { false };
+        while (true) {
+            const auto [c, n] = stream.peek_n<2>().characters;
+            if ((c == '\r' && n != '\n') || c == '\v' || c == '\f') {
+                // bad newline
+                stream.advance();
+                return_orelse_next_token(action.template process<TokenType::ErFoundInvalidNewlineCharaceter>(
+                    { token_start, stream.end_token() }));
+            } else if (c == '\\' && !escaped) {
                 escaped = true;
-                return true;
+                stream.advance();
+                continue;
+            } else if (c == '"' && !escaped) {
+                // end of string.
+                stream.advance();
+                return_orelse_next_token(
+                    action.template process<TokenType::StringLine>({ token_start, stream.end_token() }));
+            } else if (c == 0) {
+                return_orelse_next_token(
+                    action.template process<TokenType::ErStringUnclosed>({ token_start, stream.end_token() }));
+            } else {
+                escaped = false;
+                stream.advance();
+                continue;
             }
-            if (c == '"' && !escaped)
-                return false;
-            escaped = false;
-            return true;
-        });
-
-        if (stream.advance() != '"')
-            return_orelse_next_token(action.template process<TokenType::ErStringUnclosed>({ token_start, end }));
-
-        return_orelse_next_token(action.template process<TokenType::StringLine>({ token_start, stream.end_token() }));
+        }
     }
 
     // Symbol that begin with a '\'. Note: first character is used to alter what is acceptable in the following.
@@ -459,24 +531,52 @@ next_token : {
 
     // Symbol quotes 'asdf'
     if (code_point == '\'') {
-        const auto content_end = stream.advance_while([escape = false](auto c) mutable {
-            if (is_newline(c) && !escape) // you can escape the new line characters
-                return false;
-            if (c == '\'' && !escape)
-                return false;
-            if (c == '\\' && !escape) {
-                escape = true;
-                return true;
-            }
-            escape = false;
-            return true;
-        });
-        if (stream.peek() != '\'')
-            return_orelse_next_token(
-                action.template process<TokenType::ErSymbolQuoteUnclosed>({ token_start, content_end }));
+        // NOTE: should you be able to escape these newline literal characters?
 
-        stream.advance();
-        return_orelse_next_token(action.template process<TokenType::SymbolQuote>({ token_start, stream.end_token() }));
+        bool escape { false };
+        while (true) {
+            const auto [c, n] = stream.peek_n<2>().characters;
+
+            if ((c == '\r' && n != '\n') || c == '\v' || c == '\f') {
+                // bad newline
+                stream.advance();
+                return_orelse_next_token(action.template process<TokenType::ErFoundInvalidNewlineCharaceter>(
+                    { token_start, stream.end_token() }));
+            } else if (((c == '\r' && n == '\n') || is_single_newline(c)) && !escape) {
+                // Valid new line, but not esacped.
+                stream.advance();
+                return_orelse_next_token(
+                    action.template process<TokenType::ErSymbolQuoteUnclosed>({ token_start, stream.end_token() }));
+            } else if (c == '\'' && escape) {
+                escape = false;
+                stream.advance();
+                continue;
+            } else if (c == '\'' && !escape) {
+                stream.advance();
+                return_orelse_next_token(
+                    action.template process<TokenType::SymbolQuote>({ token_start, stream.end_token() }));
+            } else if (c == '\\') {
+                escape = !escape;
+                stream.advance();
+                continue;
+            } else if (c == 0) {
+                return_orelse_next_token(
+                    action.template process<TokenType::ErSymbolQuoteUnclosed>({ token_start, stream.end_token() }));
+            } else if (c == '\r' && n == '\n' && escape) {
+                stream.advance();
+                stream.advance();
+                escape = false;
+                continue;
+            } else if (is_single_newline(c) && escape) {
+                stream.advance();
+                escape = false;
+                continue;
+            } else {
+                stream.advance();
+                escape = false;
+                continue;
+            }
+        }
     }
 
     // These are the control codes, throw them away!

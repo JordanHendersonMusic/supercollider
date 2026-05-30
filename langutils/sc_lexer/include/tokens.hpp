@@ -137,6 +137,10 @@ enum struct TokenType : unsigned int {
         ErMissingExponent,
         ErInvalidToken,
         ErInvalidUTF8,
+        ErUnicodeInCharacter,
+
+        ErFoundInvalidNewlineCharaceter, // '\v' or '\f', replace with '\n'
+
         ErUnknown,
 
         START_OF_USER_DEFINED_ERRORS,

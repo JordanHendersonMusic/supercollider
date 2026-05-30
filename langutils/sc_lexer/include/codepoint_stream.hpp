@@ -6,6 +6,7 @@
 
 #include <text_location.hpp>
 #include <codepoint.hpp>
+#include <type_traits>
 
 namespace sc::lex {
 
@@ -41,7 +42,6 @@ class CodePointStream {
         std::size_t current_line_number { 0 };
         // Doesn't work with tabs, fix this once the main parser no longer needs this.
         std::size_t current_column_count { 0 };
-        bool prev_was_newline { false };
         void update(CodePoint next, std::uint8_t sz) noexcept;
     } state {};
 
@@ -139,12 +139,28 @@ public:
 
     // Null terminator is NEVER accepted as a predicate.
     template <typename Predicate> std::size_t advance_while_count(Predicate&& predicate) {
-        auto discard_null_then_predicate = [&](auto c) {
-            return (c == 0 || state.next_byte_offest >= source_length) ? false : predicate(c);
-        };
-        std::size_t i { 0 };
-        for (auto c = peek(); discard_null_then_predicate(c); c = advance_and_peek(), ++i) {}
-        return i;
+        if constexpr (std::is_invocable_v<Predicate, CodePoint, CodePoint>) {
+            auto discard_null_then_predicate = [&](auto c, auto n) {
+                return (c == 0 || state.next_byte_offest >= source_length) ? false : predicate(c, n);
+            };
+            std::size_t i { 0 };
+            while (true) {
+                auto p = peek_n<2>();
+                if (discard_null_then_predicate(p.at<0>(), p.at<1>())) {
+                    advance();
+                    ++i;
+                } else {
+                    return i;
+                }
+            }
+        } else {
+            auto discard_null_then_predicate = [&](auto c) {
+                return (c == 0 || state.next_byte_offest >= source_length) ? false : predicate(c);
+            };
+            std::size_t i { 0 };
+            for (auto c = peek(); discard_null_then_predicate(c); c = advance_and_peek(), ++i) {}
+            return i;
+        }
     }
 
     template <typename Predicate> SourceCodeLocation advance_while(Predicate&& predicate) {

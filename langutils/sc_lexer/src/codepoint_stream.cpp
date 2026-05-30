@@ -1,4 +1,5 @@
 #include "codepoint_stream.hpp"
+#include "codepoint.hpp"
 
 namespace sc::lex {
 
@@ -26,15 +27,12 @@ CodePointStream::CodePointStream(const char* src, std::size_t src_len, FileCodeL
 }
 
 void CodePointStream::State::update(CodePoint next, std::uint8_t sz) noexcept {
-    if (prev_was_newline) {
+    if (is_single_newline(next)) {
         current_line_number += 1;
         current_column_count = 0;
-        prev_was_newline = false;
     } else {
-        // TODO: this is wrong and should be removed.
-        current_column_count += 1; // codepoint_width(next);
+        current_column_count += 1;
     }
-    prev_was_newline = is_newline(next);
     next_byte_offest += sz;
 }
 

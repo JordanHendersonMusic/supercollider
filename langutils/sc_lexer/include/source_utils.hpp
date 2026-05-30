@@ -22,6 +22,7 @@ public:
     CodePointIterator& operator=(const CodePointIterator&) = delete;
 
     std::optional<CodePoint> forwards() noexcept;
+    // Note: this requires valid utf8.
     std::optional<CodePoint> backwards() noexcept;
 
     void jump(std::int64_t m) noexcept { txt_iter += m; }

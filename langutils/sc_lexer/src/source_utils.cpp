@@ -54,7 +54,7 @@ std::optional<LineIter> LineIter::make(const char* txt_start, const char* txt_en
 std::optional<LineIter::Result> LineIter::forwards() noexcept {
     if (previous_dir == Backward) {
         const auto [cp, sz] = cp_iter.current_codepoint();
-        if (is_newline(cp)) {
+        if (is_single_newline(cp)) {
             cp_iter.forwards();
             current_line += 1;
         }
@@ -65,7 +65,7 @@ std::optional<LineIter::Result> LineIter::forwards() noexcept {
 
     bool ends_in_newline_char = false;
     for (auto r = cp_iter.forwards(); r; r = cp_iter.forwards()) {
-        if (is_newline(*r)) {
+        if (is_single_newline(*r)) {
             ends_in_newline_char = true;
             break;
         }
@@ -85,9 +85,9 @@ std::optional<LineIter::Result> LineIter::backwards() noexcept {
     if (previous_dir == Forwards) {}
     previous_dir = Backward;
     const auto end = cp_iter.current_location();
-    bool ends_in_newline_char = is_newline(std::get<0>(cp_iter.current_codepoint()));
+    bool ends_in_newline_char = is_single_newline(std::get<0>(cp_iter.current_codepoint()));
     for (auto r = cp_iter.backwards(); r; r = cp_iter.backwards()) {
-        if (is_newline(*r)) {
+        if (is_single_newline(*r)) {
             cp_iter.forwards(); // undo
             break;
         }

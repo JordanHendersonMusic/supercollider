@@ -4227,7 +4227,16 @@ void PyrBlockNode::compile(PyrSlot* slotResult) {
         SetNil(&block->contextDef);
 
         PyrString* string = newPyrStringN(compileGC(), location.size(), flags, false);
-        memcpy(string->s, gCompilingText + location.begin.absolute, location.size());
+        const auto end = location.end.absolute;
+        for (size_t read { location.begin.absolute }, write { 0 }; read < end; ++read, ++write) {
+            const auto c = gCompilingText[read];
+            if (c == '\r') {
+                ++read;
+                // This should be enforced by the lexer.
+                assert(gCompilingText[read] == '\n');
+            }
+            string->s[write] = gCompilingText[read];
+        }
         SetObject(&block->sourceCode, string);
     }
 

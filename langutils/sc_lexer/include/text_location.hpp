@@ -26,12 +26,12 @@ struct SourceCodeLocation {
 
 // A location point inside an entire file
 struct FileCodeLocation {
-    [[nodiscard]] bool operator==(const SourceCodeLocation& o) const noexcept;
-    [[nodiscard]] bool operator!=(const SourceCodeLocation& o) const noexcept;
-    [[nodiscard]] bool operator<(const SourceCodeLocation& o) const noexcept;
-    [[nodiscard]] bool operator>(const SourceCodeLocation& o) const noexcept;
-    [[nodiscard]] bool operator<=(const SourceCodeLocation& o) const noexcept;
-    [[nodiscard]] bool operator>=(const SourceCodeLocation& o) const noexcept;
+    [[nodiscard]] bool operator==(const FileCodeLocation& o) const noexcept;
+    [[nodiscard]] bool operator!=(const FileCodeLocation& o) const noexcept;
+    [[nodiscard]] bool operator<(const FileCodeLocation& o) const noexcept;
+    [[nodiscard]] bool operator>(const FileCodeLocation& o) const noexcept;
+    [[nodiscard]] bool operator<=(const FileCodeLocation& o) const noexcept;
+    [[nodiscard]] bool operator>=(const FileCodeLocation& o) const noexcept;
 
     // Offset as a byte index into the text.
     std::size_t absolute { 0 };
@@ -47,6 +47,12 @@ struct SourceCodeRange {
     [[nodiscard]] static SourceCodeRange range(SourceCodeRange left, SourceCodeRange right);
     [[nodiscard]] std::size_t size() const;
     [[nodiscard]] std::size_t line_count() const;
+    [[nodiscard]] bool operator==(const SourceCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator!=(const SourceCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator<(const SourceCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator>(const SourceCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator<=(const SourceCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator>=(const SourceCodeRange& o) const noexcept;
 
     SourceCodeLocation begin, end;
 };
@@ -56,7 +62,12 @@ struct FileCodeRange {
     [[nodiscard]] static FileCodeRange range(FileCodeRange left, FileCodeRange right);
     [[nodiscard]] std::size_t size() const;
     [[nodiscard]] std::size_t line_count() const;
-
+    [[nodiscard]] bool operator==(const FileCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator!=(const FileCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator<(const FileCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator>(const FileCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator<=(const FileCodeRange& o) const noexcept;
+    [[nodiscard]] bool operator>=(const FileCodeRange& o) const noexcept;
     FileCodeLocation begin, end;
 };
 

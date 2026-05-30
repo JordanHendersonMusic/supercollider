@@ -608,6 +608,13 @@ private:
         bool escaped = false;
         auto from_it = start;
         for (; from_it != end; from_it += 1) {
+            if (from_it[0] == '\r' && from_it[1] == '\n') {
+                temp_buffer.push_back('\n');
+                // It doesn't matter if you esacpe the newline character or not, it does nothing.
+                escaped = false;
+                from_it += 1; // skip '\n' aswell
+                continue;
+            }
             if (*from_it == '\\' && !escaped) {
                 escaped = true;
                 // don't write
@@ -689,7 +696,7 @@ void print_error_line(const char* filepath, const char* txt, size_t txt_len, sc:
                 if (cp_iter.current_location() <= selection_start) {
                     ss << sc::lex::codepoint_as_whitespace(*cp);
                 } else if (cp_iter.current_location() <= selection_end) {
-                    const auto w { sc::lex::codepoint_width(*cp) };
+                    const auto w = std::max<std::uint8_t>(sc::lex::codepoint_width(*cp), 1);
                     for (size_t i { 0 }; i < w; ++i)
                         ss << '^';
                 } else
@@ -837,9 +844,11 @@ struct GlobalBisonLexerState {
                 const auto desc = std::string { "This multiline comment does not have a closing */." };
                 print_error_line(gCompilingFileSym->name, char_stream.source, char_stream.source_length, o.range,
                                  desc.c_str());
-            }
-
-            else {
+            } else if (o.is(TokenType::ErFoundInvalidNewlineCharaceter)) {
+                print_error_line(gCompilingFileSym->name, char_stream.source, char_stream.source_length, o.range,
+                                 "\'\\v\' and \'\\f\' are no longer supported, please replace them with a new line "
+                                 "character \'\\n\'.");
+            } else {
                 print_error_line(gCompilingFileSym->name, char_stream.source, char_stream.source_length, o.range);
             }
         }
@@ -976,10 +985,13 @@ int yylex() {
                     str += '\v';
                 else
                     str += *b;
-                escaped = false;
+            } else if (b[0] == '\r' && b[1] == '\n') {
+                str += '\n';
+                b += 1;
             } else {
                 str += *b;
             }
+            escaped = false;
         }
 
         prev = out;
@@ -1850,6 +1862,7 @@ SCLANG_DLLEXPORT_C void runLibrary(PyrSymbol* selector) {
 
 bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos, int lineOffset) {
     const char* filename = fileSym->name;
+    gCompilingFileSym = fileSym;
 
     gCompilinTextLen = -1;
 
