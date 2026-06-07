@@ -1605,32 +1605,32 @@ void PyrMethodNode::compile(PyrSlot* result) {
 
     if (mPrimitiveName) {
         auto prim = gPrimitiveTable.table[methraw->specialIndex];
-        if (prim.func == undefinedPrimitive) {
-            error("Method %s:%s has an undefined primitive.\n",
-                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
-            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
-            compileErrors++;
-        }
+        // Having an undefined primitive is not an error because we often want ship the whole class library but not
+        // include things like qt.
+        if (prim.func != undefinedPrimitive) {
+            if (prim.numNormalArguments != numArgs) {
+                error("Method %s:%s's number of arguments does not match the primitive.\n",
+                      slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name,
+                      slotRawSymbol(&method->name)->name);
+                nodePostErrorLine((PyrParseNode*)mPrimitiveName);
+                compileErrors++;
+            }
 
-        if (prim.numNormalArguments != numArgs) {
-            error("Method %s:%s's number of arguments does not match the primitive.\n",
-                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
-            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
-            compileErrors++;
-        }
+            if (prim.hasVariablePositionalArguments && methraw->numVariableArguments < 1) {
+                error("Primitive has variable arguments but method %s:%s does not.\n",
+                      slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name,
+                      slotRawSymbol(&method->name)->name);
+                nodePostErrorLine((PyrParseNode*)mPrimitiveName);
+                compileErrors++;
+            }
 
-        if (prim.hasVariablePositionalArguments && methraw->numVariableArguments < 1) {
-            error("Primitive has variable arguments but method %s:%s does not.\n",
-                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
-            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
-            compileErrors++;
-        }
-
-        if (prim.hasVariableKeywordArguments && methraw->numVariableArguments < 2) {
-            error("Primitive has variable keyword arguments but method %s:%s does not.\n",
-                  slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name, slotRawSymbol(&method->name)->name);
-            nodePostErrorLine((PyrParseNode*)mPrimitiveName);
-            compileErrors++;
+            if (prim.hasVariableKeywordArguments && methraw->numVariableArguments < 2) {
+                error("Primitive has variable keyword arguments but method %s:%s does not.\n",
+                      slotRawSymbol(&slotRawClass(&method->ownerclass)->name)->name,
+                      slotRawSymbol(&method->name)->name);
+                nodePostErrorLine((PyrParseNode*)mPrimitiveName);
+                compileErrors++;
+            }
         }
     }
 
