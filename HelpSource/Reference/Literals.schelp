@@ -200,7 +200,7 @@ You can also specify integer symbols this way, but if the symbol starts with a d
 code::
 \1234;
 \892342534;
-\3456meow // not illegal
+\3456meow // now illegal
 ::
 
 subsection::Strings
