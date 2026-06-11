@@ -382,7 +382,7 @@ void HelpBrowser::evaluateSelection(bool evaluateRegion) {
             Main::scProcess()->evaluateCode(selection);
         } else {
             mWebView->page()->runJavaScript(evaluateRegion ? jsSelectRegion : jsSelectLine,
-                                            [this, evaluateRegion](QVariant res) {
+                                            [](QVariant res) {
                                                 QString selectionResult = res.toString();
                                                 if (!selectionResult.isEmpty()) {
                                                     Main::scProcess()->evaluateCode(selectionResult);
