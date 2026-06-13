@@ -167,6 +167,7 @@ $\v  // vertical tab
 $\n  // newline (linefeed)
 $\r  // carriage return
 $\\  // backslash`
+$    // the space 
 ::
 
 section::Symbols and Strings
