@@ -5,7 +5,7 @@ categories:: Core
 
 description::
 A Char is a signed 8-bit integer (-128 to 127) that is used to represent that bytes inside a link::Classes/String::.
-You can also make a Char with an ASCII literal by prefixing an ASCII character with a dollar symbol:  code:$x:.
+You can also make a Char with an ASCII literal by prefixing an ASCII character with a dollar symbol: code:$x:.
 These ASCII values are in the range 0-127.
 Some special characters can be expressed as literals using escape sequences (for example, code::$\n:: for newline).
 See link::Reference/Literals#Characters:: for more information.
