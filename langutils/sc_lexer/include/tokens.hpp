@@ -136,6 +136,7 @@ enum struct TokenType : unsigned int {
         ErASCIIInvalidWhitespace,
         ErASCIIEOF,
         ErASCIIHasUnicode,
+        ErASCIINotASCII,
         ErStringUnclosed,
         ErMissingExponent,
         ErInvalidToken,

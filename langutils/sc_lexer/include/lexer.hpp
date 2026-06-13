@@ -411,9 +411,11 @@ next_token : {
         } else if (p == 0) { // end of file
             return_orelse_next_token(
                 action.template process<TokenType::ErASCIIEOF>({ token_start, stream.end_token() }));
-        } else {
-            stream.advance(); // consume whatever happens after it.
+        } else if (auto c = stream.advance(); c > 0 && c < 128) {
             return_orelse_next_token(action.template process<TokenType::Ascii>({ token_start, stream.end_token() }));
+        } else {
+            return_orelse_next_token(
+                action.template process<TokenType::ErASCIINotASCII>({ token_start, stream.end_token() }));
         }
     }
 

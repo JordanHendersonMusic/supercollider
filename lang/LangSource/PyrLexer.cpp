@@ -869,6 +869,10 @@ struct GlobalBisonLexerState {
             } else if (o.is(TokenType::ErASCIIEOF)) {
                 print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
                                  o.range, "Cannot end the file here, ascii literal needs some input.");
+            } else if (o.is(TokenType::ErASCIINotASCII)) {
+                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
+                                 o.range, "The ASCII literal only accpets ASCII characters.");
+
             } else {
                 print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
                                  o.range);
