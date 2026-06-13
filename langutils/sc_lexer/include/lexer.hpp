@@ -500,6 +500,10 @@ next_token : {
         return_orelse_next_token(
             action.template process<TokenType::ErInvalidUTF8>({ token_start, stream.end_token() }));
 
+    if (code_point > 127)
+        return_orelse_next_token(
+            action.template process<TokenType::ErUnexpectedUnicode>({ token_start, stream.end_token() }));
+
     return_orelse_next_token(action.template process<TokenType::ErUnexpected>({ token_start, stream.end_token() }));
 }
 

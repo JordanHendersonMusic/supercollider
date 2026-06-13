@@ -28,6 +28,7 @@
 #include "VMGlobals.h"
 #include "codepoint.hpp"
 #include "normalise_source.hpp"
+#include "codepoint_stream.hpp"
 #include "source_utils.hpp"
 #include "tokens.hpp"
 
@@ -690,7 +691,7 @@ void print_error_line(const char* filepath, const char* txt, size_t txt_len, sc:
                 if (cp_iter.current_location() <= selection_start) {
                     ss << sc::lex::codepoint_as_whitespace(*cp);
                 } else if (cp_iter.current_location() <= selection_end) {
-                    const auto w { sc::lex::codepoint_width(*cp) };
+                    const auto w = std::max<std::uint8_t>(1, sc::lex::codepoint_width(*cp));
                     for (size_t i { 0 }; i < w; ++i)
                         ss << '^';
                 } else
@@ -758,6 +759,10 @@ struct GlobalBisonLexerState {
         }
         linestarts[lineno] = linepos;
 
+        const char* fileName = gCompilingFileSym ? gCompilingFileSym->name : nullptr;
+
+
+        bool swallowError = false;
         if (o.is_error()) {
             zzval = 0; // stop anything from continuing.
 
@@ -765,40 +770,39 @@ struct GlobalBisonLexerState {
                  "Error:\n──────────────────────────────────────────────────────────────────────────────────\n");
             if (o.is(ExtendedErrors::GotCurlyExpectedParen) || o.is(ExtendedErrors::GotSquareExpectedParen)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                     *o.extra_range_of_error, "Parenthises opened here...");
-                    print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                     o.range, "...was expected to be closed here with a ')'.");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), *o.extra_range_of_error,
+                                     "Parenthises opened here...");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                     "...was expected to be closed here with a ')'.");
                 }
             } else if (o.is(ExtendedErrors::GotCurlyExpectedSquare) || o.is(ExtendedErrors::GotParenExpectedSquare)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                     *o.extra_range_of_error, "Square bracket opened here...");
-                    print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                     o.range, "...was expected to be closed here with a ']'.");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), *o.extra_range_of_error,
+                                     "Square bracket opened here...");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                     "...was expected to be closed here with a ']'.");
                 }
             } else if (o.is(ExtendedErrors::GotParenExpectedCurly) || o.is(ExtendedErrors::GotSquareExpectedCurly)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                     *o.extra_range_of_error, "Curly bracket opened here...");
-                    print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                     o.range, "...was expected to be closed here with a '}'.");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), *o.extra_range_of_error,
+                                     "Curly bracket opened here...");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                     "...was expected to be closed here with a '}'.");
                 }
             } else if (o.is(ExtendedErrors::ExtraClosingCurlyBracket)) {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, "Unexpected closing curly brace, could not find a matching opening one.");
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 "Unexpected closing curly brace, could not find a matching opening one.");
             } else if (o.is(ExtendedErrors::ExtraClosingParenBracket)) {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, "Unexpected closing parenthesis, could not find a matching opening one.");
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 "Unexpected closing parenthesis, could not find a matching opening one.");
             } else if (o.is(ExtendedErrors::ExtraClosingSqaureBracket)) {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, "Unexpected closing square bracket, could not find a matching opening one.");
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 "Unexpected closing square bracket, could not find a matching opening one.");
             } else if (o.is(TokenType::ErMissingExponent)) {
                 const auto [ptr, sz] = char_stream.source_code_range_to_text(o.range);
                 const std::string example { ptr, sz };
                 const auto desc = std::string { "Expected digits after the 'e', for example '" } + example + "10'.";
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
             }
 
             else if (o.is(TokenType::ErSymbolQuoteUnclosed)) {
@@ -812,16 +816,23 @@ struct GlobalBisonLexerState {
                 const auto desc =
                     std::string { "This quoted symbol does not have a matching closing quote, perhaps you meant "
                                   + example + "'?" };
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
             }
 
             else if (o.is(TokenType::ErInvalidUTF8)) {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, "Invalid UTF8 encountered here, you probably want to delete this.");
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 "Invalid UTF8 encountered here, you probably want to delete this. This is probably "
+                                 "from an old text file and needs updating.");
+                // The old lexer didn't think this was an error. That is a mistake. Here we don't mark this as a true
+                // error so comilation can continue.
+                swallowError = true;
             } else if (o.is(TokenType::ErInvalidToken)) {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, "Invalid token encountered, supercollider does not know how to handle this.");
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 "Invalid token encountered, supercollider does not know how to handle this.");
+            } else if (o.is(TokenType::ErUnexpectedUnicode)) {
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 "Unexpected unicode encountered, supercollider does not know how to handle this.");
+                swallowError = true;
             }
 
             else if (o.is(TokenType::ErStringUnclosed)) {
@@ -832,14 +843,12 @@ struct GlobalBisonLexerState {
                 const std::string example { ptr, i };
                 const auto desc =
                     std::string { "This string does not have a closing '\"', perhaps you meant " + example + "\"?" };
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
             } else if (o.is(TokenType::ErMultilineCommentUnclosed)) {
                 const auto desc = std::string { "This multiline comment does not have a closing */." };
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
             } else if (o.is(TokenType::ErASCIIInvalidWhitespace)) {
-                const auto [ptr, sz] = char_stream.source_code_range_to_text(o.range);
+				const auto [ptr, sz] = char_stream.source_code_range_to_text(o.range);
                 const char raw_c = sz == 3 ? ptr[2] : ptr[1];
                 std::string msg;
                 switch (raw_c) {
@@ -862,22 +871,13 @@ struct GlobalBisonLexerState {
                           "character instead (e.g., '$\\n').";
                     break;
                 }
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(),
                                  o.range, msg.c_str());
-
-            } else if (o.is(TokenType::ErASCIIEOF)) {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, "Cannot end the file here, ascii literal needs some input.");
-            } else if (o.is(TokenType::ErASCIINotASCII)) {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, "The ASCII literal only accpets ASCII characters.");
-
-            } else {
-                print_error_line(gCompilingFileSym->name, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range);
+			} else {
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range);
             }
         }
-        gParseFailed = o.is_error() ? 1 : 0;
+        gParseFailed = o.is_error() && !swallowError ? 1 : 0;
 
         return *convert_to_bison_tokentype(o.type);
     }
@@ -897,7 +897,7 @@ bool scanForClosingBracket(TokenType to_find) {
     while (true) {
         out = lex::lexer(s.char_stream, s.action);
 
-        if (out.type == TokenType::EndOfFile || out.is_error()) {
+        if (out.type == TokenType::EndOfFile) {
             s.mutate_global_state_for_return(out);
             return false;
         }
@@ -908,14 +908,14 @@ bool scanForClosingBracket(TokenType to_find) {
     }
 }
 
-void scan_for_end() {
+void scanForEnd() {
     assert(global_bison_lexer_state);
     GlobalBisonLexerState& s = *global_bison_lexer_state;
 
     BisonLexerAction::Output out;
     do {
         out = lex::lexer(s.char_stream, s.action);
-    } while (out.type != TokenType::EndOfFile && !out.is_error());
+    } while (out.type != TokenType::EndOfFile);
 
     s.mutate_global_state_for_return(out);
 }
@@ -946,6 +946,12 @@ int yylex() {
     }
 
     BisonLexerAction::Output out = lex::lexer(s.char_stream, s.action);
+
+    while (out.type == TokenType::ErInvalidUTF8 || out.type == TokenType::ErUnexpectedUnicode) {
+        // swallow invalid utf8.
+        s.mutate_global_state_for_return(out);
+        out = lex::lexer(s.char_stream, s.action);
+    }
 
     if (out.type != TokenType::StringLine)
         return s.mutate_global_state_for_return(out);
@@ -1410,7 +1416,19 @@ bool parseOneClass(PyrSymbol* fileSym) {
     startLineOffset = lineno - 1;
 
     GlobalBisonLexerState& s = *global_bison_lexer_state;
-    BisonLexerAction::Output out = lex::lexer(s.char_stream, s.action);
+
+    // skips all lexing errors
+    const auto advance = [&]() {
+        while (true) {
+            const auto r = lex::lexer(s.char_stream, s.action);
+            if (r.is_error())
+                continue;
+            else
+                return r;
+        }
+    };
+
+    BisonLexerAction::Output out = advance();
 
     if (out.type == TokenType::ClassName) {
         const auto [ptr, sz] = s.char_stream.source_code_range_to_text(out.range);
@@ -1421,19 +1439,19 @@ bool parseOneClass(PyrSymbol* fileSym) {
             return false;
         if (out.type == TokenType::OpenSquare) {
             scanForClosingBracket(TokenType::CloseSquare); // eat indexing spec
-            out = lex::lexer(s.char_stream, s.action);
+            out = advance();
             if (out.type == TokenType::EndOfFile)
                 return false;
         }
         if (out.type == TokenType::Colon) {
-            out = lex::lexer(s.char_stream, s.action);
+            out = advance();
             if (out.type == TokenType::EndOfFile)
                 return false;
             if (out.type == TokenType::ClassName) {
                 const auto [ptr, sz] = s.char_stream.source_code_range_to_text(out.range);
                 superClassName = getsymlen(ptr, sz);
 
-                out = lex::lexer(s.char_stream, s.action);
+                out = advance();
                 if (out.type == TokenType::EndOfFile)
                     return false;
                 if (out.type == TokenType::OpenCurly) {
@@ -1470,11 +1488,11 @@ bool parseOneClass(PyrSymbol* fileSym) {
             return false;
         }
     } else if (out.type == TokenType::Add) {
-        out = lex::lexer(s.char_stream, s.action);
+        out = advance();
         if (out.type == TokenType::EndOfFile)
             return false;
 
-        scan_for_end();
+        scanForEnd();
 
         newClassExtFile(fileSym, startPos, textpos);
         return false;
@@ -1976,6 +1994,7 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
     gCompilingCmdLine = true;
     zzval = 0;
     gParseFailed = 0;
+    gCompilingFileSym = getsym("interpreted text");
     currfilename = fs::path("interpreted text");
     printingCurrfilename = currfilename.string();
     maxlinestarts = 1000;
