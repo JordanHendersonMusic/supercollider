@@ -129,8 +129,6 @@ if(failed > 0) {
 	"\t------------------------------".postln;
 };
 
-
-
 if(exitWhenDone) {(failed > 0).asInteger.exit};
 
 )
