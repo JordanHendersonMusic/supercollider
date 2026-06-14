@@ -6,6 +6,7 @@ var useColors = \Document.asClass.isNil; // use colors if we're running sclang d
 var exitWhenDone = \Document.asClass.isNil; // exit if we're running sclang directly
 var failedList = List();
 
+var numSlowestTestToDisplay = 30;
 var roundTime = { |time| 
 	// three most significant digits
 	var log = time.log10.round;
@@ -106,7 +107,7 @@ results.do({|dict|
 "Longest running tests:\n".postln;
 results.select{ |d| d[\duration].notNil}
 	.sort{ |l, r| l[\duration] > r[\duration] }
-	.copySeries(0, nil, 30)
+	.keep(numSlowestTestToDisplay)
 	.do { |dict|
 		"\t%\t%".format(
 			makeBold.("%:%".format(dict[\suite], dict[\test])),
