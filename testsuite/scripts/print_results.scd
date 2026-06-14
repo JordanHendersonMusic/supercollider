@@ -104,15 +104,12 @@ results.do({|dict|
 
 "".postln;
 "\t------------------------------".postln;
-"Longest running tests:\n".postln;
+"Longest running tests:".postln;
 results.select{ |d| d[\duration].notNil}
 	.sort{ |l, r| l[\duration] > r[\duration] }
 	.keep(numSlowestTestToDisplay)
 	.do { |dict|
-		"\t%\t%".format(
-			makeBold.("%:%".format(dict[\suite], dict[\test])),
-			makeRed.(roundTime.(dict[\duration]))
-		).postln;
+		makeBold.("\t%:%".format(dict[\suite], dict[\test])).pad(50) ++ makeRed.(roundTime.(dict[\duration])).postln;
 	}
 ;
 "\t------------------------------".postln;
