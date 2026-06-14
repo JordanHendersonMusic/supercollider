@@ -50,7 +50,6 @@ public:
     CodePointStream(NormalisedSource src, FileCodeLocation src_start_in_file) noexcept:
         source_start_in_file(src_start_in_file),
         source(std::move(src).steal_string()) {}
-    // CodePointStream(const char* src, std::size_t src_len, FileCodeLocation src_start_in_file);
     CodePointStream(CodePointStream&&) noexcept = default;
     CodePointStream(const CodePointStream&) = default;
     CodePointStream& operator=(CodePointStream&&) noexcept = delete;
