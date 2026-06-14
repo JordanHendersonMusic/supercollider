@@ -109,7 +109,7 @@ results.select{ |d| d[\duration].notNil}
 	.sort{ |l, r| l[\duration] > r[\duration] }
 	.keep(numSlowestTestToDisplay)
 	.do { |dict|
-		makeBold.("\t%:%".format(dict[\suite], dict[\test])).pad(50) ++ makeRed.(roundTime.(dict[\duration])).postln;
+		makeBold.("\t%:%".format(dict[\suite], dict[\test])).padRight(50) ++ makeRed.(roundTime.(dict[\duration])).postln;
 	}
 ;
 "\t------------------------------".postln;
