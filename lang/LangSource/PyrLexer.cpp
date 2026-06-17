@@ -345,30 +345,27 @@ enum struct ExtendedErrors : std::underlying_type_t<TokenType> {
 };
 
 struct BisonSemActionOutput {
-    [[nodiscard]] BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range):
+    BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range):
         type(static_cast<TokenType>(e)),
         range(range),
         slot({}) {};
 
-    [[nodiscard]] BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range, lex::SourceCodeRange extra_range):
+    BisonSemActionOutput(ExtendedErrors e, lex::SourceCodeRange range, lex::SourceCodeRange extra_range):
         type(static_cast<TokenType>(e)),
         range(range),
         slot({}),
         extra_range_of_error(extra_range) {};
 
-    [[nodiscard]] BisonSemActionOutput(TokenType t, lex::SourceCodeRange range, std::optional<PyrSlot> slot = {}):
+    BisonSemActionOutput(TokenType t, lex::SourceCodeRange range, std::optional<PyrSlot> slot = {}):
         type(t),
         range(range),
         slot(slot) {};
 
-    [[nodiscard]] BisonSemActionOutput(TokenType t, lex::SourceCodeRange range, PyrSlot slot):
-        type(t),
-        range(range),
-        slot(slot) {};
+    BisonSemActionOutput(TokenType t, lex::SourceCodeRange range, PyrSlot slot): type(t), range(range), slot(slot) {};
 
-    [[nodiscard]] BisonSemActionOutput() = default;
-    [[nodiscard]] BisonSemActionOutput(BisonSemActionOutput&&) noexcept = default;
-    [[nodiscard]] BisonSemActionOutput(const BisonSemActionOutput&) noexcept = default;
+    BisonSemActionOutput() = default;
+    BisonSemActionOutput(BisonSemActionOutput&&) noexcept = default;
+    BisonSemActionOutput(const BisonSemActionOutput&) noexcept = default;
     BisonSemActionOutput& operator=(BisonSemActionOutput&&) noexcept = default;
     BisonSemActionOutput& operator=(const BisonSemActionOutput&) noexcept = default;
 
@@ -1900,7 +1897,7 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
             std::stringstream ss;
             ss << file.rdbuf();
             sc::lex::NormalisedSource src(ss.str());
-            const std::string& string { src };
+            const auto& string = static_cast<const std::string&>(src);
 
             gCompilingText = (char*)pyr_pool_compile->Alloc((string.size() + 1) * sizeof(char));
             MEMFAIL(gCompilingText);
@@ -1960,7 +1957,7 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
 
 void startLexerCmdLine(char* textbuf, int textbuflen) {
     sc::lex::NormalisedSource src(textbuf, textbuflen);
-    const std::string& string { src };
+    const auto& string = static_cast<const std::string&>(src);
 
     gCompilingText = (char*)pyr_pool_compile->Alloc((string.size()) * sizeof(char));
     MEMFAIL(gCompilingText);
