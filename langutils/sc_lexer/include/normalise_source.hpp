@@ -16,7 +16,8 @@ struct NormalisedSource {
     // Turns into a string or immutable reference to one depending on the qualifier
     [[nodiscard]] explicit operator const std::string&() const& { return s; }
     [[nodiscard]] explicit operator std::string() && { return std::move(s); }
-    [[nodiscard]] explicit operator std::string() const&& { return s; }
+    // Deleted to silence strict conversion warnings. const&& decay to const&.
+    [[nodiscard]] explicit operator std::string() const&& = delete;
 
 private:
     std::string s {};
