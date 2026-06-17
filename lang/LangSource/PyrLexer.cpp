@@ -1897,9 +1897,8 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
 
             std::stringstream ss;
             ss << file.rdbuf();
-            const auto rawString = ss.str();
-            sc::lex::NormalisedSource src(rawString);
-            std::string string { std::move(src).steal_string() };
+            sc::lex::NormalisedSource src(ss.str());
+            const std::string& string { src };
 
             gCompilingText = (char*)pyr_pool_compile->Alloc((string.size() + 1) * sizeof(char));
             MEMFAIL(gCompilingText);
@@ -1950,7 +1949,7 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
     gCompilingCmdLine = false;
 
     sc::lex::NormalisedSource src { gCompilingText, static_cast<size_t>(gCompilinTextLen) };
-    BisonLexerAction ba { src.as_string() };
+    BisonLexerAction ba { static_cast<const std::string&>(src) };
     global_bison_lexer_state.emplace(GlobalBisonLexerState::Mode::ClassLibrary, std::move(ba),
                                      std::move(sc::lex::CodePointStream { std::move(src), {} }));
 
@@ -1959,7 +1958,7 @@ bool startLexer(PyrSymbol* fileSym, const fs::path& p, int startPos, int endPos,
 
 void startLexerCmdLine(char* textbuf, int textbuflen) {
     sc::lex::NormalisedSource src(textbuf, textbuflen);
-    const std::string& string { src.as_string() };
+    const std::string& string { src };
 
     gCompilingText = (char*)pyr_pool_compile->Alloc((string.size()) * sizeof(char));
     MEMFAIL(gCompilingText);
@@ -1990,7 +1989,7 @@ void startLexerCmdLine(char* textbuf, int textbuflen) {
     errLineOffset = 0;
     errCharPosOffset = 0;
 
-    BisonLexerAction ba { src.as_string() };
+    BisonLexerAction ba { static_cast<const std::string&>(src) };
     global_bison_lexer_state.emplace(GlobalBisonLexerState::Mode::CMDInitial, std::move(ba),
                                      std::move(lex::CodePointStream { std::move(src), {} }));
 }

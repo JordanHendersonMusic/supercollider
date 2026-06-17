@@ -49,7 +49,7 @@ class CodePointStream {
 public:
     CodePointStream(NormalisedSource src, FileCodeLocation src_start_in_file) noexcept:
         source_start_in_file(src_start_in_file),
-        source(std::move(src).steal_string()) {}
+        source(std::move(src)) {}
     CodePointStream(CodePointStream&&) noexcept = default;
     CodePointStream(const CodePointStream&) = default;
     CodePointStream& operator=(CodePointStream&&) noexcept = delete;
