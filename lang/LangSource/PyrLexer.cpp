@@ -849,6 +849,8 @@ struct GlobalBisonLexerState {
                 case '\n':
                     msg = "replace with '$\\n'.";
                     break;
+                // The following three are actually not possible due to normalisation, but are kept here just in case
+                // that changes.
                 case '\r':
                     msg = "replace with '$\\r'.";
                     break;
