@@ -1,0 +1,7 @@
+includePaths:
+@BUILD_CLASSLIBRARYPATH@
+excludeDefaultPaths: true
+scsynthPath: @CMAKE_CURRENT_BINARY_DIR@/server/scsynth/scsynth
+supernovaPath: @CMAKE_CURRENT_BINARY_DIR@/server/supernova/supernova
+
+

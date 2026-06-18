@@ -145,6 +145,24 @@ int slotPStrVal(PyrSlot* slot, unsigned char* str) {
     return errWrongType;
 }
 
+int getRuntimeOptions(VMGlobals* g, int numArgsPushed) {
+    auto* stack = g->sp - 1;
+
+    if (stack[1].isSymbol()) {
+        auto* key = stack[1].getSymbol();
+        if (auto fnd = g->runtimeOptions.find(key); fnd != g->runtimeOptions.end()) {
+            auto str = newPyrString(g->gc, fnd->second.c_str(), 0, 0);
+            stack[0] = PyrSlot::make(str);
+            return errNone;
+        } else {
+            // not set, make it nil
+            stack[0] = PyrSlot {};
+            return errNone;
+        }
+    }
+    return errWrongType;
+}
+
 int instVarAt(struct VMGlobals* g, int numArgsPushed) {
     PyrSlot *a, *b;
     int index;
@@ -3268,11 +3286,11 @@ static int prLanguageConfig_addLibraryPath(struct VMGlobals* g, int numArgsPushe
     if (error)
         return errWrongType;
 
-    const fs::path& native_path = SC_Codecvt::utf8_str_to_path(path);
+    fs::path native_path = SC_Codecvt::utf8_str_to_path(path);
     if (pathType == includePaths)
-        gLanguageConfig->addIncludedDirectory(native_path);
+        gLanguageConfig->addIncludedDirectory(std::move(native_path));
     else
-        gLanguageConfig->addExcludedDirectory(native_path);
+        gLanguageConfig->addExcludedDirectory(std::move(native_path));
     return errNone;
 }
 
@@ -4102,6 +4120,8 @@ void initPrimitives() {
     definePrimitive(base, index++, "_SC_VersionTweak", prVersionTweak, 1, 0);
     definePrimitive(base, index++, "_NumUninlinedFunctionInClassLib", numUninlinedFunctionsInClassLib, 1, 0);
     definePrimitive(base, index++, "_SC_BuildString", prBuildString, 1, 0);
+
+    definePrimitive(base, index++, "_GetRuntimeOptions", getRuntimeOptions, 2, 0);
 
     // void initOscilPrimitives();
     // void initControllerPrimitives();

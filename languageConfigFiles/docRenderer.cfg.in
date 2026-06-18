@@ -1,3 +1,5 @@
 includePaths:
-@BUILD_CLASSLIBRARYPATH@
+@DOCRENDERER_CLASSLIBRARYPATH@
 excludeDefaultPaths: true
+
+

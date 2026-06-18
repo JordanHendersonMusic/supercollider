@@ -1,10 +1,117 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Generate Parser With Bison",
-            "type": "shell",
-            "command": "tools/generate_parser_bison.sh"
-        }
-    ]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Generate Parser With Bison",
+      "type": "shell",
+      "command": "tools/generate_parser_bison.sh"
+    },
+    {
+      "label": "Reset CI results directory",
+      "type": "shell",
+      "command": "rm -r ci_results || true && mkdir ci_results",
+      "hide": true
+    },
+    {
+      "label": "Build sclang",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "${command:cmake.buildDirectory}",
+        "--target",
+        "sclang"
+      ],
+      "hide": true
+    },
+    {
+      "label": "Build scsynth",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "${command:cmake.buildDirectory}",
+        "--target",
+        "scsynth"
+      ],
+      "hide": true
+    },
+    {
+      "label": "Build supernova",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "${command:cmake.buildDirectory}",
+        "--target",
+        "supernova"
+      ],
+      "hide": true
+    },
+    {
+      "label": "Run sclang CI",
+      "type": "shell",
+      "command": "${command:cmake.buildDirectory}/lang/sclang",
+      "args": [
+        "-l",
+        "${command:cmake.buildDirectory}/languageConfigFiles/build.cfg",
+        "testsuite/scripts/sclang_test_runner.scd",
+        "testsuite/scripts/test_run_proto_gha.scd",
+        "ci_results/ci_result.scxtar"
+      ],
+      "dependsOn": [
+        "Reset CI results directory",
+        "Build sclang",
+        "Build scsynth",
+        "Build supernova"
+      ],
+      "hide": true
+    },
+    {
+      "label": "Display last sclang CI results",
+      "type": "shell",
+      "command": "timeout 20m ${command:cmake.buildDirectory}/lang/sclang",
+      "args": [
+        "-l",
+        "build_sclang.cfg",
+        "testsuite/scripts/print_results.scd",
+        "ci_results/ci_result.scxtar"
+      ],
+      "hide": true
+    },
+    {
+      "label": "Run and display sclang ci results",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Run sclang CI",
+        "Display last sclang CI results"
+      ],
+      "detail": "Resets/creates the ci_results directory, builds sclang, and runs the ci.",
+      "icon": {
+        "id": "beaker",
+        "color": "terminal.ansiGreen"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Launch sclang with build options",
+      "detail": "Launchs sclang using the build_sclang.cfg file as the language config, perfect for testing!",
+      "type": "shell",
+      "command": "${command:cmake.buildDirectory}/lang/sclang",
+      "args": [
+        "-l",
+        "${command:cmake.buildDirectory}/languageConfigFiles/build.cfg"
+      ],
+      "dependsOn": [
+        "Build sclang",
+        "Build scsynth",
+        "Build supernova",
+      ],
+      "icon": {
+        "id": "music",
+        "color": "terminal.ansiMagenta"
+      },
+      "problemMatcher": []
+    }
+  ]
 }

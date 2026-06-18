@@ -31,6 +31,7 @@ Each virtual machine has a copy of VMGlobals, which contains the state of the vi
 #include <setjmp.h>
 #include <map>
 #include <cstdint>
+#include <unordered_map>
 
 #define TAILCALLOPTIMIZE 1
 
@@ -79,6 +80,7 @@ struct VMGlobals {
 
     // primitive exceptions
     std::map<PyrThread*, std::pair<std::exception_ptr, PyrMethod*>> lastExceptions;
+    std::unordered_map<struct PyrSymbol*, std::string> runtimeOptions {};
 };
 
 inline void FifoMsg::Perform(struct VMGlobals* g) { (func)(g, this); }

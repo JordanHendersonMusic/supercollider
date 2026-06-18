@@ -42,7 +42,7 @@ TestServer_dumpTree : UnitTest {
 
     test_dumpTree_scsynth {
         this.assertEquals(
-            this.getOutput(Server.program),
+            this.getOutput(Server.scsynthProgram),
             List[
                 "NODE TREE Group 0",
                 "END NODE TREE Group 0",
@@ -53,7 +53,7 @@ TestServer_dumpTree : UnitTest {
 
     test_dumpTree_supernova {
         this.assertEquals(
-            this.getOutput(Server.program.replace("scsynth", "supernova")),
+            this.getOutput(Server.supernovaProgram),
             List[
                 "NODE TREE Group 0",
                 "   0 group",

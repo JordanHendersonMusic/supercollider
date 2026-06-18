@@ -95,6 +95,16 @@ inline std::filesystem::path utf8_str_to_path(const std::string& s) {
     return std::filesystem::path(s);
 #endif // _WIN32
 }
+/** \brief Converts a UTF-8 encoded string to a path.
+ * R value overload, saves a copy if not windows.
+ */
+inline std::filesystem::path utf8_str_to_path(std::string&& s) {
+#ifdef _WIN32
+    return utf8_str_to_path(s); // calls const& overload
+#else
+    return std::filesystem::path(std::move(s));
+#endif // _WIN32
+}
 
 /** \brief Converts a native filesystem-encoded string to a UTF-8 string.
  *
@@ -113,6 +123,14 @@ inline std::string utf8_to_native_str(const std::string& s) {
 #endif // _WIN32
 }
 
+inline std::string utf8_to_native_str(std::string&& s) {
+#ifdef _WIN32
+    return utf8_to_native_str(s);
+#else
+    return std::move(s);
+#endif // _WIN32
+}
+
 /** \brief Converts a UTF-8 string to a native filesystem-encoded string.
  *
  * On Windows, converts between UTF-16 and UTF-8. On POSIX systems, no-op. */
@@ -127,6 +145,14 @@ inline std::string native_to_utf8_str(const std::string& s) {
     return ret;
 #else
     return s;
+#endif // _WIN32
+}
+
+inline std::string native_to_utf8_str(std::string&& s) {
+#ifdef _WIN32
+    return native_to_utf8_str(s);
+#else
+    return std::move(s);
 #endif // _WIN32
 }
 

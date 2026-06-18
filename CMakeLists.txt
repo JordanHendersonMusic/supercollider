@@ -581,16 +581,16 @@ endif()
 #
 # build scdoc help files
 #
-list(APPEND BUILD_CLASSLIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/SCClassLibrary")
+list(APPEND DOCRENDERER_CLASSLIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/SCClassLibrary")
 
 # this folder has an extension to Platform that disables the loadStartupFiles method
-list(APPEND BUILD_CLASSLIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/platform/disable_startup_files")
+list(APPEND DOCRENDERER_CLASSLIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/platform/disable_startup_files")
 
-foreach(arg ${BUILD_CLASSLIBRARIES})
-	set(BUILD_CLASSLIBRARYPATH "${BUILD_CLASSLIBRARYPATH}  - ${arg}\n")
+foreach(arg ${DOCRENDERER_CLASSLIBRARIES})
+	set(DOCRENDERER_CLASSLIBRARYPATH "${DOCRENDERER_CLASSLIBRARYPATH}  - ${arg}\n")
 endforeach()
 
-configure_file(build_sclang.cfg.in ${CMAKE_CURRENT_BINARY_DIR}/build_sclang.cfg)
+configure_file(languageConfigFiles/docRenderer.cfg.in ${CMAKE_CURRENT_BINARY_DIR}/languageConfigFiles/docRenderer.cfg)
 
 if(SC_DOC_RENDER)
 	file(GLOB_RECURSE SCDocSources RELATIVE HelpSource .*[^~])
@@ -598,7 +598,7 @@ if(SC_DOC_RENDER)
 
 	add_custom_target(doc ALL
 		COMMAND sclang
-			-l ${CMAKE_CURRENT_BINARY_DIR}/build_sclang.cfg
+			-l ${CMAKE_CURRENT_BINARY_DIR}/languageConfigFiles/docRenderer.cfg
 			platform/renderAllHelp.scd ${CMAKE_CURRENT_SOURCE_DIR}/HelpSource ${CMAKE_CURRENT_BINARY_DIR}/RenderedHelp
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		DEPENDS sclang ${SCDocSources} ${SCDocClasses})
@@ -609,6 +609,15 @@ set_directory_properties(
 	PROPERTIES
 	ADDITIONAL_MAKE_CLEAN_FILES "RenderedHelp")
 
+#############################################
+# lang config for testing in the build dir
+list(APPEND BUILD_CONFIG_CLASSLIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/SCClassLibrary")
+list(APPEND BUILD_CONFIG_CLASSLIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/testsuite/classlibrary")
+foreach(arg ${BUILD_CONFIG_CLASSLIBRARIES})
+	set(BUILD_CLASSLIBRARYPATH "${BUILD_CLASSLIBRARYPATH}  - ${arg}\n")
+endforeach()
+
+configure_file(languageConfigFiles/build.cfg.in ${CMAKE_CURRENT_BINARY_DIR}/languageConfigFiles/build.cfg)
 #############################################
 #
 # testsuite

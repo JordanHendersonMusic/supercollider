@@ -22,6 +22,7 @@
  */
 
 #include "SC_LanguageConfig.hpp"
+#include "SC_Codecvt.hpp"
 #include "SC_Filesystem.hpp" // getDirectory
 
 #include "SCBase.h" // postfl
@@ -31,6 +32,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <utility>
 #include <yaml-cpp/yaml.h> // YAML
 
 SC_LanguageConfig::Path SC_LanguageConfig::gConfigFile;
@@ -42,8 +44,11 @@ static const std::string INCLUDE_PATHS = "includePaths";
 static const std::string EXCLUDE_PATHS = "excludePaths";
 static const std::string POST_INLINE_WARNINGS = "postInlineWarnings";
 static const std::string CLASS_LIB_DIR_NAME = "SCClassLibrary";
+static const std::string EXCLUDE_DEFAULT_PATHS = "excludeDefaultPaths";
+static const std::string SCSYNTH_PATH = "scsynthPath";
+static const std::string SUPERNOVA_PATH = "supernovaPath";
+// Can't be static as is extern
 const std::string SCLANG_YAML_CONFIG_FILENAME = "sclang_conf.yaml";
-static std::string EXCLUDE_DEFAULT_PATHS = "excludeDefaultPaths";
 
 using DirName = SC_Filesystem::DirName;
 namespace fs = std::filesystem;
@@ -95,7 +100,7 @@ bool SC_LanguageConfig::forEachIncludedDirectory(bool (*func)(const Path&)) cons
 
 bool SC_LanguageConfig::pathIsExcluded(const Path& path) const { return findPath(mExcludedDirectories, path); }
 
-bool SC_LanguageConfig::addIncludedDirectory(const Path& path) { return addPath(mIncludedDirectories, path); }
+bool SC_LanguageConfig::addIncludedDirectory(Path&& path) { return addPath(mIncludedDirectories, std::move(path)); }
 
 bool SC_LanguageConfig::addExcludedDirectory(const Path& path) { return addPath(mExcludedDirectories, path); }
 
@@ -103,15 +108,24 @@ bool SC_LanguageConfig::removeIncludedDirectory(const Path& path) { return remov
 
 bool SC_LanguageConfig::removeExcludedDirectory(const Path& path) { return removePath(mExcludedDirectories, path); }
 
+template <typename Func> static void processPath(const std::string& nodeName, YAML::Node& doc, Func&& func) {
+    const YAML::Node& item = doc[nodeName];
+    if (item) {
+        if (auto path = item.as<std::string>(""); !path.empty()) {
+            std::forward<Func>(func)(SC_Codecvt::utf8_str_to_path(std::move(path)));
+        }
+    }
+}
+
 static void processPathList(const std::string& nodeName, YAML::Node& doc,
-                            const std::function<void(const std::filesystem::path&)>& func) {
+                            const std::function<void(std::filesystem::path)>& func) {
     const YAML::Node& items = doc[nodeName];
     if (items && items.IsSequence()) {
         for (auto const& item : items) {
-            const std::string& path = item.as<std::string>("");
+            std::string path = item.as<std::string>("");
             if (!path.empty()) {
-                const std::filesystem::path& native_path = SC_Codecvt::utf8_str_to_path(path);
-                func(native_path);
+                std::filesystem::path native_path = SC_Codecvt::utf8_str_to_path(std::move(path));
+                func(std::move(native_path));
             }
         }
     }
@@ -148,8 +162,10 @@ bool SC_LanguageConfig::readLibraryConfigYAML(const Path& fileName, bool standal
                 [standalone](bool b) { gLanguageConfig->setExcludeDefaultPaths(standalone || b); },
                 [standalone] { gLanguageConfig->setExcludeDefaultPaths(standalone); });
 
-            processPathList(INCLUDE_PATHS, doc, [](const Path& p) { gLanguageConfig->addIncludedDirectory(p); });
-            processPathList(EXCLUDE_PATHS, doc, [](const Path& p) { gLanguageConfig->addExcludedDirectory(p); });
+            processPathList(INCLUDE_PATHS, doc, [](Path p) { gLanguageConfig->addIncludedDirectory(std::move(p)); });
+            processPathList(EXCLUDE_PATHS, doc, [](Path p) { gLanguageConfig->addExcludedDirectory(std::move(p)); });
+            processPath(SCSYNTH_PATH, doc, [](Path p) { gLanguageConfig->setScsynthPath(std::move(p)); });
+            processPath(SUPERNOVA_PATH, doc, [](Path p) { gLanguageConfig->setSupernovaPath(std::move(p)); });
         }
         return true;
     } catch (std::exception& e) {
@@ -189,6 +205,16 @@ bool SC_LanguageConfig::writeLibraryConfigYAML(const Path& fileName) {
 
     out << Key << EXCLUDE_DEFAULT_PATHS;
     out << Value << gLanguageConfig->mExcludeDefaultPaths;
+
+    if (auto p = gLanguageConfig->mScsynthPath) {
+        out << Key << SCSYNTH_PATH;
+        out << Value << (*p).string(); // can't use conversion operators here because msvc
+    }
+
+    if (auto p = gLanguageConfig->mSupernovaPath) {
+        out << Key << SUPERNOVA_PATH;
+        out << Value << (*p).string();
+    }
 
     out << EndMap;
 
@@ -245,6 +271,15 @@ bool SC_LanguageConfig::findPath(const DirVector& vec, const Path& path) {
 bool SC_LanguageConfig::addPath(DirVector& vec, const Path& path) {
     if (!findPath(vec, path)) {
         vec.push_back(path);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool SC_LanguageConfig::addPath(DirVector& vec, Path&& path) {
+    if (!findPath(vec, path)) {
+        vec.push_back(std::move(path));
         return true;
     } else {
         return false;

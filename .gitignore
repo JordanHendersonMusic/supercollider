@@ -45,3 +45,7 @@ __pycache__
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/c_cpp_properties.json
+
+
+# results of running the ci from the vscode task
+ci_results/*

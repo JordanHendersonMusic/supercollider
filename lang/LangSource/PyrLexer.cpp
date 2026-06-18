@@ -1806,6 +1806,17 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool standalone) {
             }
         }
         pyr_pool_compile->FreeAll();
+
+        if (const auto& p = gLanguageConfig->getScSynthPath())
+            // mscv cant see the conversion operator so we have to call it like this.
+            gMainVMGlobals->runtimeOptions.insert({ getsym("scsynthPath"), (*p).string() });
+
+
+        if (const auto& p = gLanguageConfig->getSupernovaPath()) {
+            // mscv cant see the conversion operator so we have to call it like this.
+            gMainVMGlobals->runtimeOptions.insert({ getsym("supernovaPath"), (*p).string() });
+        }
+
         flushPostBuf();
         compileSucceeded();
     } else {

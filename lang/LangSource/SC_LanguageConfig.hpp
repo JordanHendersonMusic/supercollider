@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <optional>
 #include <vector>
 #include <string>
 #include <filesystem>
@@ -54,6 +55,7 @@ public:
     bool pathIsExcluded(const Path&) const; // true iff the path is in mExcludedDirectories
 
     bool addIncludedDirectory(const Path&); // false iff the path was already in the vector
+    bool addIncludedDirectory(Path&&); // false iff the path was already in the vector
     bool addExcludedDirectory(const Path&);
 
     bool removeIncludedDirectory(const Path&); // false iff there was nothing to remove
@@ -63,6 +65,11 @@ public:
 
     bool getExcludeDefaultPaths() const { return mExcludeDefaultPaths; }
     void setExcludeDefaultPaths(bool value);
+
+    void setScsynthPath(Path p) { mScsynthPath.emplace(std::move(p)); };
+    void setSupernovaPath(Path p) { mSupernovaPath.emplace(std::move(p)); };
+    [[nodiscard]] const std::optional<Path>& getScSynthPath() const { return mScsynthPath; }
+    [[nodiscard]] const std::optional<Path>& getSupernovaPath() const { return mSupernovaPath; }
 
     static bool readLibraryConfigYAML(const Path&, bool standalone);
     static bool writeLibraryConfigYAML(const Path&);
@@ -78,12 +85,14 @@ public:
 private:
     static bool findPath(const DirVector&, const Path&);
     static bool addPath(DirVector&, const Path&);
+    static bool addPath(DirVector&, Path&&);
     static bool removePath(DirVector&, const Path&);
 
-    DirVector mIncludedDirectories;
-    DirVector mExcludedDirectories;
-    DirVector mDefaultClassLibraryDirectories;
+    DirVector mIncludedDirectories {};
+    DirVector mExcludedDirectories {};
+    DirVector mDefaultClassLibraryDirectories {};
     bool mExcludeDefaultPaths = true;
+    std::optional<Path> mScsynthPath {}, mSupernovaPath {};
     static Path gConfigFile;
     static bool gPostInlineWarnings;
 };

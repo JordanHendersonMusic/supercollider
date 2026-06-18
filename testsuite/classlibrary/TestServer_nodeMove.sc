@@ -50,7 +50,7 @@ TestServer_nodeMove : UnitTest {
 	// inside group 1001, right after 3000.
 	test_moveAfter_acrossGroups {
 		var moves = [["/n_after", 2001, 3000]];
-		[Server.program, Server.program.replace("scsynth", "supernova")].do { |program|
+		[Server.scsynthProgram, Server.supernovaProgram].do { |program|
 			this.assertEquals(
 				this.treeAfter(program, moves),
 				List[1000, 2000, 1001, 3000, 2001, 3001],
@@ -64,7 +64,7 @@ TestServer_nodeMove : UnitTest {
 	// supernova sends it back to group 1000.
 	test_moveAfter_doesNotStaleParent {
 		var moves = [["/n_after", 2000, 3000], ["/n_after", 2000, 3001]];
-		[Server.program, Server.program.replace("scsynth", "supernova")].do { |program|
+		[Server.scsynthProgram, Server.supernovaProgram].do { |program|
 			this.assertEquals(
 				this.treeAfter(program, moves),
 				List[1000, 2001, 1001, 3000, 3001, 2000],
