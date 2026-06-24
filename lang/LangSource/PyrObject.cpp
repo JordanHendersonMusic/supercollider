@@ -192,7 +192,7 @@ void initSymbols() {
 
     // classes
     s_object = getsym("Object");
-    s_abstract_object = getsym("ExperimentalAbstractObject");
+    s_abstract_object = getsym("AbstractObjectExperimental");
     s_ref = getsym("Ref");
     s_dictionary = getsym("Dictionary");
     s_bag = getsym("Bag");
@@ -1494,7 +1494,7 @@ PyrClass* makeIntrinsicClass(PyrSymbol* className, PyrSymbol* superClassName, in
         metaSuperClass = metaSuperClassName->u.classobj;
         superInstVars = numSuperInstVars(superClass);
     } else {
-        // else it must be ExperimentalAbstractObject and so has no superclass
+        // else it must be AbstractObjectExperimental and so has no superclass
         metaSuperClassName = nullptr;
         superInstVars = 0;
     }

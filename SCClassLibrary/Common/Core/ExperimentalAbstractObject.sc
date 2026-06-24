@@ -1,18 +1,18 @@
-// ExperimentalAbstractObject represent the minimum interface needed to get the interpreter to work (it will cause the IDE to post an error as it doesn't support printing).
+// AbstractObjectExperimental represent the minimum interface needed to get the interpreter to work (it will cause the IDE to post an error as it doesn't support printing).
 // This make it very useful as a wrapper class and to implement some specific features.
 
 // !!! --- PLEASE NEVER ADD A NORMAL PASCAL CASE METHOD TO ABSTRACT OBJECT --- !!!
-// The whole point of this class is to be minimal, ExperimentalAbstractObjects are not Objects, allowing those who subclass it to create their own definition of what an object is and isn't.
+// The whole point of this class is to be minimal, AbstractObjectExperimentals are not Objects, allowing those who subclass it to create their own definition of what an object is and isn't.
 
-ExperimentalAbstractObject {
+AbstractObjectExperimental {
 
 	/////// 1. Core and Interpreter functionality, do not override.
 
 	*new { |maxSize = 0| _BasicNew; ^this.sc_abstract_object_primitive_failed }
 	*newCopyArgs { | ... args, kwargs | _BasicNewCopyArgsToInstVars; ^this.sc_abstract_object_primitive_failed }
 
-	// ExperimentalAbstractObject support identity, this is required by the interpreter and cannot actually be overridden.
-	// When you put ExperimentalAbstractObjects into an identity dictionary the interpreter uses its own implementation, this should match the sclang implementation or things will get confusing.
+	// AbstractObjectExperimental support identity, this is required by the interpreter and cannot actually be overridden.
+	// When you put AbstractObjectExperimentals into an identity dictionary the interpreter uses its own implementation, this should match the sclang implementation or things will get confusing.
 	// Identity operators are also provided, this isn't strictly necessary, but we usually think of identity and these operators as a set.
 	identityHash { _ObjectHash; ^this.sc_abstract_object_primitive_failed }
 	=== { arg obj; _Identical; ^this.sc_abstract_object_primitive_failed }
@@ -20,7 +20,7 @@ ExperimentalAbstractObject {
 
 	// Interpreter will engage in undefined behavior if this method does not throw.
 	// It is not possible to implement a boolean abstract object as the compiler assumes its internal slot layout.
-	mustBeBoolean {  MustBeBooleanError(nil, "ExperimentalAbstractObject").throw }
+	mustBeBoolean {  MustBeBooleanError(nil, "AbstractObjectExperimental").throw }
 
 	// It is not possible to implement a 'nil' abstract object due to the compiler inlining the definition of these when used inside 'if' control flow.
 	// You cannot override these methods.
@@ -37,8 +37,8 @@ ExperimentalAbstractObject {
 	// Note: Interpreter will segfault if this isn't provided so a default is given.
 	// You will need to override doesNotUnderstand to anything useful will abstract objects,
 	//   hence why it throws a SubclassResponsibilityError rather than a DoesNotUnderstandError.
-	// "ExperimentalAbstractObject" is passed as a string here, rather than 'this', as 'this' may not support the 'toString' method, which would cause the error handling to get stuck in a loop.
-	doesNotUnderstand { |selector ...args, kwargs| SubclassResponsibilityError("ExperimentalAbstractObject", thisMethod, ExperimentalAbstractObject).throw }
+	// "AbstractObjectExperimental" is passed as a string here, rather than 'this', as 'this' may not support the 'toString' method, which would cause the error handling to get stuck in a loop.
+	doesNotUnderstand { |selector ...args, kwargs| SubclassResponsibilityError("AbstractObjectExperimental", thisMethod, AbstractObjectExperimental).throw }
 
 
 
@@ -47,7 +47,7 @@ ExperimentalAbstractObject {
 	// These methods may be used *only* to implement other abstract objects, do not call them from outside the definition of an abstract object.
 	// They are here so that other's may use primitive implementations, without making the primitives themselves publicly available.
 
-	sc_abstract_object_primitive_failed { PrimitiveFailedError("ExperimentalAbstractObject").throw }
+	sc_abstract_object_primitive_failed { PrimitiveFailedError("AbstractObjectExperimental").throw }
 
 	sc_abstract_object_hash { _ObjectHash; ^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_copy_shallow { _ObjectShallowCopy; ^this.sc_abstract_object_primitive_failed }
@@ -55,7 +55,7 @@ ExperimentalAbstractObject {
 	sc_abstract_object_copy_deep { _ObjectDeepCopy; ^this.sc_abstract_object_primitive_failed }
 
 	// Yielding — must be implemented as primitives as special methods are provided.
-	// Note that idle is not provided because it requires calling 'value' on the ExperimentalAbstractObject'.
+	// Note that idle is not provided because it requires calling 'value' on the AbstractObjectExperimental'.
 	sc_abstract_object_yield {	_RoutineYield; ^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_always_yield { _RoutineAlwaysYield; ^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_yield_and_reset { |reset = true| _RoutineYieldAndReset; ^this.sc_abstract_object_primitive_failed }
@@ -63,7 +63,7 @@ ExperimentalAbstractObject {
 	// This is often necessary in abstract objects to determine if we have an abstract object, use isKindOf in normal use.
 	sc_abstract_object_is_kind_of { |aClass| _ObjectIsKindOf; ^this.sc_abstract_object_primitive_failed }
 
-	// Needed when we want to do the normal method calling in an ExperimentalAbstractObject.
+	// Needed when we want to do the normal method calling in an AbstractObjectExperimental.
 	// In many cases, the 'perform*' messages should defer to these as most of the time, you actually want to implement doesNotUnderstand.
 	sc_abstract_object_perform_args { |selector, args, kwargs|	_ObjectPerformArgs;	^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_super_perform_args { |selector, args, kwargs| _ObjectSuperPerformArgs; ^this.sc_abstract_object_primitive_failed }
