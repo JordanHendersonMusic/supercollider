@@ -68,7 +68,7 @@ AbstractObjectExperimental {
 	sc_abstract_object_perform_args { |selector, args, kwargs|	_ObjectPerformArgs;	^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_super_perform_args { |selector, args, kwargs| _ObjectSuperPerformArgs; ^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_perform_msg { |msg| _ObjectPerformMsg; ^this.sc_abstract_object_primitive_failed }
-	sc_abstract_object_perform { |selector ... args| _ObjectPerform; ^this.sc_abstract_object_primitive_failed }
+	sc_abstract_object_perform { |selector ... args, kwargs| _ObjectPerform; ^this.sc_abstract_object_primitive_failed }
 	// Note that this is used to implement syntax, it is very strange to change this, please don't.
 	sc_abstract_object_perform_list { | ...args, kwargs| _ObjectPerformList; ^this.sc_abstract_object_primitive_failed }
 }
