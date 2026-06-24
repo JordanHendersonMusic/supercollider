@@ -1,5 +1,5 @@
 // AbstractObjectExperimental represent the minimum interface needed to get the interpreter to work (it will cause the IDE to post an error as it doesn't support printing).
-// This make it very useful as a wrapper class and to implement some specific features.
+// This make it useful as a wrapper class and to implement some specific features.
 
 // !!! --- PLEASE NEVER ADD A NORMAL PASCAL CASE METHOD TO ABSTRACT OBJECT --- !!!
 // The whole point of this class is to be minimal, AbstractObjectExperimentals are not Objects, allowing those who subclass it to create their own definition of what an object is and isn't.
@@ -32,11 +32,11 @@ AbstractObjectExperimental {
 
 
 
-	/////// 2. Main interface, override this method.
+	/////// 2. Main interface, override these method.
 
 	// Note: Interpreter will segfault if this isn't provided so a default is given.
 	// You will need to override doesNotUnderstand to anything useful will abstract objects,
-	//   hence why it throws a SubclassResponsibilityError rather than a DoesNotUnderstandError.
+	//   hence it throws a SubclassResponsibilityError rather than a DoesNotUnderstandError.
 	// "AbstractObjectExperimental" is passed as a string here, rather than 'this', as 'this' may not support the 'toString' method, which would cause the error handling to get stuck in a loop.
 	doesNotUnderstand { |selector ...args, kwargs| SubclassResponsibilityError("AbstractObjectExperimental", thisMethod, AbstractObjectExperimental).throw }
 
@@ -45,7 +45,7 @@ AbstractObjectExperimental {
 	/////// 3. Helper methods and primitive implementations
 
 	// These methods may be used *only* to implement other abstract objects, do not call them from outside the definition of an abstract object.
-	// They are here so that other's may use primitive implementations, without making the primitives themselves publicly available.
+	// They are here so that other objects may use primitive implementations, without making the primitives themselves publicly available.
 
 	sc_abstract_object_primitive_failed { PrimitiveFailedError("AbstractObjectExperimental").throw }
 
