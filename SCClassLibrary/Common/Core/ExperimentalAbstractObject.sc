@@ -1,8 +1,9 @@
-// AbstractObjectExperimental represent the minimum interface needed to get the interpreter to work (it will cause the IDE to post an error as it doesn't support printing).
+// AbstractObjectExperimental represents the minimum interface needed to get the interpreter to work (it will cause the IDE to post an error as it doesn't support printing).
 // This make it useful as a wrapper class and to implement some specific features.
 
 // !!! --- PLEASE NEVER ADD A NORMAL PASCAL CASE METHOD TO ABSTRACT OBJECT --- !!!
-// The whole point of this class is to be minimal, AbstractObjectExperimentals are not Objects, allowing those who subclass it to create their own definition of what an object is and isn't.
+// The whole point of this class is to be minimal.
+// AbstractObjectExperimentals are not full Objects, allowing those who subclass it to create their own definition of what an object is and isn't.
 
 AbstractObjectExperimental {
 
@@ -35,17 +36,21 @@ AbstractObjectExperimental {
 	/////// 2. Main interface, override these method.
 
 	// Note: Interpreter will segfault if this isn't provided so a default is given.
-	// You will need to override doesNotUnderstand to anything useful will abstract objects,
+	// You will need to override doesNotUnderstand to do anything useful with abstract objects,
 	//   hence it throws a SubclassResponsibilityError rather than a DoesNotUnderstandError.
-	// "AbstractObjectExperimental" is passed as a string here, rather than 'this', as 'this' may not support the 'toString' method, which would cause the error handling to get stuck in a loop.
-	doesNotUnderstand { |selector ...args, kwargs| SubclassResponsibilityError("AbstractObjectExperimental", thisMethod, AbstractObjectExperimental).throw }
+	// "AbstractObjectExperimental" is passed as a string here, rather than 'this', because 'this' may not support the 'toString' method, 	
+	// which would cause the error handling to get stuck in a loop.
+	
+	doesNotUnderstand { |selector ...args, kwargs| 
+		SubclassResponsibilityError("AbstractObjectExperimental", thisMethod, AbstractObjectExperimental).throw 
+	}
 
 
 
 	/////// 3. Helper methods and primitive implementations
 
 	// These methods may be used *only* to implement other abstract objects, do not call them from outside the definition of an abstract object.
-	// They are here so that other objects may use primitive implementations, without making the primitives themselves publicly available.
+	// They are here so that other objects may use primitive implementations without making the primitives themselves publicly available.
 
 	sc_abstract_object_primitive_failed { PrimitiveFailedError("AbstractObjectExperimental").throw }
 
@@ -54,7 +59,7 @@ AbstractObjectExperimental {
 	sc_abstract_object_copy_immutable { _ObjectCopyImmutable; ^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_copy_deep { _ObjectDeepCopy; ^this.sc_abstract_object_primitive_failed }
 
-	// Yielding — must be implemented as primitives as special methods are provided.
+	// Yielding from a routine — must be implemented as primitives as special methods are provided.
 	// Note that idle is not provided because it requires calling 'value' on the AbstractObjectExperimental'.
 	sc_abstract_object_yield {	_RoutineYield; ^this.sc_abstract_object_primitive_failed }
 	sc_abstract_object_always_yield { _RoutineAlwaysYield; ^this.sc_abstract_object_primitive_failed }
