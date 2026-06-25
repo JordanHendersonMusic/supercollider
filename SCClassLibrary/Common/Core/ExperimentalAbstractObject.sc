@@ -1,5 +1,5 @@
 // AbstractObjectExperimental represents the minimum interface needed to get the interpreter to work (it will cause the IDE to post an error as it doesn't support printing).
-// This make it useful as a wrapper class and to implement some specific features.
+// This makes it useful as a wrapper class and to implement some specific features.
 
 // !!! --- PLEASE NEVER ADD A NORMAL PASCAL CASE METHOD TO ABSTRACT OBJECT --- !!!
 // The whole point of this class is to be minimal.
