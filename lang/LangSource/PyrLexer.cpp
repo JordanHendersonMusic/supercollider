@@ -770,22 +770,22 @@ struct GlobalBisonLexerState {
                  "Error:\n──────────────────────────────────────────────────────────────────────────────────\n");
             if (o.is(ExtendedErrors::GotCurlyExpectedParen) || o.is(ExtendedErrors::GotSquareExpectedParen)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), *o.extra_range_of_error,
-                                     "Parenthises opened here...");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(),
+                                     *o.extra_range_of_error, "Parenthises opened here...");
                     print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
                                      "...was expected to be closed here with a ')'.");
                 }
             } else if (o.is(ExtendedErrors::GotCurlyExpectedSquare) || o.is(ExtendedErrors::GotParenExpectedSquare)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), *o.extra_range_of_error,
-                                     "Square bracket opened here...");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(),
+                                     *o.extra_range_of_error, "Square bracket opened here...");
                     print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
                                      "...was expected to be closed here with a ']'.");
                 }
             } else if (o.is(ExtendedErrors::GotParenExpectedCurly) || o.is(ExtendedErrors::GotSquareExpectedCurly)) {
                 if (o.extra_range_of_error) {
-                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), *o.extra_range_of_error,
-                                     "Curly bracket opened here...");
+                    print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(),
+                                     *o.extra_range_of_error, "Curly bracket opened here...");
                     print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
                                      "...was expected to be closed here with a '}'.");
                 }
@@ -802,7 +802,8 @@ struct GlobalBisonLexerState {
                 const auto [ptr, sz] = char_stream.source_code_range_to_text(o.range);
                 const std::string example { ptr, sz };
                 const auto desc = std::string { "Expected digits after the 'e', for example '" } + example + "10'.";
-                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 desc.c_str());
             }
 
             else if (o.is(TokenType::ErSymbolQuoteUnclosed)) {
@@ -816,7 +817,8 @@ struct GlobalBisonLexerState {
                 const auto desc =
                     std::string { "This quoted symbol does not have a matching closing quote, perhaps you meant "
                                   + example + "'?" };
-                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 desc.c_str());
             }
 
             else if (o.is(TokenType::ErInvalidUTF8)) {
@@ -843,12 +845,14 @@ struct GlobalBisonLexerState {
                 const std::string example { ptr, i };
                 const auto desc =
                     std::string { "This string does not have a closing '\"', perhaps you meant " + example + "\"?" };
-                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 desc.c_str());
             } else if (o.is(TokenType::ErMultilineCommentUnclosed)) {
                 const auto desc = std::string { "This multiline comment does not have a closing */." };
-                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, desc.c_str());
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range,
+                                 desc.c_str());
             } else if (o.is(TokenType::ErASCIIInvalidWhitespace)) {
-				const auto [ptr, sz] = char_stream.source_code_range_to_text(o.range);
+                const auto [ptr, sz] = char_stream.source_code_range_to_text(o.range);
                 const char raw_c = sz == 3 ? ptr[2] : ptr[1];
                 std::string msg;
                 switch (raw_c) {
@@ -871,9 +875,8 @@ struct GlobalBisonLexerState {
                           "character instead (e.g., '$\\n').";
                     break;
                 }
-                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(),
-                                 o.range, msg.c_str());
-			} else {
+                print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range, msg.c_str());
+            } else {
                 print_error_line(fileName, char_stream.source.c_str(), char_stream.source.size(), o.range);
             }
         }
