@@ -9,6 +9,7 @@ on:
 jobs:
   test-linux:
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
       INSTALL_PATH: ${{ github.workspace }}/build/Install
       ARTIFACT_FILE: "SuperCollider-${{ inputs.sc-version }}-ubuntu-22.04-gcc12"
@@ -54,7 +55,6 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: |
-          timeout 20m $SCLANG --exclude-default-paths --include-path $INCLUDE_TEST --include-path $INCLUDE_CLASSLIB $SCRIPT_RUN_TESTS
+        run: $SCLANG --exclude-default-paths --include-path $INCLUDE_TEST --include-path $INCLUDE_CLASSLIB $SCRIPT_RUN_TESTS
 
      
