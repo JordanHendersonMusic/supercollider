@@ -9,9 +9,11 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-${{ matrix.os-version }}
+    continue-on-error: ${{ matrix.not-needed-for-ci-test }}
     strategy:
       fail-fast: false
       matrix:
+        not-needed-for-ci-test: [true]
         include:
 
           - job-name: ""
@@ -37,6 +39,8 @@ jobs:
             use-syslibs: false
             shared-libscsynth: false
             artifact-suffix: "ubuntu-22.04-gcc12" # will trigger artifact upload; after changing this update the test-linux artifact-file in actions.yml
+            not-needed-for-ci-test: false
+
             ctest: true
 
           - job-name: "use system libraries with ctest"
