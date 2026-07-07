@@ -368,6 +368,13 @@ void ScProcess::onResponse(const QString& selector, const QString& data) {
     else if (selector == QStringLiteral("classLibraryRecompiled")) {
         mCompiled = true;
         emit classLibraryRecompiled();
+
+        // bring the ide window to focus
+        static bool firstStart = true;
+        if (firstStart && MainWindow::instance()) {
+            MainWindow::instance()->raise();
+            firstStart = false;
+        }
     }
 
     else if (selector == QStringLiteral("requestCurrentPath"))
