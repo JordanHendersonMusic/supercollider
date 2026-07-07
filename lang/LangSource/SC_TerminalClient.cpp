@@ -122,9 +122,8 @@ int SC_TerminalClient::run(int argc, char** argv) {
         std::filesystem::create_directories(SC_Filesystem::instance().getDirectory(SC_Filesystem::DirName::UserConfig));
 
     // startup library
-    compileLibrary(opt.mStandalone);
 
-    if (!gCompiledOK) {
+    if (!compileLibrary(opt.mStandalone)) {
         post("ERROR: Library has not been compiled successfully.\n");
         shutdownLibrary();
         flush();
