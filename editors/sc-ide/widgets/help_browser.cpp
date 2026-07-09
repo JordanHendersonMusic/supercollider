@@ -366,8 +366,6 @@ void HelpBrowser::onScResponse(const QString& command, const QString& data) {
     mWebView->load(urlString);
 
     HelpBrowserDocklet* helpDock = MainWindow::instance()->helpBrowserDocklet();
-    if (helpDock)
-        helpDock->focus();
 
     emit urlChanged();
 }
