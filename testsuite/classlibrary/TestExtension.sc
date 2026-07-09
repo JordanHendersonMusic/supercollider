@@ -13,7 +13,7 @@ TestExtension : UnitTest {
 		this.assertEquals(TestExtension_Base.foo, \foo2, "basic extension override works.");
 	}
 	test_extensions_inheritance {
-		this.assertEquals(TestExtension_Derived.foo, \fooDerived, "inherited extension doesn't override.");
+		this.assertEquals(TestExtension_Derived.foo, \fooDerived, "extension override to a base class should be overridden by the derived class.");
 		this.assertEquals(TestExtension_Derived.meow, \meow, "inheriting from an extension shows methods.");
 	}
 }
