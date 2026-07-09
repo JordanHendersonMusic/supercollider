@@ -136,17 +136,17 @@ jobs:
             s3-artifact-extension: 'zip'
             s3-create-latest-link: true # create link to pointing to the "latest" build
 
-          - artifact-suffix: "x86_64.flatpak"
-            s3-os-name: flatpak-x86_64
-            s3-artifact-prefix: '-x86_64-flatpak'
+          - artifact-suffix: "Linux-x86_64"
+            s3-os-name: Linux-Flatpak-x86_64
+            s3-artifact-prefix: '-flatpak-x86_64'
             s3-artifact-suffix: ''
             s3-artifact-extension: 'flatpak'
             artifact-extension: '.flatpak'
             s3-create-latest-link: true # create link to pointing to the "latest" build; activate only one per branch per s3-os-name
 
-          - artifact-suffix: "arm64.flatpak"
-            s3-os-name: flatpak-arm64
-            s3-artifact-prefix: '-arm64-flatpak'
+          - artifact-suffix: "Linux-arm64"
+            s3-os-name: Linux-Flatpak-arm64
+            s3-artifact-prefix: '-flatpak-arm64'
             s3-artifact-suffix: ''
             s3-artifact-extension: 'flatpak'
             artifact-extension: '.flatpak'
@@ -247,6 +247,6 @@ jobs:
             ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE_PREFIX }}-macOS-x64-legacy.dmg/*
             ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE_PREFIX }}-win64-installer/*
             ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE_PREFIX }}-win64/*
-            ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE_PREFIX }}-x86_64.flatpak/*
-            ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE_PREFIX }}-arm64.flatpak/*
+            ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE_PREFIX }}-flatpak-x86_64.flatpak/*
+            ${{ env.INSTALL_PATH }}/${{ env.ARTIFACT_FILE_PREFIX }}-flatpak-arm64.flatpak/*
           draft: true
