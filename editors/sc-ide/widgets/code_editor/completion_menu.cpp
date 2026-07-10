@@ -23,6 +23,8 @@
 #include <QKeyEvent>
 #include <QApplication>
 
+#include "main.hpp"
+
 namespace ScIDE {
 
 CompletionMenu::CompletionMenu(QWidget* parent): PopUpWidget(parent), mCompletionRole(Qt::DisplayRole) {
@@ -46,6 +48,23 @@ CompletionMenu::CompletionMenu(QWidget* parent): PopUpWidget(parent), mCompletio
     mLayout->addWidget(mListView);
     mLayout->addWidget(mTextBrowser);
     mLayout->setContentsMargins(1, 1, 1, 1);
+
+    auto parentFont = parent->font();
+    parentFont.setPointSizeF(parentFont.pointSizeF() * 0.8f);
+    mListView->setFont(parentFont);
+
+    // modify font of help window so it is relative to the size of the editor font
+    auto browserFont = mTextBrowser->font();
+    browserFont.setPointSizeF(parentFont.pointSizeF() * 0.8f);
+    mTextBrowser->setFont(browserFont);
+
+    // set links to match the color of symbol as highlight color
+    // inject this via a style sheet
+    const auto& classFontColor = Main::settings()->getThemeVal("symbol").foreground().color();
+    mTextBrowser->document()->setDefaultStyleSheet(QStringLiteral("a { color: rgb(%1, %2, %3) }")
+                                                       .arg(classFontColor.red())
+                                                       .arg(classFontColor.green())
+                                                       .arg(classFontColor.blue()));
 
     connect(mListView, &QListView::clicked, this, &CompletionMenu::accept);
     connect(mTextBrowser, &CompletionTextBrowser::anchorClicked, this, &CompletionMenu::onAnchorClicked);
