@@ -26,7 +26,7 @@ Exception {
 				// Skips the creation of this class in the back trace.
 				oneBeforeBeginMethod: { |method| method === thisConstructor },
 				// Skip all the interpreter stuff, that isn't useful for this error (or if it is, there is an issue in the class library).
-				endMethod: { |method| method.ownerClass === Interpreter },
+				endMethod: { |method| method.ownerClass === Interpreter or: {method.ownerClass == Function and: { method.name === 'protect' or: {method.name == 'try'} }} },
 				path: thisProcess.nowExecutingPath
 			] ++ kwargs
 		)
@@ -47,8 +47,9 @@ Exception {
 		) 
 	}
 
-	// Don't override.
 	reportError { |stream(Post), prefix("")|
+		var oldReporting = Exception.reporting;
+
 		Exception.reporting = true;
 
 		stream << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
@@ -60,7 +61,7 @@ Exception {
 
 		stream << "\n" << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
 
-		Exception.reporting = false;
+		Exception.reporting = oldReporting;
 		^stream;
 	}
 
@@ -74,10 +75,26 @@ ErrorWrapper : Exception {
 	var wrapped;
 
 	*new { |wrapped, what|
-		^super.new(what, wrapper: wrapped)
+		^super.new(what: what, wrapped: wrapped)
 	}
 
-	prReportErrorDescription { |stream| ^wrapped.reportError(stream) } 
+	reportError { |stream(Post), prefix("")|
+		var oldReporting = Exception.reporting;
+
+		Exception.reporting = true;
+
+		stream << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
+		stream << prefix << "ERROR: " << this.what << "\n";
+		wrapped.reportError(stream, prefix ++ "   ");
+		stream << "\n" << prefix;
+
+		this.prReportErrorBacktrace(stream, prefix);
+
+		stream << "\n" << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
+
+		Exception.reporting = oldReporting;
+		^stream;
+	}
 }
 
 MethodError : Error {
@@ -100,9 +117,10 @@ PrimitiveFailedError : MethodError {
 			what: errorString 
 				!? { "Primitive '%' failed with message : '%'.".format(failedPrimitive, errorString) }
 				?? { "Primitive '%' failed.".format(failedPrimitive) },
-			callFrameAnnotations: [errorString],
+			callFrameAnnotations: [nil, errorString],
 			receiver: receiver,
-			failedPrimitiveName: failedPrimitive
+			failedPrimitiveName: failedPrimitive,
+			oneBeforeBeginMethod: { |m| m === PrimitiveFailedError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'primitiveFailed'}} },
 		)
 	}
 }
@@ -115,6 +133,7 @@ SubclassResponsibilityError : MethodError {
 			what: "'%' should have been implemented by %.".format(method.name, class.name), 
 			callFrameAnnotations: ["Please implement this method for the class '%'".format(class.name)],
 			receiver: receiver, 
+			oneBeforeBeginMethod: { |m| m === SubclassResponsibilityError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'subclassResponsibility'}} },
 			method: method,
 			class: class
 		)
@@ -130,6 +149,7 @@ ShouldNotImplementError : MethodError {
 			callFrameAnnotations: ["'%' cannot respond to this message, please remove the call.".format(class.name)],
 			receiver: receiver, 
 			method: method,
+			oneBeforeBeginMethod: { |m| m === ShouldNotImplementError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'shouldNotImplement'}} },
 			class: class
 		)
 	}
@@ -147,7 +167,7 @@ DoesNotUnderstandError : MethodError {
 			callFrameAnnotations: [msg],
 			selector: selector.asSymbol,
 			// We don't need to print Object.doesNotUnderstand.
-			oneBeforeBeginMethod: { |method| method === thisMethod or: {method.ownerClass === Object and: {method.name === 'doesNotUnderstand'}} },
+			oneBeforeBeginMethod: { |m| m === DoesNotUnderstandError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'doesNotUnderstand'}} },
 			receiver: receiver,
 			args: args,
 			keywordArgumentPairs: keywordArgumentPairs
@@ -176,10 +196,27 @@ DoesNotUnderstandError : MethodError {
 
 
 MustBeBooleanError : MethodError {
-	*new { |receiver| ^super.new( what: "Non boolean in test ", receiver: receiver) }
+	*new { |receiver| 
+		^super.new( 
+			what: "Non boolean in test ", 
+			receiver: receiver,
+			oneBeforeBeginMethod: { |m| m === MustMeBooleanError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'mustBeBoolean'}} },
+		) 
+	}
 }
 
-NotYetImplementedError : MethodError { }
+NotYetImplementedError : MethodError {
+	*new { |receiver| 
+		^super.new( 
+			what: "Not yet implemented", 
+
+			callFrameAnnotations: ["This method has not yet been implemented."],
+			receiver: receiver,
+			oneBeforeBeginMethod: { |m| m === NotYetImplementedError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'notYetImplemented'}} },
+		) 
+	}
+
+ }
 
 OutOfContextReturnError : MethodError {
 	var <method, <result;
@@ -192,6 +229,7 @@ OutOfContextReturnError : MethodError {
 			callFrameAnnotations: ["Could not complete this return as the parent method is no longer active."],
 			receiver: receiver,
 			method: method, 
+			oneBeforeBeginMethod: { |m| m === OutOfContextReturnError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'outOfContextReturn'}} },
 			result: result
 		)
 	}
@@ -204,6 +242,7 @@ ImmutableError : MethodError {
 			what: "Cannot mutate an immutable object",
 			callFrameAnnotations: ["Make a copy of this object before mutating it."],
 			receiver: receiver,
+			oneBeforeBeginMethod: { |m| m === ImmutableError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'immutableError'}} },
 			value: value
 		)
 	}
