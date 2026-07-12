@@ -51,12 +51,11 @@ Exception {
 		stream << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
 		stream << prefix << "ERROR: " << this.what << "\n";
 		this.prReportErrorBacktrace(stream, prefix);
+		stream << "\n" << prefix;
 
 		this.prReportErrorDescription(stream, prefix);
 
-		stream << prefix << "ERROR: " << this.what << $\n;
-
-		stream << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
+		stream << "\n" << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
 
 		Exception.reporting = false;
 		^stream;
@@ -150,6 +149,25 @@ DoesNotUnderstandError : MethodError {
 			args: args,
 			keywordArgumentPairs: keywordArgumentPairs
 		);
+	}
+
+	prReportErrorDescription { |stream, prefix| 
+		var methodSuggestions = receiver.class.findSimilarSelectors(selector, minSimilarity: 0.5, maxEditDistance: 2);
+		var classSuggestions = Object.findRespondingUpperSubclasses(selector).collect(_.name);
+		if(methodSuggestions.notEmpty) {
+			stream << "Message% with a similar name understood by the receiver:".format( if(methodSuggestions.size > 1) { "s" } { "" } );
+			stream << "\n" << prefix << "  ";
+			stream << methodSuggestions.join("\n" ++ prefix ++ "  ");
+		};
+		if(classSuggestions.notEmpty) {
+			if(classSuggestions.size < 8) {
+				stream << "\n" << prefix << "Objects which respond to the selector '%' derive from:".format(selector);
+				stream << "\n" << prefix << "  ";
+				stream << classSuggestions.join("\n" ++ prefix ++ "  ");
+			} {
+				stream << "\n" << prefix << "Many other objects respond to the message '%' (found % superclasses).".format(selector, classSuggestions.size);
+			}
+		}
 	}
 }
 
