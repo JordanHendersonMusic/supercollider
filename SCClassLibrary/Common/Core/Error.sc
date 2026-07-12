@@ -5,6 +5,8 @@ Exception {
 	classvar <>inProtectedFunction = false;
 
 	var <what, <callFrameAnnotations, <backtrace, <oneBeforeBeginMethod, <endMethod;
+	// path should not be needed anymore because what you really want is where the source code was defined.
+	var <path;
 
 	// This is designed to be called with keyword arguments and will pass all of them to newCopyArgs.
 	*new { |what ... args, kwargs|
@@ -24,7 +26,8 @@ Exception {
 				// Skips the creation of this class in the back trace.
 				oneBeforeBeginMethod: { |method| method === thisConstructor },
 				// Skip all the interpreter stuff, that isn't useful for this error (or if it is, there is an issue in the class library).
-				endMethod: { |method| method.ownerClass === Interpreter }
+				endMethod: { |method| method.ownerClass === Interpreter },
+				path: thisProcess.nowExecutingPath
 			] ++ kwargs
 		)
 	}
@@ -218,6 +221,7 @@ DeprecatedError : MethodError {
 			callFrameAnnotations: ["Replace this with '*.%".format(alternateMethod.name)],
 			receiver: receiver,
 			method: method,
+			oneBeforeBeginMethod: { |m| m === thisMethod or: {m == method} },
 			alternateMethod: alternateMethod
 		)
 	}
