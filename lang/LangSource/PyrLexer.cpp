@@ -1208,13 +1208,33 @@ bool initaliseClassDependencyListAndRegisterExtensions(std::shared_ptr<TextInfo>
                                                        sc::lex::CodePointStream& cps, ActionSkipWhitespace& action,
                                                        ClassDependencyList& depList,
                                                        std::vector<ClassExtentionFile>& extList) {
-    const auto first = match(textInfo, cps, action, "Expected class name or '+' for extention class",
-                             TokenType::ClassName, TokenType::Add, TokenType::EndOfFile);
+    // What we want here is an error resistant approach to parsing.
+    // In future this should be rewritten so we can avoid manual checks, this will involve a more 'theoretical' and
+    // consider approach to parsing. Right now, we just have some basic cases. It is very easy to end up with an
+    // un-parsable file, which will result in valid class definitions being missed.
+
+    const auto first =
+        match(textInfo, cps, action, "Expected class name or '+' for extention class", TokenType::ClassName,
+              TokenType::KeywordBinaryOperator, TokenType::Add, TokenType::EndOfFile);
 
     if (first.type == TokenType::EndOfFile)
         return false; // This is the main exit of the loop.
+    else if (first.type == TokenType::KeywordBinaryOperator) {
+        std::string msg = "Replace with '";
+        const auto [ptr, sz] = textInfo->indexIntoSource(first.range);
+        msg.append(ptr, sz - 1);
+        msg += " :'";
+        const auto hg = textInfo->createDiagnosticHighlight(first.range, msg);
+        const auto err =
+            diagnosticToString(ErrorType::Error, "Must have a space between class name and the colon.", &hg, 1);
+        postText(err.c_str(), err.size());
 
-    else if (first.type == TokenType::Add) {
+        // Skip this class definition.
+        const auto maybeSuper = match(textInfo, cps, action, "Expected superclass after ':'", TokenType::ClassName);
+        const auto open_curly = match(textInfo, cps, action, "Expected open curly bracket '{'.", TokenType::OpenCurly);
+        const auto close_curly = matchClosingBracket(textInfo, cps, action, open_curly.range, TokenType::OpenCurly);
+        return true; // try to parse the remainder of the file.
+    } else if (first.type == TokenType::Add) {
         const auto class_name = match(textInfo, cps, action, "Expected class name after '+'", TokenType::ClassName);
         const auto open_curly = match(textInfo, cps, action, "Expected open curly bracket '{'.", TokenType::OpenCurly);
         const auto close_curly = matchClosingBracket(textInfo, cps, action, open_curly.range, TokenType::OpenCurly);
