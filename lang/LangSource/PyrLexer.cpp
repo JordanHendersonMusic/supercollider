@@ -610,13 +610,13 @@ std::optional<ParserState> gParserState {};
                 txtInfo.createDiagnosticHighlight(*o.extra_range_of_error, "Parenthsises opened here..."),
                 txtInfo.createDiagnosticHighlight(o.range, "...was expected to be closed here."),
             };
-            return diagnosticToString(ErrorType::Error, "Parenthises mismatch.", highlights, 2);
+            return diagnosticToCompilerError(ErrorType::Error, "Parenthises mismatch.", highlights, 2);
         } else {
             // Should not happen.
             assert(false);
             const DiagnosticHighlight h =
                 txtInfo.createDiagnosticHighlight(o.range, "Parenthises opened here was expected to be closed.");
-            return diagnosticToString(ErrorType::Error, "Parenthises mismatch", &h, 1);
+            return diagnosticToCompilerError(ErrorType::Error, "Parenthises mismatch", &h, 1);
         }
     } else if (o.is(ExtendedErrors::GotCurlyExpectedSquare) || o.is(ExtendedErrors::GotParenExpectedSquare)) {
         if (o.extra_range_of_error) {
@@ -624,12 +624,12 @@ std::optional<ParserState> gParserState {};
                 txtInfo.createDiagnosticHighlight(*o.extra_range_of_error, "Square bracket opened here..."),
                 txtInfo.createDiagnosticHighlight(o.range, "...was expected to be closed here."),
             };
-            return diagnosticToString(ErrorType::Error, "Square bracket mismatch.", highlights, 2);
+            return diagnosticToCompilerError(ErrorType::Error, "Square bracket mismatch.", highlights, 2);
         } else {
             assert(false);
             const DiagnosticHighlight h =
                 txtInfo.createDiagnosticHighlight(o.range, "Square bracket opened here was expected to be closed.");
-            return diagnosticToString(ErrorType::Error, "Square bracket mismatch", &h, 1);
+            return diagnosticToCompilerError(ErrorType::Error, "Square bracket mismatch", &h, 1);
         }
     } else if (o.is(ExtendedErrors::GotParenExpectedCurly) || o.is(ExtendedErrors::GotSquareExpectedCurly)) {
         if (o.extra_range_of_error) {
@@ -637,32 +637,32 @@ std::optional<ParserState> gParserState {};
                 txtInfo.createDiagnosticHighlight(*o.extra_range_of_error, "Curly bracket opened here..."),
                 txtInfo.createDiagnosticHighlight(o.range, "...was expected to be closed here."),
             };
-            return diagnosticToString(ErrorType::Error, "Curly bracket mismatch.", highlights, 2);
+            return diagnosticToCompilerError(ErrorType::Error, "Curly bracket mismatch.", highlights, 2);
         } else {
             assert(false);
             const DiagnosticHighlight h =
                 txtInfo.createDiagnosticHighlight(o.range, "Curly bracket opened here was expected to be closed.");
-            return diagnosticToString(ErrorType::Error, "Curly bracket mismatch", &h, 1);
+            return diagnosticToCompilerError(ErrorType::Error, "Curly bracket mismatch", &h, 1);
         }
     } else if (o.is(ExtendedErrors::ExtraClosingCurlyBracket)) {
         const DiagnosticHighlight h = txtInfo.createDiagnosticHighlight(
             o.range, "Unexpected closing curly braket, could not find a matching opening one.");
-        return diagnosticToString(ErrorType::Error, "Curly bracket mismatch", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Curly bracket mismatch", &h, 1);
     } else if (o.is(ExtendedErrors::ExtraClosingParenBracket)) {
         const DiagnosticHighlight h = txtInfo.createDiagnosticHighlight(
             o.range, "Unexpected closing parenthesis, could not find a matching opening one.");
-        return diagnosticToString(ErrorType::Error, "Paranthesis mismatch", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Paranthesis mismatch", &h, 1);
     } else if (o.is(ExtendedErrors::ExtraClosingSqaureBracket)) {
         const DiagnosticHighlight h = txtInfo.createDiagnosticHighlight(
             o.range, "Unexpected closing square bracket, could not find a matching opening one.");
-        return diagnosticToString(ErrorType::Error, "Square bracket mismatch", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Square bracket mismatch", &h, 1);
     } else if (o.is(TokenType::ErMissingExponent)) {
         const auto [ptr, sz] = txtInfo.indexIntoSource(o.range);
         const std::string example { ptr, sz };
         auto desc = std::string { "Expected digits after the 'e', for example '" } + example + "10'.";
 
         const auto h = txtInfo.createDiagnosticHighlight(o.range, std::move(desc));
-        return diagnosticToString(ErrorType::Error, "Invalid float exponent.", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Invalid float exponent.", &h, 1);
     }
 
     else if (o.is(TokenType::ErSymbolQuoteUnclosed)) {
@@ -676,17 +676,17 @@ std::optional<ParserState> gParserState {};
         auto desc = std::string { "This quoted symbol does not have a matching closing quote, perhaps you meant "
                                   + example + "'?" };
         const auto h = txtInfo.createDiagnosticHighlight(o.range, std::move(desc));
-        return diagnosticToString(ErrorType::Error, "Invalid symbol.", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Invalid symbol.", &h, 1);
     }
 
     else if (o.is(TokenType::ErInvalidUTF8)) {
         const auto h = txtInfo.createDiagnosticHighlight(o.range, "this is invalid utf8, please delete it.");
-        return diagnosticToString(ErrorType::Error, "Invalid utf8", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Invalid utf8", &h, 1);
     }
 
     else if (o.is(TokenType::ErInvalidToken)) {
         const auto h = txtInfo.createDiagnosticHighlight(o.range, "this token is invalid in this context.");
-        return diagnosticToString(ErrorType::Error, "Invalid token.", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Invalid token.", &h, 1);
     }
 
     else if (o.is(TokenType::ErStringUnclosed)) {
@@ -698,17 +698,17 @@ std::optional<ParserState> gParserState {};
 
         const auto h = txtInfo.createDiagnosticHighlight(
             o.range, std::string { "This string does not have a closing '\"', perhaps you meant " + example + "\"?" });
-        return diagnosticToString(ErrorType::Error, "Unclosed string.", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Unclosed string.", &h, 1);
     } else if (o.is(TokenType::ErMultilineCommentUnclosed)) {
         const auto h = txtInfo.createDiagnosticHighlight(o.range, "this comment lacks a closing */.");
-        return diagnosticToString(ErrorType::Error, "Unclosed string.", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Unclosed string.", &h, 1);
     } else if (o.is(TokenType::ErASCIIInvalidWhitespace)) {
         const auto h =
             txtInfo.createDiagnosticHighlight(o.range, "did you mean either: '$ ' (missing space) or '$\\n'?");
-        return diagnosticToString(ErrorType::Error, "Invalid whitespace in char", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Invalid whitespace in char", &h, 1);
     } else {
         const auto h = txtInfo.createDiagnosticHighlight(o.range, "an unknown error has occured right here!");
-        return diagnosticToString(ErrorType::Error, "Unknown error.", &h, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Unknown error.", &h, 1);
     }
 }
 
@@ -899,11 +899,11 @@ struct ParseClassExceptionSimple : ParseClassException {
 
     [[nodiscard]] std::string getError() & override {
         const auto highlight = textInfo->createDiagnosticHighlight(range, { desc });
-        return diagnosticToString(ErrorType::Error, "Parsing error.", &highlight, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Parsing error.", &highlight, 1);
     }
     [[nodiscard]] std::string getError() && override {
         const auto highlight = textInfo->createDiagnosticHighlight(range, { desc });
-        return diagnosticToString(ErrorType::Error, "Parsing error.", &highlight, 1);
+        return diagnosticToCompilerError(ErrorType::Error, "Parsing error.", &highlight, 1);
     }
 };
 struct ParseClassExceptionBracket : ParseClassException {
@@ -929,14 +929,14 @@ struct ParseClassExceptionBracket : ParseClassException {
             f_info.createDiagnosticHighlight(start, std::string { startDesc }),
             f_info.createDiagnosticHighlight(end, std::string { endDesc }),
         };
-        return diagnosticToString(ErrorType::Error, "Parsing error.", highlight, 2);
+        return diagnosticToCompilerError(ErrorType::Error, "Parsing error.", highlight, 2);
     }
     [[nodiscard]] std::string getError() && override {
         const DiagnosticHighlight highlight[2] {
             f_info.createDiagnosticHighlight(start, std::move(startDesc)),
             f_info.createDiagnosticHighlight(end, std::move(endDesc)),
         };
-        return diagnosticToString(ErrorType::Error, "Parsing error.", highlight, 2);
+        return diagnosticToCompilerError(ErrorType::Error, "Parsing error.", highlight, 2);
     }
 };
 
@@ -1128,7 +1128,7 @@ bool compile(CompilerContext& cxt) {
     const auto on_parse_failure = [&](const std::vector<CompilerContext::ParseErrorInCurFile>& errors, int error_code) {
         for (const auto& error : errors) {
             const auto highlight = cxt.textInfo->createDiagnosticHighlight(error.location, std::string { error.msg });
-            const auto str = diagnosticToString(ErrorType::Error, "parse error", &highlight, 1);
+            const auto str = diagnosticToCompilerError(ErrorType::Error, "parse error", &highlight, 1);
             cxt.postError(str.c_str(), error.versionOfError);
         }
         return false;
@@ -1226,7 +1226,7 @@ bool initaliseClassDependencyListAndRegisterExtensions(std::shared_ptr<TextInfo>
         msg += " :'";
         const auto hg = textInfo->createDiagnosticHighlight(first.range, msg);
         const auto err =
-            diagnosticToString(ErrorType::Error, "Must have a space between class name and the colon.", &hg, 1);
+            diagnosticToCompilerError(ErrorType::Error, "Must have a space between class name and the colon.", &hg, 1);
         postText(err.c_str(), err.size());
 
         // Skip this class definition.
@@ -1642,12 +1642,12 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool wasCompiledPreviously, bool standalo
             if (dis[0].superClassName == dis[0].className) {
                 const auto h = dis[0].textInfo->createDiagnosticHighlight(dis[0].rangeOfSuperClass.value(),
                                                                           "Classes cannot inherit from themselves");
-                const auto str = diagnosticToString(ErrorType::Error, "Self inheritance", &h, 1);
+                const auto str = diagnosticToCompilerError(ErrorType::Error, "Self inheritance", &h, 1);
                 ::postText(str.c_str(), str.size());
             } else {
                 const auto h = dis[0].textInfo->createDiagnosticHighlight(dis[0].rangeOfSuperClass.value(),
                                                                           "This superclass does not exist.");
-                const auto str = diagnosticToString(ErrorType::Error, "Undefined classes", &h, 1);
+                const auto str = diagnosticToCompilerError(ErrorType::Error, "Undefined classes", &h, 1);
                 ::postText(str.c_str(), str.size());
             }
         } else {
@@ -1665,7 +1665,7 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool wasCompiledPreviously, bool standalo
                     diags.push_back(dis[i].textInfo->createDiagnosticHighlight(dis[i].rangeOfClassName, "..."));
             }
 
-            const auto str = diagnosticToString(ErrorType::Error, "Inheritance loop", &diags[0], diags.size());
+            const auto str = diagnosticToCompilerError(ErrorType::Error, "Inheritance loop", &diags[0], diags.size());
             ::postText(str.c_str(), str.size());
         }
     }
