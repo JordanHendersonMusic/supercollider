@@ -47,6 +47,9 @@ Exception {
 		) 
 	}
 
+	// Just does what.error. Prefer that instead.
+	errorString { ^what.error }
+
 	reportError { |stream(Post), prefix("")|
 		var oldReporting = Exception.reporting;
 
