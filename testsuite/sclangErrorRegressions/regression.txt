@@ -218,34 +218,29 @@ ERROR: This is a test error
 
 ──────────────────────────────────────────────────────────────────────────────────
 ERROR: Wrapping some error
-   ──────────────────────────────────────────────────────────────────────────────────
-   ERROR: some other error
 
-   2   : Method Name: 'Function-prTry'
-          args: this=
-          vars: result=nil, thread=, next=, wasInProtectedFunc=true
-                file://SCClassLibrary/Common/Core/Function.sc:207:22
-              205 │ 		};
-              206 │ 		Exception.inProtectedFunction = true;
-              207 │ 		result = this.value;
-                  ┆ 		         ^^^^^^^^^^ 
-              208 │ 		Exception.inProtectedFunction = wasInProtectedFunc;
-              209 │ 		thread.exceptionHandler = next; // pop
-              210 │ 		^result
-   1   : Anonymous Function
-                file://testsuite/sclangErrorRegressions/ErrorGenerator.sc:36:38
-               34 │     *errorWrapper {
-               35 │         try {
-               36 │             Error("some other error").throw;
-                  ┆             ^^^^^^^^^^^^^^^^^^^^^^^^^ 
-               37 │         } { |er|
-               38 │             ErrorWrapper(er, "Wrapping some error").throw
-               39 │         }
-
-   
-   ──────────────────────────────────────────────────────────────────────────────────
-
-
+Wrapped error:
+     2   : Method Name: 'Function-prTry'
+            args: this=
+            vars: result=nil, thread=, next=, wasInProtectedFunc=true
+                    file://SCClassLibrary/Common/Core/Function.sc:207:22
+                205 │ 		};
+                206 │ 		Exception.inProtectedFunction = true;
+                207 │ 		result = this.value;
+                    ┆ 		         ^^^^^^^^^^ 
+                208 │ 		Exception.inProtectedFunction = wasInProtectedFunc;
+                209 │ 		thread.exceptionHandler = next; // pop
+                210 │ 		^result
+     1   : Anonymous Function
+                    file://testsuite/sclangErrorRegressions/ErrorGenerator.sc:36:38
+                 34 │     *errorWrapper {
+                 35 │         try {
+                 36 │             Error("some other error").throw;
+                    ┆             ^^^^^^^^^^^^^^^^^^^^^^^^^ 
+                 37 │         } { |er|
+                 38 │             ErrorWrapper(er, "Wrapping some error").throw
+                 39 │         }
+This error:
 1   : Anonymous Function
        args: er=
           file://testsuite/sclangErrorRegressions/ErrorGenerator.sc:38:52
@@ -386,7 +381,7 @@ ERROR: 'subclassResponsibilityError' should have been implemented by Meta_ErrorG
             39 │ 
             40 │ 	catch.value {
             41 │ 		ErrorGenerator.subclassResponsibilityError
-               ┆ 		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+               ┆ 		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Please implement this method for the class 'Meta_ErrorGenerator'
             42 │ 	};
             43 │ 
             44 │ 	catch.value {
@@ -396,7 +391,7 @@ ERROR: 'subclassResponsibilityError' should have been implemented by Meta_ErrorG
             60 │ 
             61 │     *subclassResponsibilityError {
             62 │         this.subclassResponsibility(thisMethod);
-               ┆         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Please implement this method for the class 'Meta_ErrorGenerator'
+               ┆         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
             63 │     }
             64 │ 
             65 │     *shouldNotImplementError {
@@ -431,7 +426,7 @@ ERROR: 'Meta_ErrorGenerator-shouldNotImplementError' is not a valid message for 
             43 │ 
             44 │ 	catch.value {
             45 │ 		ErrorGenerator.shouldNotImplementError
-               ┆ 		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+               ┆ 		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 'Meta_ErrorGenerator' cannot respond to this message, please remove the call.
             46 │ 	};
             47 │ 
             48 │ 	catch.value {
@@ -441,7 +436,7 @@ ERROR: 'Meta_ErrorGenerator-shouldNotImplementError' is not a valid message for 
             64 │ 
             65 │     *shouldNotImplementError {
             66 │         this.shouldNotImplement(thisMethod);
-               ┆         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 'Meta_ErrorGenerator' cannot respond to this message, please remove the call.
+               ┆         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
             67 │     }
             68 │ 
             69 │     // leave these unset to throw an error
