@@ -6,7 +6,7 @@ on:
         required: true
         type: string
 jobs:
-  generate-file:
+  sclang-error-regression:
     runs-on: ubuntu-22.04
     env:
       INSTALL_PATH: ${{ github.workspace }}/build/Install
@@ -35,7 +35,7 @@ jobs:
         shell: bash
         continue-on-error: false
         run: |
-          timeout 20m $SCLANG -a --include-path $CLASS_LIB --include-path $ERROR_REGRESSION $ERROR_REGRESSION/generateError.sc ${{ github.workspace }}/build/regression.txt
+          timeout 5m $SCLANG -a --include-path $CLASS_LIB --include-path $ERROR_REGRESSION $ERROR_REGRESSION/generateError.sc ${{ github.workspace }}/build/regression.txt
 
       - name: Check for differences
         shell: bash
