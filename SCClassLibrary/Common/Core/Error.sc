@@ -6,7 +6,7 @@ Exception {
 
 	var <what, <callFrameAnnotations, <backtrace, <oneBeforeBeginMethod, <endMethod;
 	// path should not be needed anymore because what you really want is where the source code was defined.
-	var <path;
+	var <>path;
 
 	// This is designed to be called with keyword arguments and will pass all of them to newCopyArgs.
 	*new { |what ... args, kwargs|
