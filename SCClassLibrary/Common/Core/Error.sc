@@ -33,10 +33,7 @@ Exception {
 	}
 
 	// Subclasses can override these two methods:
-	// Prefix must be nil, or a reference to a string.
-
-	prReportErrorDescription { |stream, prefix| } 
-	prReportErrorBacktrace { |stream, prefix| 
+	prReportStage1 { |stream, prefix| 
 		backtrace.backtracePrintOnto(
 			stream, 
 			prefix: prefix,
@@ -46,8 +43,9 @@ Exception {
 			maxVerboseFrames: 3,
 		) 
 	}
+	prReportStage2 { |stream, prefix| } 
 
-	// Just does what.error. Prefer that instead.
+	// Just does what.error. 
 	errorString { ^what.error }
 
 	reportError { |stream(Post), prefix("")|
@@ -57,10 +55,10 @@ Exception {
 
 		stream << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
 		stream << prefix << "ERROR: " << this.what << "\n";
-		this.prReportErrorBacktrace(stream, prefix);
+		this.prReportStage1(stream, prefix);
 		stream << "\n" << prefix;
 
-		this.prReportErrorDescription(stream, prefix);
+		this.prReportStage2(stream, prefix);
 
 		stream << "\n" << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
 
@@ -81,23 +79,18 @@ ErrorWrapper : Exception {
 		^super.new(what: what, wrapped: wrapped)
 	}
 
-	reportError { |stream(Post), prefix("")|
-		var oldReporting = Exception.reporting;
-
-		Exception.reporting = true;
-
-		stream << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
-		stream << prefix << "ERROR: " << this.what << "\n";
-		wrapped.reportError(stream, prefix ++ "   ");
-		stream << "\n" << prefix;
-
-		this.prReportErrorBacktrace(stream, prefix);
-
-		stream << "\n" << prefix << "──────────────────────────────────────────────────────────────────────────────────\n";
-
-		Exception.reporting = oldReporting;
-		^stream;
+	prReportStage1 { |stream, prefix|
+		super.prReportStage2(stream, prefix)
 	}
+
+	prReportStage2{ |stream, prefix|
+		stream << prefix << "Wrapped error:";
+		wrapped.prReportStage1(stream, prefix ++ "     ");
+		wrapped.prReportStage2(stream, prefix ++ "     ");
+		stream << prefix << "This error:";
+		super.prReportStage1(stream, prefix)
+	}
+
 }
 
 MethodError : Error {
@@ -107,7 +100,7 @@ MethodError : Error {
 		^this.superPerformArgs(\new, [], kwargs ++ [what: what, receiver: receiver])
 	}
 
-	prReportErrorDescription { |stream|
+	prReportStage2 { |stream, prefix|
 		stream << "RECEIVER: " << receiver.class.name << $\n;
 	}
 }
@@ -134,7 +127,7 @@ SubclassResponsibilityError : MethodError {
 	*new { |receiver, method(thisMethod), class(SubclassResponsibilityError)|
 		^super.new(
 			what: "'%' should have been implemented by %.".format(method.name, class.name), 
-			callFrameAnnotations: ["Please implement this method for the class '%'".format(class.name)],
+			callFrameAnnotations: [nil, "Please implement this method for the class '%'".format(class.name)],
 			receiver: receiver, 
 			oneBeforeBeginMethod: { |m| m === SubclassResponsibilityError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'subclassResponsibility'}} },
 			method: method,
@@ -149,7 +142,7 @@ ShouldNotImplementError : MethodError {
 	*new { |receiver, method(thisMethod), class(SubclassResponsibilityError)|
 		^super.new(
 			what: "'%-%' is not a valid message for the subclass '%'".format(method.ownerClass.name, method.name, class.name), 
-			callFrameAnnotations: ["'%' cannot respond to this message, please remove the call.".format(class.name)],
+			callFrameAnnotations: [nil, "'%' cannot respond to this message, please remove the call.".format(class.name)],
 			receiver: receiver, 
 			method: method,
 			oneBeforeBeginMethod: { |m| m === ShouldNotImplementError.class.findMethod(\new) or: {m.ownerClass === Object and: {m.name === 'shouldNotImplement'}} },
@@ -177,7 +170,7 @@ DoesNotUnderstandError : MethodError {
 		);
 	}
 
-	prReportErrorDescription { |stream, prefix| 
+	prReportStage2 { |stream, prefix| 
 		var methodSuggestions = receiver.class.findSimilarSelectors(selector, minSimilarity: 0.5, maxEditDistance: 2);
 		var classSuggestions = Object.findRespondingUpperSubclasses(selector).collect(_.name);
 		if(methodSuggestions.notEmpty) {
