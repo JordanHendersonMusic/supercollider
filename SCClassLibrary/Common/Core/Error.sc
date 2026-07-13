@@ -9,7 +9,7 @@ Exception {
 	var <>path;
 
 	// This is designed to be called with keyword arguments and will pass all of them to newCopyArgs.
-	*new { |what ... args, kwargs|
+	*new { |what("") ... args, kwargs|
 		var thisConstructor;
 		if (Exception.reporting) {
 			"Attempting to construct and error while reporting one. This is not allowed, please file a bug report.".error;
