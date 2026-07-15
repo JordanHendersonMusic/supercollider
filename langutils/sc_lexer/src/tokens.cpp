@@ -14,7 +14,7 @@
         return "Integer";
     case TokenType::IntegerRadix:
         return "IntegerRadix";
-    case TokenType::Hexidecimal:
+    case TokenType::Hexadecimal:
         return "Hexidecimal";
     case TokenType::Float:
         return "Float";
