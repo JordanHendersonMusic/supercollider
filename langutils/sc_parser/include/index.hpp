@@ -63,21 +63,19 @@ template <NodeFlag... Ts> struct TypedIndex : public MaybeIndex {
         return TypedIndex<Others...> { **this };
     }
 
-private:
-    template <const auto& arr, typename Indices = std::make_index_sequence<arr.size()>> struct Appender;
-
-    template <const auto& arr, std::size_t... I> struct Appender<arr, std::index_sequence<I...>> {
+    // These can't be private because some compilers won't let you access them in the using statement.
+    template <const auto& arr, typename Indices = std::make_index_sequence<arr.size()>> struct PrivateAppender;
+    template <const auto& arr, std::size_t... I> struct PrivateAppender<arr, std::index_sequence<I...>> {
         using type = TypedIndex<Ts..., arr[I]...>;
     };
 
-    template <class OtherMany> [[nodiscard]] static constexpr auto appendFunc() {
-        return Appender<OtherMany::Possible> {};
+    template <class OtherMany> [[nodiscard]] static constexpr auto private_appendFunc() {
+        return PrivateAppender<OtherMany::Possible> {};
     }
 
-public:
-    template <class OtherMany> using append = typename decltype(appendFunc<OtherMany>())::type;
+    template <class OtherMany> using append = typename decltype(private_appendFunc<OtherMany>())::type;
 
-    static constexpr auto prOptional() { return appendFunc<TypedIndex<NodeFlag::Missing>>(); }
+    static constexpr auto prOptional() { return private_appendFunc<TypedIndex<NodeFlag::Missing>>(); }
 };
 
 
