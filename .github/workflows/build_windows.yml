@@ -67,7 +67,6 @@ jobs:
     env:
       BUILD_PATH: ${{ github.workspace }}/build
       INSTALL_PATH: ${{ github.workspace }}/build/Install
-      LIBS_DOWNLOAD_PATH: ${{ github.workspace }}/../3rd-party
       FFTW_INSTALL_DIR: "C:/Program Files/fftw"
       ARTIFACT_FILE: "SuperCollider-${{ inputs.sc-version }}-${{ matrix.artifact-suffix }}"
       INSTALLER_FILE: "SuperCollider-${{ inputs.sc-version }}-${{ matrix.installer-suffix }}"
@@ -134,17 +133,6 @@ jobs:
         run: |
           call "${{ matrix.vcvars-script-path }}"
           lib.exe /machine:${{ matrix.fftw-arch }} /def:libfftw3f-3.def
-
-      - name: install asio sdk
-        shell: bash
-        env:
-          ASIO_PATH: ${{ env.LIBS_DOWNLOAD_PATH }}/asio_sdk
-        run: |
-          mkdir -p $ASIO_PATH && cd $ASIO_PATH
-          curl -L https://www.steinberg.net/asiosdk -o asio.zip
-          7z x asio.zip -y
-          shopt -s nocaseglob
-          mv asiosdk* $GITHUB_WORKSPACE/external_libraries/portaudio/asiosdk
 
       - name: install readline
         if: matrix.vcpkg-triplet
