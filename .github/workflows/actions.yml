@@ -16,7 +16,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
@@ -41,7 +41,7 @@ jobs:
           FULL_CHECK: 1
 
   version-getter:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
       sc-version: ${{ steps.set-version.outputs.version }}
 
