@@ -56,9 +56,9 @@ jobs:
             ctest: true
             
           - job-name: ""
-            os-version: "22.04"
-            c-compiler: "clang-11"
-            cxx-compiler: "clang++-11"
+            os-version: "24.04"
+            c-compiler: "clang-14"
+            cxx-compiler: "clang++-14"
             use-syslibs: false
             shared-libscsynth: false
             ctest: false
