@@ -22,6 +22,7 @@ Table of contents
  * Using ccache with Xcode
  * Building without Qt or the IDE
  * sclang and scynth executables
+ * `vcpkg` integration
 
 Executables
 -----------
@@ -45,6 +46,7 @@ Prerequisites:
   See http://brew.sh for installation instructions.
 - **git, cmake >= 3.12, libsndfile, readline, and qt6 >= 6.2**, installed via homebrew:
   `brew install git cmake libsndfile readline qt@6`
+  See the section on `vcpkg` for alternative source for libraries when cross-compiling.
 
 Obtaining the source code
 -------------------------
@@ -403,3 +405,23 @@ This application failed to start because it could not find or load the Qt platfo
 
 - scsynth will not find the included "plugins", unless given explicitly
   with the -U commandline flag or using the SC_PLUGIN_PATH environment variable as shown above.
+
+`vcpkg` integration
+-----------------------------
+
+When building Supercollider, it's possible to use `libsndfile` and `readline` from `vcpkg` instead of `homebrew`. This is useful when cross-compiling supercollider, including building a "universal binary" for arm64 and x86_64 platforms. 
+`vcpkg` is automatically detected if `VCPKG_ROOT` environment variable, pointing to the `vcpkg` installation, is set. `vcpkg` can be used in manifest mode when compiling for a single architecture, as well as in classic mode.
+
+In manifest mode, there's no need to run `vcpkg install <package>` - dependencies will be automatically installed at the configure time. 
+Dedicated cmake switches are available to enable building individual dependencies. To enable them, set the `-D USE_VCPKG_LIBSNDFILE=ON` and `-D USE_VCPKG_READLINE=ON` flags. 
+Additionally, you need to specify the vcpkg triplet. Supercollider comes with a set of preconfigured triplets. Here's an example cmake invocation:
+
+```sh
+cmake -G Xcode -DVCPKG_TARGET_TRIPLET=x64-osx-release-supercollider -DCMAKE_BUILD_TYPE=Release -D USE_VCPKG_LIBSNDFILE=ON -D USE_VCPKG_READLINE=ON ..
+```
+
+At the time of writing this, it's not possible to automatically build dual-architecture `vcpkg` packages. 
+In order to build a universal binary of supercollider, one needs to install `vcpkg` versions of libraries for both x86_64 and arm64 platforms and then combine them together into a universal package, exposed as a "fake" triplet. We have a script to facilitate creating these "universal" packages (`tools/vcpkg_combine_libs.sh`). 
+Note that the manifest mode needs to be disabled (`-D VCPKG_MANIFEST_MODE=OFF`) when using system-installed `vcpkg` packages and the fake "universal" triplet needs to be passed to cmake configuration. 
+Please refer to the CI configuration for more details.
+
