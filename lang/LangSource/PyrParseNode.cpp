@@ -884,7 +884,7 @@ void fillClassPrototypes(CompilerContext& cxt, PyrClassNode* node, PyrClass* cla
     const auto print_duplicate_error = [&](const PyrSymbol* duplicate, int varFlagType) {
         const auto loc = get_duplicate_locations(duplicate, varInst);
         if (const auto r = std::get_if<std::monostate>(&loc)) {
-            // Both duplicates where delcared in a super class, no need to print anything here.
+            // Both duplicates where declared in a super class, no need to print anything here.
             return;
         }
 
