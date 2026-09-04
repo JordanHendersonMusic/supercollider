@@ -732,12 +732,12 @@ void fillClassPrototypes(CompilerContext& cxt, PyrClassNode* node, PyrClass* cla
     };
     // sets up method correctly
     const auto create_getter_or_setter_method =
-        [&](unsigned char num_args, MethodType method_type, unsigned short speical_index, PyrClass* owner_class,
+        [&](unsigned char num_args, MethodType method_type, unsigned short special_index, PyrClass* owner_class,
             PyrSlot method_name, sc::lex::SourceCodeRange loc, std::optional<PyrSlot> selector = std::nullopt) {
             assert(num_args > 0);
             auto* method = newPyrMethod();
             *METHRAW(method) = { 0,
-                                 speical_index,
+                                 special_index,
                                  static_cast<unsigned short>(method_type),
                                  0,
                                  0,
@@ -790,7 +790,7 @@ void fillClassPrototypes(CompilerContext& cxt, PyrClassNode* node, PyrClass* cla
                 }
                 instVarIndex++;
             }
-        }; break;
+        } break;
 
 
         case varClass: {
@@ -819,7 +819,7 @@ void fillClassPrototypes(CompilerContext& cxt, PyrClassNode* node, PyrClass* cla
                 }
                 classVarIndex++;
             }
-        }; break;
+        } break;
 
         case varConst: {
             for (; vardef; vardef = (PyrVarDefNode*)vardef->mNext) {
@@ -836,7 +836,7 @@ void fillClassPrototypes(CompilerContext& cxt, PyrClassNode* node, PyrClass* cla
                     addMethod(metaclassobj, meth);
                 }
             }
-        }; break;
+        } break;
         }
     }
 
