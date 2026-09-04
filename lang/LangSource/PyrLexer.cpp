@@ -1819,11 +1819,15 @@ CompilerContext::CompilerContext(std::shared_ptr<TextInfo> t, sc::lex::FileCodeL
                       textInfo->isClassFile ? ParserState::Mode::ClassLibrary : ParserState::Mode::CMDInitial };
 }
 
+constexpr size_t compPoolInitSize { 32000 };
+constexpr size_t compPoolGrowSize { 32000 };
+constexpr size_t compPoolTooBigSize { 2000 };
+
 CompilerContext::CompilerContext(std::shared_ptr<TextInfo> t, sc::lex::FileCodeLocation fileLoc,
                                  sc::lex::SourceCodeRange range, struct VMGlobals* vm):
     textInfo(std::move(t)),
     vm_globals(vm) {
-    parseNodePool.Init(pyr_pool_compile, 32000, 32000, 2000);
+    parseNodePool.Init(pyr_pool_compile, compPoolInitSize, compPoolGrowSize, compPoolTooBigSize);
     assert(bison_cxt == nullptr);
     bison_cxt = this;
     assert(!gParserState);
@@ -1838,7 +1842,7 @@ CompilerContext::CompilerContext(std::shared_ptr<TextInfo> t, sc::lex::FileCodeL
 CompilerContext::CompilerContext(std::shared_ptr<TextInfo> t, struct VMGlobals* vm):
     textInfo(std::move(t)),
     vm_globals(vm) {
-    parseNodePool.Init(pyr_pool_compile, 32000, 32000, 2000);
+    parseNodePool.Init(pyr_pool_compile, compPoolInitSize, compPoolGrowSize, compPoolTooBigSize);
     assert(bison_cxt == nullptr);
     bison_cxt = this;
     assert(!gParserState);
