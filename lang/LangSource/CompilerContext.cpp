@@ -18,8 +18,17 @@
 [[nodiscard]] DiagnosticHighlight TextInfo::createDiagnosticHighlight(sc::lex::SourceCodeRange range,
                                                                       std::string description) const {
     const std::string& str { normalisedSource.as_string() };
-    return { filePathDescription.name, str.c_str(),           str.size(), range, offsetInFile.line_number,
-             offsetInFile.column,      std::move(description) };
+    // clang-format off
+    return {
+        filePathDescription.name, 
+		str.c_str(), 
+		str.size(),
+		range,
+		offsetInFile.line_number,
+		offsetInFile.column,
+        std::move(description),
+    };
+    // clang-format on
 }
 
 
