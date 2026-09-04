@@ -1314,8 +1314,8 @@ private:
     T t;
 };
 
-void postDuplicateIdentiferError(CompilerContext& cxt, sc::lex::SourceCodeRange first,
-                                 sc::lex::SourceCodeRange second) {
+void postDuplicateIdentifierError(CompilerContext& cxt, sc::lex::SourceCodeRange first,
+                                  sc::lex::SourceCodeRange second) {
     const DiagnosticHighlight hg[2] {
         cxt.textInfo->createDiagnosticHighlight(first, "This identifier is duplicated..."),
         cxt.textInfo->createDiagnosticHighlight(second, "...here. Names must be unique, rename one of these."),
@@ -1356,7 +1356,7 @@ PyrSlot createArgNames(CompilerContext& cxt, std::size_t size, bool hasThis, Pyr
     const auto insertAndCheck = [&](PyrSymbol* name, sc::lex::SourceCodeRange loc) {
         checkRedefiningPseudo(cxt, loc, name);
         if (auto fnd = identifiers.find(name); fnd != identifiers.end())
-            postDuplicateIdentiferError(cxt, fnd->second, loc);
+            postDuplicateIdentifierError(cxt, fnd->second, loc);
         else
             identifiers.insert({ name, loc });
         names->symbols[counter] = name;
@@ -1393,7 +1393,7 @@ PyrSlot createVarNames(CompilerContext& cxt, std::size_t size, PyrVarListNode* v
     const auto insertAndCheck = [&](PyrSymbol* name, sc::lex::SourceCodeRange loc) {
         checkRedefiningPseudo(cxt, loc, name);
         if (auto fnd = identifiers.find(name); fnd != identifiers.end())
-            postDuplicateIdentiferError(cxt, fnd->second, loc);
+            postDuplicateIdentifierError(cxt, fnd->second, loc);
         else
             identifiers.insert({ name, loc });
         names->symbols[counter] = name;
