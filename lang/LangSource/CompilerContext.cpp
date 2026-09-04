@@ -84,8 +84,6 @@ std::string diagnosticToString(ErrorType type, const char* generalDescription, c
         for (auto line = iter.forwards(); line; line = iter.forwards()) {
             const auto [ptr, sz, line_number, ends_in_newline_char] = *line;
             const auto real_line_number = line_number + 1 + source_line;
-            std::stringstream m;
-            m.write(ptr, sz);
 
             // If is outside of the highligh range
             if (line_number < range.begin.line_number || line_number > range.end.line_number) {
