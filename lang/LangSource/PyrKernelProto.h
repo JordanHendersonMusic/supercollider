@@ -41,7 +41,7 @@ void postClassTree(PyrClass* classobj, int level);
 
 // Returns number of selectors
 int setSelectorFlags();
-void buildBigMethodMatrix(std::size_t);
+void buildBigMethodMatrix(std::size_t numSelectors);
 
 bool funcFindArg(PyrBlock* func, PyrSymbol* name, int* index);
 bool funcFindVar(PyrBlock* func, PyrSymbol* name, int* index);
