@@ -1303,7 +1303,7 @@ PyrMethod* initPyrMethod(PyrMethod* method);
 void compilePyrMethodNode(CompilerContext& cxt, PyrMethodNode* node, PyrSlot* result) { node->compile(cxt, result); }
 
 template <typename T> struct defer {
-    defer(T&& t): t(t) {}
+    defer(T&& t): t(std::forward<T>(t)) {}
     defer(defer&&) = delete;
     defer(const defer&) = delete;
     defer& operator=(defer&&) = delete;
