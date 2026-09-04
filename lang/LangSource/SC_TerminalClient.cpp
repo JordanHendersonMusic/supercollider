@@ -292,7 +292,7 @@ void SC_TerminalClient::interpretInput() {
 
 
     const auto fileName = std::string { startOfFileName.begin(), endOfFileName.begin() };
-    const auto lineNumber = atoi(startOfLineNumber.begin());
+    const auto lineNumber = atoi(startOfLineNumber.data());
     const auto column = atoi(startOfColumn.begin());
     setCmdLine(startOfBody.begin(), std::distance(startOfBody.begin(), endOfBody.begin()), &fileName, lineNumber,
                column);
