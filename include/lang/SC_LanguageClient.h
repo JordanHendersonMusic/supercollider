@@ -40,6 +40,20 @@ SCLANG_DLLEXPORT void destroyLanguageClient(class SC_LanguageClient*);
 
 class SCLANG_DLLEXPORT SC_LanguageClient {
 public:
+    // Input header, allows for passing source location information.
+    // If other editors want to support this feature, they will need to alter their output.
+    // In future this will need to change again to support an LSP as this is a bit haphazard at the moment.
+    // This is used in the terminal client, which despite being the only class to inherit from this, isn't publicly
+    // available.
+    enum InputHeader : char {
+        InterpretCmdLine = 0x1b,
+        InterpretPrintCmdLine = 0x0c,
+        InterpretPrintCmdLineWithHeader = 0x19,
+        StartOfHeader = 0x01,
+        FileNameDelimiter = 0x1c,
+        RecompileLibrary = 0x18
+    };
+
     struct Options {
         static constexpr int defaultMemSpace = 2 * 1024 * 1024;
         static constexpr int defaultMemGrow = 256 * 1024;
@@ -50,6 +64,7 @@ public:
         int mPort = defaultPort; // network port number
         std::string mRuntimeDir; // runtime directory
     };
+
 
 protected:
     // create singleton instance

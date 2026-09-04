@@ -27,6 +27,7 @@
 #include "SC_TerminalClient.h"
 
 #include "SC_CLIOptions.hpp"
+#include "SC_LanguageClient.h"
 #include <cstdlib>
 
 #ifdef SC_QT
@@ -184,41 +185,31 @@ void SC_TerminalClient::interpretCmdLine(const char* cmdLine, size_t size, bool 
 }
 
 // Note: called only if the input thread does not perform an asynchronous read operation
-struct Span {
-    const char* ptr;
-    size_t size;
-
-    [[nodiscard]] constexpr Span advance() const noexcept {
-        assert(size != 0);
-        return { ptr + 1, size - 1 };
-    }
-    [[nodiscard]] constexpr explicit operator bool() const noexcept { return size != 0; }
-    [[nodiscard]] constexpr char operator[](size_t i) const noexcept {
-        assert(i < size);
-        return ptr[i];
-    }
-    [[nodiscard]] constexpr const char* end() const noexcept { return ptr + size; }
-    [[nodiscard]] constexpr const char* start() const noexcept { return ptr; }
-
-    [[nodiscard]] explicit operator std::string() const { return { ptr, ptr + size }; }
-};
-
 void SC_TerminalClient::interpretInput() {
-    const Span startOfBody { mInputBuf.getData(), mInputBuf.getSize() };
+    std::string_view startOfBody { mInputBuf.getData(), mInputBuf.getSize() };
 
-    if (!startOfBody)
+
+    // Consumes the first byte from the string view.
+    // The subspan methods are c++ 20 only.
+    const auto advance = [](std::string_view sv) -> std::string_view {
+        return sv.empty() ? sv : std::string_view { sv.data() + 1, sv.size() - 1 };
+    };
+
+    if (startOfBody.empty())
         return;
 
-    if (startOfBody[0] == kRecompileLibrary) {
+    if (startOfBody[0] == SC_LanguageClient::RecompileLibrary) {
         recompileLibrary();
         return;
     }
 
+    // While not empty and not a input header
     auto rollingBody = startOfBody;
-    while (rollingBody
-           && !(rollingBody[0] == kInterpretCmdLine || rollingBody[0] == kInterpretPrintCmdLine
-                || rollingBody[0] == kInterpretPrintCmdLineWithHeader)) {
-        rollingBody = rollingBody.advance();
+    while (!rollingBody.empty()
+           && !(rollingBody[0] == SC_LanguageClient::InterpretCmdLine
+                || rollingBody[0] == SC_LanguageClient::InterpretPrintCmdLine
+                || rollingBody[0] == SC_LanguageClient::InterpretPrintCmdLineWithHeader)) {
+        rollingBody = advance(rollingBody);
     }
 
     const auto cleanUp = [&]() {
@@ -232,78 +223,78 @@ void SC_TerminalClient::interpretInput() {
     const auto endOfBody = rollingBody;
 
     const auto executeIgnoreHeader = [&](bool silent = false) {
-        setCmdLine(startOfBody.start(), std::distance(startOfBody.start(), endOfBody.start()));
+        setCmdLine(startOfBody.data(), std::distance(startOfBody.begin(), endOfBody.begin()));
         runLibrary(resolveMethodSymbol(silent));
         flush();
     };
 
-    if (!endOfBody) {
+    if (endOfBody.empty()) {
         executeIgnoreHeader();
         cleanUp();
         return;
     }
-    const auto silent = rollingBody[0] == kInterpretCmdLine;
+    const auto silent = rollingBody[0] == SC_LanguageClient::InterpretCmdLine;
 
-    auto rollingHeader = rollingBody.advance();
+    auto rollingHeader = advance(rollingBody);
 
-    if (!rollingHeader || rollingHeader[0] != kStartOfHeader) {
+    if (rollingHeader.empty() || rollingHeader[0] != SC_LanguageClient::StartOfHeader) {
         executeIgnoreHeader(silent);
         cleanUp();
         return;
     }
 
-    rollingHeader = rollingHeader.advance();
+    rollingHeader = advance(rollingHeader);
 
-    if (!rollingHeader || rollingHeader[0] != kFileNameDelimiter) {
+    if (rollingHeader.empty() || rollingHeader[0] != SC_LanguageClient::FileNameDelimiter) {
         executeIgnoreHeader(silent);
         cleanUp();
         return;
     }
 
-    auto rollingFileName = rollingHeader.advance();
+    auto rollingFileName = advance(rollingHeader);
     const auto startOfFileName = rollingFileName;
     while (true) {
-        if (!rollingFileName) {
+        if (rollingFileName.empty()) {
             executeIgnoreHeader(silent);
             cleanUp();
             return;
-        } else if (rollingFileName[0] == kFileNameDelimiter) {
+        } else if (rollingFileName[0] == SC_LanguageClient::FileNameDelimiter) {
             break;
         } else {
-            rollingFileName = rollingFileName.advance();
+            rollingFileName = advance(rollingFileName);
             continue;
         }
     }
     const auto endOfFileName = rollingFileName;
-    rollingHeader = rollingFileName.advance(); // skip delimiter
+    rollingHeader = advance(rollingFileName); // skip delimiter
 
     const auto startOfLineNumber = rollingHeader;
-    if (!startOfLineNumber) {
+    if (startOfLineNumber.empty()) {
         executeIgnoreHeader(silent);
         cleanUp();
         return;
     }
-    while (rollingHeader && ('0' <= rollingHeader[0] && rollingHeader[0] <= '9')) {
-        rollingHeader = rollingHeader.advance();
+    while (!rollingHeader.empty() && ('0' <= rollingHeader[0] && rollingHeader[0] <= '9')) {
+        rollingHeader = advance(rollingHeader);
     }
     const auto endOfLineNumber = rollingHeader;
-    if (!endOfLineNumber || endOfLineNumber[0] != ' ') {
+    if (endOfLineNumber.empty() || endOfLineNumber[0] != ' ') {
         executeIgnoreHeader(silent);
         cleanUp();
         return;
     }
 
-    const auto startOfColumn = rollingHeader.advance();
-    while (rollingHeader && ('0' <= rollingHeader[0] && rollingHeader[0] <= '9')) {
-        rollingHeader = rollingHeader.advance();
+    const auto startOfColumn = advance(rollingHeader);
+    while (!rollingHeader.empty() && ('0' <= rollingHeader[0] && rollingHeader[0] <= '9')) {
+        rollingHeader = advance(rollingHeader);
     }
     const auto endOfColumn = rollingHeader;
 
 
-    const auto fileName = std::string { startOfFileName.start(), endOfFileName.start() };
-    const auto lineNumber = atoi(startOfLineNumber.start());
-    const auto column = atoi(startOfColumn.start());
-    setCmdLine(startOfBody.start(), std::distance(startOfBody.start(), endOfBody.start()), &fileName, lineNumber,
+    const auto fileName = std::string { startOfFileName.begin(), endOfFileName.begin() };
+    const auto lineNumber = atoi(startOfLineNumber.begin());
+    const auto column = atoi(startOfColumn.begin());
+    setCmdLine(startOfBody.begin(), std::distance(startOfBody.begin(), endOfBody.begin()), &fileName, lineNumber,
                column);
     runLibrary(resolveMethodSymbol(silent));
     flush();
@@ -469,7 +460,7 @@ void SC_TerminalClient::readlineCmdLine(char* cmdLine) {
         int len = strlen(cmdLine);
 
         client->mInputBuf.append(cmdLine, len);
-        client->mInputBuf.append(kInterpretPrintCmdLine);
+        client->mInputBuf.append(SC_TerminalClient::InterpretPrintCmdLine);
         client->sendSignal(sig_input);
         client->mReadlineSem.wait();
     }

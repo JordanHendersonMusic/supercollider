@@ -26,6 +26,7 @@
 
 #include <QtConcurrent>
 
+#include "include/lang/SC_LanguageClient.h"
 #include "main.hpp"
 #include "main_window.hpp"
 #include "sc_introspection.hpp"
@@ -243,26 +244,27 @@ void ScProcess::evaluateCode(QString const& commandString, bool silent, const QS
 
 
     if (!filePath || filePath->isEmpty()) {
-        bytesToWrite.append(silent ? '\x1b' : '\x0c');
+        bytesToWrite.append(silent ? SC_LanguageClient::InterpretCmdLine : SC_LanguageClient::InterpretPrintCmdLine);
         size_t writtenBytes = write(bytesToWrite);
         if (writtenBytes != bytesToWrite.size())
             emit statusMessage(tr("Error when passing data to interpreter!"));
         return;
     }
-    bytesToWrite.append(silent ? '\x1b' : '\x19');
+    bytesToWrite.append(silent ? SC_LanguageClient::InterpretCmdLine
+                               : SC_LanguageClient::InterpretPrintCmdLineWithHeader);
 
     // start of header
-    bytesToWrite.append('\x01');
+    bytesToWrite.append(SC_LanguageClient::StartOfHeader);
 
-    bytesToWrite.append('\x1c');
+    bytesToWrite.append(SC_LanguageClient::FileNameDelimiter);
     bytesToWrite.append(filePath->toUtf8());
-    bytesToWrite.append('\x1c');
+    bytesToWrite.append(SC_LanguageClient::FileNameDelimiter);
     const auto lineNumberString = QString::number(lineNumber);
     const auto columnString = QString::number(column);
     bytesToWrite.append(lineNumberString.toUtf8());
     bytesToWrite.append(' ');
     bytesToWrite.append(columnString.toUtf8());
-    bytesToWrite.append('\x0c'); // form feed ends input.
+    bytesToWrite.append(SC_LanguageClient::InterpretPrintCmdLine); // form feed ends input.
 
     size_t writtenBytes = write(bytesToWrite);
     if (writtenBytes != bytesToWrite.size())
