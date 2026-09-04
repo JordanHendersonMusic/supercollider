@@ -21,27 +21,28 @@
 #include "ByteCodeArray.h"
 
 void CompilingBytecodes::consume(CompilingBytecodes&& other) {
-    data.codes.insert(data.codes.end(), other.data.codes.begin(), other.data.codes.end());
-    data.startAndEndLocations.insert(data.startAndEndLocations.end(), other.data.startAndEndLocations.begin(),
-                                     other.data.startAndEndLocations.end());
-    data.sizeOfCodes.insert(data.sizeOfCodes.end(), other.data.sizeOfCodes.begin(), other.data.sizeOfCodes.end());
+    m_data.codes.insert(m_data.codes.end(), other.m_data.codes.begin(), other.m_data.codes.end());
+    m_data.startAndEndLocations.insert(m_data.startAndEndLocations.end(), other.m_data.startAndEndLocations.begin(),
+                                       other.m_data.startAndEndLocations.end());
+    m_data.sizeOfCodes.insert(m_data.sizeOfCodes.end(), other.m_data.sizeOfCodes.begin(),
+                              other.m_data.sizeOfCodes.end());
 }
 
-[[nodiscard]] size_t CompilingBytecodes::length() const noexcept { return data.codes.size(); }
+[[nodiscard]] size_t CompilingBytecodes::length() const noexcept { return m_data.codes.size(); }
 
 [[nodiscard]] CompilingBytecodes::Data CompilingBytecodes::finish() && noexcept {
-    assert(data.startAndEndLocations.size() == data.sizeOfCodes.size() * 2); // twice as many.
-    Data out { std::move(data) }; // this empties this->data.
+    assert(m_data.startAndEndLocations.size() == m_data.sizeOfCodes.size() * 2); // twice as many.
+    Data out { std::move(m_data) }; // this empties this->data.
     return out;
 }
 
 void CompilingBytecodes::backSetByte(size_t index, Byte newValue) noexcept {
-    assert(index < data.codes.size());
-    data.codes[index] = newValue;
+    assert(index < m_data.codes.size());
+    m_data.codes[index] = newValue;
 }
 
 void CompilingBytecodes::assertEmpty() const noexcept {
-    assert(data.codes.empty());
-    assert(data.startAndEndLocations.empty());
-    assert(data.sizeOfCodes.empty());
+    assert(m_data.codes.empty());
+    assert(m_data.startAndEndLocations.empty());
+    assert(m_data.sizeOfCodes.empty());
 }

@@ -57,10 +57,10 @@ public:
         // SCLang only support int type.
         assert(loc.begin.absolute <= std::numeric_limits<int>::max());
         assert(loc.end.absolute <= std::numeric_limits<int>::max());
-        data.startAndEndLocations.push_back(loc.begin.absolute);
-        data.startAndEndLocations.push_back(loc.end.absolute);
-        (data.codes.push_back(static_cast<Byte>(bytes)), ...);
-        data.sizeOfCodes.push_back(static_cast<std::uint8_t>(sizeof...(bytes)));
+        m_data.startAndEndLocations.push_back(loc.begin.absolute);
+        m_data.startAndEndLocations.push_back(loc.end.absolute);
+        (m_data.codes.push_back(static_cast<Byte>(bytes)), ...);
+        m_data.sizeOfCodes.push_back(static_cast<std::uint8_t>(sizeof...(bytes)));
     }
 
     // Returns data and sets the held data to empty as per the move constructor (not assignment).
@@ -72,5 +72,5 @@ public:
     void assertEmpty() const noexcept;
 
 private:
-    Data data;
+    Data m_data;
 };
