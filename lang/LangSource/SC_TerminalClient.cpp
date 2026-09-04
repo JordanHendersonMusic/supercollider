@@ -579,9 +579,9 @@ void SC_TerminalClient::pushCmdLine(const char* newData, size_t size) {
     while (size--) {
         char c = *newData++;
         switch (c) {
-        case kRecompileLibrary:
-        case kInterpretCmdLine:
-        case kInterpretPrintCmdLine:
+        case RecompileLibrary:
+        case InterpretCmdLine:
+        case InterpretPrintCmdLine:
             mInputBuf.append(mInputThrdBuf.getData(), mInputThrdBuf.getSize());
             mInputBuf.append(c);
             signal = true;
