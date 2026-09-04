@@ -983,8 +983,6 @@ void postClassTree(PyrClass* classobj, int level) {
 
 
 int setSelectorFlags() {
-    int count { 0 };
-
     PyrClass* classobj = gClassList;
     while (classobj) {
         if (IsObj(&classobj->methods)) {
@@ -1003,16 +1001,17 @@ int setSelectorFlags() {
     }
     // count selectors
     SymbolTable* symbolTable = gMainVMGlobals->symbolTable;
+    int countSelectors { 0 };
     const auto sz = symbolTable->TableSize();
     for (std::size_t i { 0 }; i < sz; ++i) {
         PyrSymbol* sym = symbolTable->Get(i);
         if (sym && (sym->flags & sym_Selector)) {
-            sym->u.index = count++;
+            sym->u.index = countSelectors++;
         }
     }
-    gNumSelectors = count;
+    gNumSelectors = countSelectors;
     post("gNumSelectors %d\n", gNumSelectors);
-    return count;
+    return countSelectors;
 }
 
 // the chunky stuff can be commented back in for implementing a better
