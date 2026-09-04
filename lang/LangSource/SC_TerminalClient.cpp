@@ -189,12 +189,6 @@ void SC_TerminalClient::interpretInput() {
     std::string_view startOfBody { mInputBuf.getData(), mInputBuf.getSize() };
 
 
-    // Consumes the first byte from the string view.
-    // The subspan methods are c++ 20 only.
-    const auto advance = [](std::string_view sv) -> std::string_view {
-        return sv.empty() ? sv : std::string_view { sv.data() + 1, sv.size() - 1 };
-    };
-
     if (startOfBody.empty())
         return;
 
@@ -209,7 +203,7 @@ void SC_TerminalClient::interpretInput() {
            && !(rollingBody[0] == SC_LanguageClient::InterpretCmdLine
                 || rollingBody[0] == SC_LanguageClient::InterpretPrintCmdLine
                 || rollingBody[0] == SC_LanguageClient::InterpretPrintCmdLineWithHeader)) {
-        rollingBody = advance(rollingBody);
+        rollingBody.remove_prefix(1);
     }
 
     const auto cleanUp = [&]() {
@@ -235,7 +229,7 @@ void SC_TerminalClient::interpretInput() {
     }
     const auto silent = rollingBody[0] == SC_LanguageClient::InterpretCmdLine;
 
-    auto rollingHeader = advance(rollingBody);
+    auto rollingHeader = rollingBody.substr(1);
 
     if (rollingHeader.empty() || rollingHeader[0] != SC_LanguageClient::StartOfHeader) {
         executeIgnoreHeader(silent);
@@ -243,7 +237,7 @@ void SC_TerminalClient::interpretInput() {
         return;
     }
 
-    rollingHeader = advance(rollingHeader);
+    rollingHeader.remove_prefix(1);
 
     if (rollingHeader.empty() || rollingHeader[0] != SC_LanguageClient::FileNameDelimiter) {
         executeIgnoreHeader(silent);
@@ -251,7 +245,7 @@ void SC_TerminalClient::interpretInput() {
         return;
     }
 
-    auto rollingFileName = advance(rollingHeader);
+    auto rollingFileName = rollingHeader.substr(1);
     const auto startOfFileName = rollingFileName;
     while (true) {
         if (rollingFileName.empty()) {
@@ -261,12 +255,12 @@ void SC_TerminalClient::interpretInput() {
         } else if (rollingFileName[0] == SC_LanguageClient::FileNameDelimiter) {
             break;
         } else {
-            rollingFileName = advance(rollingFileName);
+            rollingFileName.remove_prefix(1);
             continue;
         }
     }
     const auto endOfFileName = rollingFileName;
-    rollingHeader = advance(rollingFileName); // skip delimiter
+    rollingHeader = rollingFileName.substr(1); // skip delimiter
 
     const auto startOfLineNumber = rollingHeader;
     if (startOfLineNumber.empty()) {
@@ -275,7 +269,7 @@ void SC_TerminalClient::interpretInput() {
         return;
     }
     while (!rollingHeader.empty() && ('0' <= rollingHeader[0] && rollingHeader[0] <= '9')) {
-        rollingHeader = advance(rollingHeader);
+        rollingHeader.remove_prefix(1);
     }
     const auto endOfLineNumber = rollingHeader;
     if (endOfLineNumber.empty() || endOfLineNumber[0] != ' ') {
@@ -284,9 +278,9 @@ void SC_TerminalClient::interpretInput() {
         return;
     }
 
-    const auto startOfColumn = advance(rollingHeader);
+    const auto startOfColumn = rollingHeader.substr(1);
     while (!rollingHeader.empty() && ('0' <= rollingHeader[0] && rollingHeader[0] <= '9')) {
-        rollingHeader = advance(rollingHeader);
+        rollingHeader.remove_prefix(1);
     }
     const auto endOfColumn = rollingHeader;
 
