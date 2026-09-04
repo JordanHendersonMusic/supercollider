@@ -71,7 +71,7 @@ public:
     bool mRunning;
 };
 
-SC_LanguageClient::SC_LanguageClient(const std::string& name): compiledSuccessfully(false) {
+SC_LanguageClient::SC_LanguageClient(const std::string& name) {
     mHiddenClient = new HiddenLanguageClient;
 
     lockInstance();
