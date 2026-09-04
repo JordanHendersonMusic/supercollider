@@ -11,7 +11,7 @@
 struct ClassLibraryInfo {
 public:
     template <typename T> [[nodiscard]] void* allocRuntimePool() const { return pyr_pool_runtime->Alloc(sizeof(T)); }
-    template <typename T> [[nodiscard]] void* comptimePool() const { return pyr_pool_compile->Alloc(sizeof(T)); }
+    template <typename T> [[nodiscard]] void* allocComptimePool() const { return pyr_pool_compile->Alloc(sizeof(T)); }
     void freeRuntimePool() const { pyr_pool_runtime->FreeAll(); }
     void freeInternalRuntimePool() const { pyr_pool_runtime->FreeAllInternal(); }
     void freeComptimePool() const { pyr_pool_compile->FreeAll(); }
