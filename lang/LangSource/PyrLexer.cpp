@@ -1048,7 +1048,7 @@ struct ClassDependencyList {
             toVisit.insert(i);
         }
 
-        topoSortHasLoop(objIndex, marks, out, toVisit);
+        topologicalSortAvoidingCycles(objIndex, marks, out, toVisit);
         std::reverse(out.begin(), out.end());
 
         std::vector<std::vector<ClassDependency>> loops;
@@ -1087,8 +1087,12 @@ private:
 
 
     enum struct Mark { NotVisited, InProgress, Visited };
-    void topoSortHasLoop(std::size_t i, std::vector<Mark>& marks, std::vector<ClassDependency>& sorted,
-                         std::unordered_set<std::size_t>& visited) const {
+    // Because everything ought to be connected to AbstractObject, we just walk the graph from there.
+    // Marks should start with all indexes marked 'NotVisited', anything still in this state is a part of a cycle.
+    void topologicalSortAvoidingCycles(std::size_t i, std::vector<Mark>& marks, std::vector<ClassDependency>& sorted,
+                                       std::unordered_set<std::size_t>& visited) const {
+        // There should be a mark for every dependency.
+        assert(marks.size() == deps.size());
         // DFS
         switch (marks[i]) {
         case Mark::InProgress:
@@ -1102,7 +1106,7 @@ private:
             // if we find a loop, all classes added to sorted are invalidated
             const auto startingSize = sorted.size();
             for (auto it = deps[i].firstChild; it; it = deps[it.valueUnchecked()].nextSibling) {
-                topoSortHasLoop(it.valueUnchecked(), marks, sorted, visited);
+                topologicalSortAvoidingCycles(it.valueUnchecked(), marks, sorted, visited);
             }
             visited.erase(i);
             marks[i] = Mark::Visited;
