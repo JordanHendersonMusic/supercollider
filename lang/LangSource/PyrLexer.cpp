@@ -1002,8 +1002,8 @@ struct ClassDependencyList {
     }
 
 
-    // returns vector of dependencys whose super class is not defined.
-    void linkReturnUndefinedSuperClasses() {
+    // Builds edges between siblings.
+    void createEdges() {
         const auto count = deps.size();
         for (std::size_t i { 0 }; i < count; ++i) {
             auto& dep = deps[i];
@@ -1637,7 +1637,7 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool wasCompiledPreviously, bool standalo
 
     declareDependancyTreeLoadFiles(files, deps, extList, nullptr);
 
-    deps.linkReturnUndefinedSuperClasses();
+    deps.createEdges();
 
     auto [topo, disconnected] = deps.getTopologicalOrdering();
 
