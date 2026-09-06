@@ -18,20 +18,17 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <climits>
 #include "GC.h"
+#include "PyrKernel.h"
 #include "PyrMessage.h"
 #include "PyrInterpreter.h"
 #include "PyrSymbolTable.h"
 #include "PyrObjectProto.h"
 #include "PyrKernelProto.h"
-#include "PyrLexer.h"
 #include "InitAlloc.h"
-#include "Hash.h"
-#include "SC_Alloca.h"
 #include "SC_Lock.h"
 
 #include <set>
@@ -1137,7 +1134,7 @@ static void calcRowStats(PyrMethod const* const* bigTable, ColumnDescriptor* sel
         sels[i].rowWidth = sels[i].maxClassIndex - sels[i].minClassIndex + 1;
 }
 
-void buildBigMethodMatrix(std::size_t numSeletorsI) {
+void buildBigMethodMatrix(std::size_t numSeletors) {
     PyrMethod **bigTable, **row;
     PyrClass** classes;
     int j, k;
@@ -2369,7 +2366,7 @@ bool objAddIndexedSymbol(PyrSymbolArray* obj, PyrSymbol* symbol) {
     }
 }
 
-bool objAddIndexedObject(PyrObject* obj, PyrObject* obj2) {
+bool objAddIndexedObject(PyrObject* obj, PyrObjectHdr* obj2) {
     if (obj->size < ARRAYMAXINDEXSIZE(obj)) {
         SetObject(obj->slots + obj->size, obj2);
         obj->size++;
@@ -2397,10 +2394,10 @@ PyrObject* newPyrObject(class PyrGC* gc, size_t inNumBytes, int inFlags, int inF
     return gc->New(inNumBytes, inFlags, inFormat, inRunGC);
 }
 
-PyrObject* newPyrArray(class PyrGC* gc, int size, int flags, bool runGC) {
+PyrObject* newPyrArray(class PyrGC* gc, int capacity, int flags, bool runGC) {
     PyrObject* array;
 
-    int numbytes = size * sizeof(PyrSlot);
+    int numbytes = capacity * sizeof(PyrSlot);
     if (!gc)
         array = PyrGC::NewPermanent(numbytes, flags, obj_slot);
     else
@@ -2409,10 +2406,10 @@ PyrObject* newPyrArray(class PyrGC* gc, int size, int flags, bool runGC) {
     return array;
 }
 
-PyrSymbolArray* newPyrSymbolArray(class PyrGC* gc, int size, int flags, bool runGC) {
+PyrSymbolArray* newPyrSymbolArray(class PyrGC* gc, int capacity, int flags, bool runGC) {
     PyrSymbolArray* array;
 
-    int numbytes = size * sizeof(PyrSymbol*);
+    int numbytes = capacity * sizeof(PyrSymbol*);
     if (!gc)
         array = (PyrSymbolArray*)PyrGC::NewPermanent(numbytes, flags, obj_symbol);
     else
@@ -2421,20 +2418,20 @@ PyrSymbolArray* newPyrSymbolArray(class PyrGC* gc, int size, int flags, bool run
     return array;
 }
 
-PyrInt8Array* newPyrInt8Array(class PyrGC* gc, int size, int flags, bool runGC) {
+PyrInt8Array* newPyrInt8Array(class PyrGC* gc, int capacity, int flags, bool runGC) {
     PyrInt8Array* array;
 
     if (!gc)
-        array = (PyrInt8Array*)PyrGC::NewPermanent(size, flags, obj_int8);
+        array = (PyrInt8Array*)PyrGC::NewPermanent(capacity, flags, obj_int8);
     else
-        array = (PyrInt8Array*)gc->New(size, flags, obj_int8, runGC);
+        array = (PyrInt8Array*)gc->New(capacity, flags, obj_int8, runGC);
     array->classptr = class_int8array;
     return array;
 }
 
-PyrInt32Array* newPyrInt32Array(class PyrGC* gc, int size, int flags, bool runGC) {
+PyrInt32Array* newPyrInt32Array(class PyrGC* gc, int capacity, int flags, bool runGC) {
     PyrInt32Array* array;
-    int numbytes = size * sizeof(int32);
+    int numbytes = capacity * sizeof(int32);
     if (!gc)
         array = (PyrInt32Array*)PyrGC::NewPermanent(numbytes, flags, obj_int32);
     else
@@ -2443,14 +2440,14 @@ PyrInt32Array* newPyrInt32Array(class PyrGC* gc, int size, int flags, bool runGC
     return array;
 }
 
-PyrDoubleArray* newPyrDoubleArray(class PyrGC* gc, int size, int flags, bool runGC) {
+PyrDoubleArray* newPyrDoubleArray(class PyrGC* gc, int capacity, int flags, bool runGC) {
     PyrDoubleArray* array;
 
-    int numbytes = size * sizeof(double);
+    int numbytes = capacity * sizeof(double);
     if (!gc)
         array = (PyrDoubleArray*)PyrGC::NewPermanent(numbytes, flags, obj_double);
     else
-        array = (PyrDoubleArray*)gc->New(size, flags, obj_double, runGC);
+        array = (PyrDoubleArray*)gc->New(capacity, flags, obj_double, runGC);
     array->classptr = class_doublearray;
     return array;
 }

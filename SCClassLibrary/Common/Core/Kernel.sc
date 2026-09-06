@@ -44,6 +44,10 @@ Class {
 			});
 
 			if(aClass.subclasses.notNil,{
+				// If a class author has missed any Class.initClassTree(X) calls in their initClass methods,
+				//   you might get an error depending on the class ordering.
+				// The actual ordering is undefined, but is consistent for any given set of classes.
+				// This means if you add classes, the order might change and you might get errors when trying to start the class library.
 				aClass.subclasses.do({ arg class; this.initClassTree(class); });
 			});
 		});

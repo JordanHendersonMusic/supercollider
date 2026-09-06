@@ -28,7 +28,6 @@
 #include "ClassLibraryInfo.hpp"
 #include "CompilerContext.hpp"
 #include "PyrKernel.h"
-#include "PyrMessage.h"
 #include "PyrObjectHdr.h"
 #include "SCBase.h"
 #include "PyrLexer.h"
@@ -39,6 +38,7 @@
 #include "SC_LanguageClient.h"
 #include "SimpleStack.h"
 #include "VMGlobals.h"
+#include "PyrSlot.h"
 
 #include "BisonHeaderInclude.hpp"
 #include "codepoint_stream.hpp"
@@ -1002,9 +1002,23 @@ struct ClassDependencyList {
     }
 
 
+    // Sorts alphabetically
     // Builds edges between siblings.
-    void createEdges() {
+    void finalize() {
+        // First sort them alphabetically.
+        // This ensures the topological ordering is always predictable for any given set of classes.
+        // Note, this includes quarks, so if you add quarks the ordering could change.
+        className2DepIndex.clear();
+
+        std::sort(deps.begin(), deps.end(), [](const ClassDependency& lhs, const ClassDependency& rhs) -> bool {
+            return strcmp(lhs.className->name, rhs.className->name) < 0;
+        });
+
         const auto count = deps.size();
+
+        for (std::size_t i { 0 }; i < count; ++i)
+            className2DepIndex.emplace(deps[i].className, i);
+
         for (std::size_t i { 0 }; i < count; ++i) {
             auto& dep = deps[i];
             if (!dep.superClassName)
@@ -1268,9 +1282,11 @@ bool initaliseClassDependencyListAndRegisterExtensions(std::shared_ptr<TextInfo>
     }
 
     std::optional<sc::lex::SourceCodeRange> superloc {};
-    PyrSymbol* superName;
+    PyrSymbol* superName { nullptr };
     if (next.type != TokenType::Colon) {
-        superName = className == s_object ? s_none : s_object;
+        if (className != s_abstract_object) {
+            superName = s_object;
+        }
     } else {
         if (className == s_abstract_object)
             throw ParseClassExceptionSimple { textInfo, first.range,
@@ -1472,7 +1488,7 @@ static bool passOne_ProcessDir(const fs::path& dir, std::set<fs::path>& compiled
 }
 
 // Pass one build the class dependancy tree.
-bool declareDependancyTreeLoadFiles(ClassLibraryFileMap& files, ClassDependencyList& deps,
+bool declareDependencyTreeLoadFiles(ClassLibraryFileMap& files, ClassDependencyList& deps,
                                     std::vector<ClassExtentionFile>& extList, PyrGC* gc) {
     return gLanguageConfig->forEachIncludedDirectory(
         [&, compiled_dirs = std::set<fs::path> {}](const fs::path& p) mutable {
@@ -1635,9 +1651,11 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool wasCompiledPreviously, bool standalo
 
     std::size_t numFilesCompiled { 0 };
 
-    declareDependancyTreeLoadFiles(files, deps, extList, nullptr);
+    // Goes through all the files.
+    // Adds them to the classdependencylist.
+    declareDependencyTreeLoadFiles(files, deps, extList, nullptr);
 
-    deps.createEdges();
+    deps.finalize();
 
     auto [topo, disconnected] = deps.getTopologicalOrdering();
 
