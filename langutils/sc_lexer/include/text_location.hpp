@@ -55,6 +55,10 @@ struct SourceCodeRange {
     [[nodiscard]] bool operator<=(const SourceCodeRange& o) const noexcept;
     [[nodiscard]] bool operator>=(const SourceCodeRange& o) const noexcept;
 
+    [[nodiscard]] constexpr SourceCodeRange flatten() const noexcept {
+        return { begin, { begin.absolute + 1, begin.line_number, begin.column } };
+    }
+
     SourceCodeLocation begin, end;
 };
 
@@ -70,6 +74,10 @@ struct FileCodeRange {
     [[nodiscard]] bool operator>(const FileCodeRange& o) const noexcept;
     [[nodiscard]] bool operator<=(const FileCodeRange& o) const noexcept;
     [[nodiscard]] bool operator>=(const FileCodeRange& o) const noexcept;
+
+    [[nodiscard]] constexpr FileCodeRange flatten() const noexcept {
+        return { begin, { begin.absolute + 1, begin.line_number, begin.column } };
+    }
 
     FileCodeLocation begin, end;
 };

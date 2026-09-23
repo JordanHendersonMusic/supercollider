@@ -109,6 +109,11 @@ public:
     [[nodiscard]] sc::lex::SourceCodeRange& get_location(Index index);
     [[nodiscard]] const sc::lex::SourceCodeRange& get_location(Index index) const;
 
+    [[nodiscard]] nodes::Edges get_edges(Index i) const noexcept {
+        assert(*i < edges.size());
+        return edges[*i];
+    }
+
 
     // Mostly useful for debugging purposes.
     template <typename F> void flat_walk(F&& f) const;

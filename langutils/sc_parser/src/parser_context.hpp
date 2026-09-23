@@ -1,16 +1,13 @@
 // Copyright Jordan Henderson 2026
 #pragma once
 
-#include "indexes_typed.hpp"
 #include "node_graph.hpp"
 #include <memory>
 #include <utility>
 #include "normalise_source.hpp"
-#include "sc_parser.hpp"
 #include "text_location.hpp"
 #include "tokens.hpp"
 #include <optional>
-#include <variant>
 
 namespace sc::parser {
 

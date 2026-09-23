@@ -510,7 +510,7 @@ public:
             // symbol
             char dummy43[sizeof(SymbolLitIndex)];
 
-            // expr.error
+            // region.item
             char dummy44[sizeof(error_index<ExprSeqIndex>)];
 
             // class.super.opt
@@ -694,8 +694,8 @@ public:
             S_UMINUS = 60, // UMINUS
             S_YYACCEPT = 61, // $accept
             S_go = 62, // go
-            S_region = 63, // region
-            S_64_expr_error = 64, // expr.error
+            S_63_region_item = 63, // region.item
+            S_region = 64, // region
             S_65_classOrExtList_list = 65, // classOrExtList.list
             S_66_classOrExtList_item = 66, // classOrExtList.item
             S_class = 67, // class
@@ -1036,7 +1036,7 @@ public:
                 value.move<SymbolLitIndex>(std::move(that.value));
                 break;
 
-            case symbol_kind::S_64_expr_error: // expr.error
+            case symbol_kind::S_63_region_item: // region.item
                 value.move<error_index<ExprSeqIndex>>(std::move(that.value));
                 break;
 
@@ -1882,7 +1882,7 @@ public:
                 value.template destroy<SymbolLitIndex>();
                 break;
 
-            case symbol_kind::S_64_expr_error: // expr.error
+            case symbol_kind::S_63_region_item: // region.item
                 value.template destroy<error_index<ExprSeqIndex>>();
                 break;
 
@@ -2627,7 +2627,7 @@ private:
     static bool yy_table_value_is_error_(int yyvalue) YY_NOEXCEPT;
 
     static const short yypact_ninf_;
-    static const short yytable_ninf_;
+    static const signed char yytable_ninf_;
 
     /// Convert a scanner token kind \a t to a symbol kind.
     /// In theory \a t should be a token_kind_type, but character literals
@@ -2649,7 +2649,7 @@ private:
     static const short yypgoto_[];
 
     // YYDEFGOTO[NTERM-NUM].
-    static const unsigned char yydefgoto_[];
+    static const short yydefgoto_[];
 
     // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
     // positive, shift that token.  If negative, reduce the rule whose
@@ -2853,9 +2853,9 @@ private:
 
     /// Constants.
     enum {
-        yylast_ = 1500, ///< Last index in yytable_.
+        yylast_ = 1657, ///< Last index in yytable_.
         yynnts_ = 69, ///< Number of nonterminal symbols.
-        yyfinal_ = 63 ///< Termination state number.
+        yyfinal_ = 62 ///< Termination state number.
     };
 
 
