@@ -1,6 +1,4 @@
 #include "sc_grammar_impl.hpp"
-#include "codepoint_stream.hpp"
-#include "lexer.hpp"
 #include "node_graph_diagnostic.hpp"
 #include "parser_context.hpp"
 #include "text_location.hpp"

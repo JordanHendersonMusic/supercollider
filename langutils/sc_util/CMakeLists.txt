@@ -3,3 +3,4 @@ add_library(sc_util INTERFACE
 )
 
 target_include_directories(sc_util INTERFACE include)
+set_property(TARGET sc_util PROPERTY FOLDER Libs)

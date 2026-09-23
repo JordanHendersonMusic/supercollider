@@ -287,4 +287,10 @@ a.foo;
 
     tester(" 1 + 2 (\n\n 4 * 4;");
     tester(" 1 + 2 (\n\n 4 * 12 );");
+
+
+    // tester("1 + \n(var x = 10; x * 2)");
+    tester("(var x = 10; x * 2)");
+
+    tester("(|a| var x = 10; x * 2)");
 }

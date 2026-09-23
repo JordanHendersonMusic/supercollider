@@ -88,6 +88,7 @@ auto create_error(sc::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, 
 %type <ClassListOrExprListIndex> go
 
 %type <RegionListIndex> region
+%type <error_index<ExprSeqIndex>> region.item 
 
 %type <ClassOrExtensionListIndex> classOrExtList.list
 %type <ClassOrExtensionIndex> classOrExtList.item
@@ -171,21 +172,88 @@ auto create_error(sc::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, 
 %%
 
 go 
-	: INTERPRET region semicolon.opt { $$ = cxt.graph.assign_root($region); }
-	| classOrExtList.list[classes] { $$ = cxt.graph.assign_root($classes); }
+	: region YYEOF { $$ = cxt.graph.assign_root($region); }
+	| classOrExtList.list[classes] YYEOF  { $$ = cxt.graph.assign_root($classes); }
 	;
 
-// Best to occur as a left most rule (except from lexer tokens).
-// This is because any orphaned nodes will be parented to the error node here.
+
+region.item
+	: expr
+		{ $$ = $expr; } 
+	| OPENPAREN argument_declarations[args] block.contents[content] CLOSEPAREN 
+		{ 
+			auto block = cxt.create(BlockNode{}, @$, $args, $content); 
+
+			$$ = cxt.create(
+				MessageNode{MessageNode::SelectorMode::Value}, 
+				@$, 
+				cxt.create(Missing{}, @$),
+				cxt.create(ArgumentList{}, @$, block)
+			);
+		}
+	| OPENPAREN argument_declarations[args] CLOSEPAREN 
+		{ 
+			auto block = cxt.create(BlockNode{}, @$, $args, cxt.create(BlockContentsList{}, @$));
+
+			$$ = cxt.create(
+				MessageNode{MessageNode::SelectorMode::Value}, 
+				@$, 
+				cxt.create(Missing{}, @$),
+				cxt.create(ArgumentList{}, @$, block)
+			);
+		}
+	;
+
 region
-	: expr.error[e]
-		{ $$ = cxt.create(RegionList{}, @$, $e); }
-	| region[r] SEMICOLON expr.error[e]
-		{ $$ = cxt.graph.append_to_list($r, @$, $e); }
+	: INTERPRET expr
+		{ 
+			$$ = cxt.create(RegionList{}, @$, $expr);
+		} 
+	| INTERPRET error
+		{
+			error_recovery::expr(cxt);
+			yyclearin;
+			$$ = cxt.create(RegionList{}, @$, create_error(cxt, @error));
+		}
+	| INTERPRET OPENPAREN argument_declarations[args] block.contents[content] semicolon.opt CLOSEPAREN 
+		{ 
+			auto block = cxt.create(BlockNode{}, @$, $args, $content); 
+
+			auto msg = cxt.create(
+				MessageNode{MessageNode::SelectorMode::Value}, 
+				@$, 
+				cxt.create(Missing{}, @$),
+				cxt.create(ArgumentList{}, @$, block)
+			);
+			$$ = cxt.create(RegionList{}, @$, msg);
+		}
+	| INTERPRET OPENPAREN argument_declarations[args] CLOSEPAREN 
+		{ 
+			auto block = cxt.create(BlockNode{}, @$, $args, cxt.create(BlockContentsList{}, @$));
+
+			auto msg = cxt.create(
+				MessageNode{MessageNode::SelectorMode::Value}, 
+				@$, 
+				cxt.create(Missing{}, @$),
+				cxt.create(ArgumentList{}, @$, block)
+			);
+
+			$$ = cxt.create(RegionList{}, @$, msg);
+		}
+
+	| region[r] SEMICOLON region.item[item]
+		{ $$ = cxt.graph.append_to_list($r, @$, $item); }
+
+	| region[r] REGION_SEPARATOR region.item[item]
+		{ $$ = cxt.graph.append_to_list($r, @$, $item); }
+
 	| region[r] error[e] 
 		{
 			if (@r.end.line_number != @e.begin.line_number){
-				error_recovery::region_separator(cxt, @r);
+				auto first_child = cxt.graph.get_edges(*$r).first_child.value();
+				auto last_child = cxt.graph.get_edges(Index{first_child}).last_sibling;
+				auto loc = cxt.graph.get_location(last_child ? Index{*last_child} : Index{first_child});
+				error_recovery::region_separator(cxt, loc);
 				cxt.region_recovery = sc::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
 				static_assert(std::is_same_v<decltype(yyerrstatus_), int>);
 				yyerrstatus_ = 0; // this is NOT in the api, but the only way to get errors to re-emit.
@@ -194,23 +262,14 @@ region
 			} else {
 				error_recovery::expr(cxt);
 				$$ = cxt.graph.append_to_list($r, create_error(cxt, @e, $r));
-				//cxt.region_recovery = sc::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
 				yyclearin;
 			} 
 		}
-
-	| region[r] REGION_SEPARATOR expr.error[e]
-		{ $$ = cxt.graph.append_to_list($1, @$, $e); }
 	;
 
 expr.error
 	: expr { $$ = $expr; }
-	| error { 
-		std::cout << "EXPR ERROR" << std::endl;
-		auto unexpected = cxt.consume_error(); 
-		$$ = create_error(cxt, @$);
-		yyclearin;
-	}
+
 	;
 
 classOrExtList.list
@@ -443,8 +502,11 @@ expr.base
 	| name { $$ = $1; }
 	// | curry_arg { $$ = $1; }
 	| msgsend { $$ = $1; }
-	| OPENPAREN expr.seq CLOSEPAREN 
-		{ $$ = $2; }
+	| OPENPAREN block.contents[contents] semicolon.opt CLOSEPAREN 
+		{ 
+			auto blk = cxt.create(BlockNode{}, @$, cxt.create(DeclareArgumentList{}, @$), $contents);
+			$$ = cxt.create(MessageNode{MessageNode::SelectorMode::Value}, @$.flatten(), cxt.create(Missing{}, @$.flatten()), cxt.create(ArgumentList{}, @$, blk));
+		}
 	| TILDE name { $$ = cxt.create(EnvIdentifierNode{}, @$, $2); }
 
 	// | OPENPAREN valrange2 CLOSEPAREN
@@ -630,7 +692,7 @@ variable_declarations.list
 		{$$ = cxt.graph.append_to_list($1, $3); }
 	;
 
-variable_declarations : VAR variable_declarations.list comma.opt { $$ = $2; };
+variable_declarations : VAR variable_declarations.list { $$ = $2; };
 
 
 arguments.entries 	
@@ -683,7 +745,10 @@ literal.array.contents
 	;
 
 literal.dictionary.entry 
-	: expr.seq COLON expr.seq 
+	// This is a breaking change!
+	// Previously you could have ( 1;2;3;4;5;6; : 10). now the expr.seq is invalid, but you can have ((1;2;3;4): 10)
+	// This is necessary because of the scd format as (1;2;3;4;5;6;7;) is a valid file, and the parser would need infinite look ahead to figure out which is which.
+	: expr COLON expr.seq 
 		{ $$ = cxt.create(DictionaryEntryNode{}, @$, $1, $3); }
 	| KEYBINOP expr.seq 
 		{ $$ = cxt.create(DictionaryEntryNode{}, @$, cxt.create(SymbolNode{SymbolNode::Kind::KeyBinOp}, @1), $2); }

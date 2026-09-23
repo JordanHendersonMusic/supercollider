@@ -1,6 +1,5 @@
 
 add_library(sc_parser STATIC 
-	src/main.cpp
 	src/node_graph.cpp
 	src/sc_parser.cpp
 	src/sc_grammar_parser.cpp
