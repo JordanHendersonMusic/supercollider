@@ -1,6 +1,7 @@
 // Copyright Jordan Henderson 2026
 #pragma once
 
+#include "strong_index.hpp"
 #include <array>
 #include <cstddef>
 #include <limits>
@@ -91,6 +92,8 @@ namespace sc::util::typed_index {
 
 // This should be passed to every single template below.
 template <typename INDEX_TYPE, typename ENUM_SET, typename GraphTypeID = void> struct Spec {
+    static_assert(std::is_integral_v<INDEX_TYPE>);
+    static_assert(std::is_enum_v<ENUM_SET>);
     using IndexType = INDEX_TYPE;
     using EnumSet = ENUM_SET;
     // By providing a unique GraphID from each graph type, we ensure that indexes from different types of graph cannot
@@ -104,51 +107,11 @@ template <typename INDEX_TYPE, typename ENUM_SET, typename GraphTypeID = void> s
 // Indexs
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename SPEC> struct IndexT {
-    using IndexType = typename SPEC::IndexType;
-    constexpr IndexT(IndexType v) noexcept: m_value(v) {}
-    constexpr IndexT() = delete;
+template <typename SPEC> using IndexT = sc::util::StrongIndex<typename SPEC::IndexType, SPEC>;
 
-    constexpr IndexT(IndexT&&) noexcept = default;
-    constexpr IndexT(const IndexT&) noexcept = default;
-    constexpr IndexT& operator=(IndexT&&) noexcept = default;
-    constexpr IndexT& operator=(const IndexT&) noexcept = default;
-
-    [[nodiscard]] constexpr IndexType value() const noexcept { return m_value; }
-    [[nodiscard]] constexpr IndexType operator*() const noexcept { return m_value; }
-
-private:
-    IndexType m_value;
-};
-
-template <typename SPEC> struct OptionalIndexT {
-public:
-    using IndexType = typename SPEC::IndexType;
-    static constexpr IndexType invalid_value { std::numeric_limits<IndexType>::max() };
-
-    constexpr OptionalIndexT(IndexType v) noexcept: m_value(v) {}
-    constexpr OptionalIndexT() noexcept: m_value(invalid_value) {}
-    constexpr OptionalIndexT(IndexT<SPEC> i) noexcept: m_value(*i) {}
-
-    constexpr OptionalIndexT(OptionalIndexT&&) noexcept = default;
-    constexpr OptionalIndexT(const OptionalIndexT&) noexcept = default;
-    constexpr OptionalIndexT& operator=(OptionalIndexT&&) noexcept = default;
-    constexpr OptionalIndexT& operator=(const OptionalIndexT&) noexcept = default;
-
-
-    [[nodiscard]] constexpr explicit operator bool() const noexcept { return m_value != invalid_value; }
-
-    // The value() function is checked, but the de-ref isn't.
-    [[nodiscard]] constexpr IndexType value() const noexcept {
-        assert(*this);
-        return m_value;
-    }
-    [[nodiscard]] constexpr IndexType operator*() const noexcept { return m_value; }
-
-
-private:
-    IndexType m_value;
-};
+template <typename SPEC>
+using OptionalIndexT =
+    sc::util::StrongOptionalIndex<typename SPEC::IndexType, SPEC, std::numeric_limits<typename SPEC::IndexType>::max()>;
 
 
 template <typename SPEC> [[nodiscard]] inline constexpr OptionalIndexT<SPEC> as_optional(IndexT<SPEC> i) noexcept {
@@ -171,8 +134,11 @@ template <typename Enum, Enum ToCheck, Enum... ElementsInSet> [[nodiscard]] inli
     return ((ToCheck == ElementsInSet) || ...);
 }
 
+struct TypedIndexBase {};
+
 template <typename SPEC, typename INDEX_BASE, typename SPEC::EnumSet... ThisSet>
-struct TypedIndexHelper : public INDEX_BASE {
+struct TypedIndexHelper : public INDEX_BASE, public TypedIndexBase {
+    using UnderlyingIndex = INDEX_BASE;
     using EnumSet = typename SPEC::EnumSet;
     static_assert(sizeof...(ThisSet) > 0, "Must provide at least one 'Type' per TypedIndex.");
     static constexpr auto Possible { std::array<EnumSet, sizeof...(ThisSet)> { ThisSet... } };
@@ -198,6 +164,11 @@ struct TypedIndexHelper : public INDEX_BASE {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Helper Function Details
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T> [[nodiscard]] static constexpr bool is_type_set_index() {
+    return std::is_base_of_v<details::TypedIndexBase, T>;
+}
+
 
 namespace details::convertible {
 template <typename L, typename R> struct Convertible;

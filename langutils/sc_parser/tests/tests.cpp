@@ -41,7 +41,7 @@ const auto tester_base = [](const char* src, bool is_class_file) {
                                    for (size_t di { 0 }; di < depth; ++di)
                                        std::cout << "|  ";
 
-                                   std::cout << N::NodeCollection::get_name(payload) << ": ";
+                                   std::cout << N::NodeCollectionHelper::get_name(payload) << ": ";
 
                                    const auto [ptr, sz] = text_info->read(loc);
                                    for (size_t i { 0 }; i < sz; ++i) {
@@ -293,4 +293,6 @@ a.foo;
     tester("(var x = 10; x * 2)");
 
     tester("(|a| var x = 10; x * 2)");
+
+    tester("foo(this: 2, arg2: 10)");
 }

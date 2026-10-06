@@ -5,7 +5,7 @@
 
 void sc::parser::parser::report_syntax_error(const context& symbol_cxt) const {
     std::vector<symbol_kind_type> expected(12);
-    expected.resize(symbol_cxt.expected_tokens(expected.data(), 12));
+    expected.resize(static_cast<size_t>(symbol_cxt.expected_tokens(expected.data(), 12)));
 
     std::vector<int> expected_int(expected.size());
     std::transform(expected.begin(), expected.end(), expected_int.begin(),
@@ -15,7 +15,7 @@ void sc::parser::parser::report_syntax_error(const context& symbol_cxt) const {
                                                    static_cast<int>(symbol_cxt.lookahead().kind_) };
 }
 
-void sc::parser::parser::error(const sc::lex::SourceCodeRange& loc, const std::string& message) {
+void sc::parser::parser::error(const sc::lex::SourceCodeRange&, const std::string&) {
     // TODO: temporary code.
     ////////////////	cxt.error_handler->operator()(cxt.text_info, loc, message);
 }
@@ -32,7 +32,7 @@ void region_separator(ParserContext& cxt, sc ::lex::SourceCodeRange last_valid) 
     msg.append(highlight_ptr, highlight_sz);
     msg += ";'.";
     cxt.graph.add_diagnostic({ "Missing semicolon between regions.",
-                               { cxt.text_info, last_valid.end, last_valid.end },
+                               { cxt.text_info, { last_valid.end, last_valid.end } },
                                graph::Diagnostic::Severity::Warning,
                                msg });
 }
@@ -41,7 +41,7 @@ void expr(ParserContext& cxt) {
     using Symbol = sc::parser::parser::symbol_kind_type;
     auto unexpected = *cxt.consume_error();
     const auto got = static_cast<Symbol>(unexpected.got);
-    const sc::lex::SourceCodeRange& loc = unexpected.location;
+    // const sc::lex::SourceCodeRange& loc = unexpected.location;
 
     const char* got_name = sc::parser::parser::symbol_name(got);
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "typed_index.hpp"
+#include "type_set_index.hpp"
 #include <cstdint>
 
 namespace sc::parser {

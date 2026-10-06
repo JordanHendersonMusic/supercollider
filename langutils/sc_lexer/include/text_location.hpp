@@ -59,7 +59,7 @@ struct SourceCodeRange {
         return { begin, { begin.absolute + 1, begin.line_number, begin.column } };
     }
 
-    SourceCodeLocation begin, end;
+    SourceCodeLocation begin {}, end {};
 };
 
 // A range within an entire file
@@ -79,7 +79,7 @@ struct FileCodeRange {
         return { begin, { begin.absolute + 1, begin.line_number, begin.column } };
     }
 
-    FileCodeLocation begin, end;
+    FileCodeLocation begin {}, end {};
 };
 
 }

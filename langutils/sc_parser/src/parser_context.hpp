@@ -39,14 +39,14 @@ public:
     // Returned by sc::lex::lexer(...);
     struct Output {
         constexpr Output(ExtendedTokenType t, SourceCodeRange r,
-                         std::optional<SourceCodeRange> extra = std::nullopt) noexcept:
+                         std::optional<SourceCodeRange> e = std::nullopt) noexcept:
             token(static_cast<TokenType>(t)),
             range(r),
-            extra(extra) {}
-        constexpr Output(TokenType t, SourceCodeRange r, std::optional<SourceCodeRange> extra = std::nullopt) noexcept:
+            extra(e) {}
+        constexpr Output(TokenType t, SourceCodeRange r, std::optional<SourceCodeRange> e = std::nullopt) noexcept:
             token(t),
             range(r),
-            extra(extra) {}
+            extra(e) {}
 
         TokenType token;
         SourceCodeRange range;
@@ -138,7 +138,7 @@ struct ParserContext {
     std::optional<Action::Output> previous { std::nullopt };
     sc::parser::graph::NodeGraph graph {};
 
-    std::optional<UnexpectedToken> unexpected_token_error;
+    std::optional<UnexpectedToken> unexpected_token_error {};
 
     std::optional<UnexpectedToken> consume_error() { return std::move(unexpected_token_error); }
 

@@ -3,8 +3,9 @@
 
 #include "index.hpp"
 #include "indexes_typed.hpp"
-#include "node_base.hpp"
 #include "sc_grammar_shared.hpp"
+#include "typed_graph_node.hpp"
+#include "typed_graph.hpp"
 #include <cstdint>
 
 
@@ -69,80 +70,87 @@ change the definitions below.
 */
 
 namespace sc::parser::nodes {
+template <typename Index> using TerminalNode = sc::util::typed_graph_node::TerminalNode<Index>;
 
-struct Missing : public priv::TerminalNode<Missing, MissingIndex> {
+template <typename Index, typename ChildIndex> using ListNode = sc::util::typed_graph_node::ListNode<Index, ChildIndex>;
+
+template <class ThisTypedIndex, typename... CHILD_INDEXES>
+using Node = sc::util::typed_graph_node::Node<ThisTypedIndex, CHILD_INDEXES...>;
+
+
+struct Missing : public TerminalNode<MissingIndex> {
     static constexpr auto name { "Missing" };
 };
 
 // This one is confusing.
 // The Index type can be cast to from many of expression.
 // But this node is solely used for a collection of expressions.
-struct ExprSeq : priv::ListNode<ExprSeq, ExprSeqIndex, ExprSeqIndex> {
+struct ExprSeq : ListNode<ExprSeqIndex, ExprSeqIndex> {
     static constexpr auto name { "ExprSeq" };
 };
 
-struct IntNode : public priv::TerminalNode<IntNode, IntLitIndex> {
+struct IntNode : public TerminalNode<IntLitIndex> {
     static constexpr auto name { "IntNode" };
     enum struct Kind : std::uint8_t { Normal, Radix, Hexadecimal } kind;
     enum struct Sign { Positive, Negative } sign;
     constexpr IntNode(Kind i = Kind::Normal, Sign s = Sign::Positive): kind(i), sign(s) {}
 };
 
-struct FloatNode : public priv::TerminalNode<FloatNode, FloatLitIndex> {
+struct FloatNode : public TerminalNode<FloatLitIndex> {
     static constexpr auto name { "FloatNode" };
     enum struct Kind : std::uint8_t { Normal, Radix, Exponent, Pi, Inf } kind;
     enum struct Sign { Positive, Negative } sign;
     constexpr FloatNode(Kind i = Kind::Normal, Sign s = Sign::Positive): kind(i), sign(s) {}
 };
 
-struct PiNode : public priv::Node<PiNode(maybe<NumberIndex> multiplier), PiLitIndex> {
+struct PiNode : public Node<PiLitIndex(maybe<NumberIndex> multiplier)> {
     static constexpr auto name { "PiNode" };
     enum struct Sign { Positive, Negative } sign; // if the multiplier is signed, this is always positive.
     constexpr PiNode(Sign s = Sign::Positive): sign(s) {}
 };
 
-struct AccidentalNode : public priv::TerminalNode<AccidentalNode, AccidentalLitIndex> {
+struct AccidentalNode : public TerminalNode<AccidentalLitIndex> {
     static constexpr auto name { "AccidentalNode" };
     enum struct Kind { Steps, Cents } kind;
     enum struct Sign { Positive, Negative } sign;
     constexpr AccidentalNode(Kind k, Sign s = Sign::Positive): kind(k), sign(s) {}
 };
 
-struct StringLineNode : public priv::TerminalNode<StringLineNode, StringLineLitIndex> {
+struct StringLineNode : public TerminalNode<StringLineLitIndex> {
     static constexpr auto name { "StringLineNode" };
 };
 
 // This is the true string literal type
-struct StringLineList : public priv::ListNode<StringLineList, StringLitIndex, StringLineLitIndex> {
+struct StringLineList : public ListNode<StringLitIndex, StringLineLitIndex> {
     static constexpr auto name { "StringLineList" };
 };
 
-struct SymbolNode : public priv::TerminalNode<SymbolNode, SymbolLitIndex> {
+struct SymbolNode : public TerminalNode<SymbolLitIndex> {
     static constexpr auto name { "SymbolNode" };
     enum struct Kind { Quote, Slash, KeyBinOp } kind;
     constexpr SymbolNode(Kind k): kind(k) {}
 };
 
-struct BooleanNode : public priv::TerminalNode<BooleanNode, BooleanLitIndex> {
+struct BooleanNode : public TerminalNode<BooleanLitIndex> {
     static constexpr auto name { "BooleanNode" };
     bool value;
     constexpr BooleanNode(bool v): value(v) {}
 };
 
-struct NilNode : public priv::TerminalNode<NilNode, NilLitIndex> {
+struct NilNode : public TerminalNode<NilLitIndex> {
     static constexpr auto name { "NilNode" };
 };
 
-struct ASCIINode : public priv::TerminalNode<ASCIINode, ASCIIIndex> {
+struct ASCIINode : public TerminalNode<ASCIIIndex> {
     static constexpr auto name { "ASCIINode" };
 };
 
-struct CurryNode : public priv::TerminalNode<CurryNode, CurryIndex> {
+struct CurryNode : public TerminalNode<CurryIndex> {
     static constexpr auto name { "CurryNode" };
 };
 
 
-struct ArrayNode : public priv::ListNode<ArrayNode, ArrayIndex, ExprSeqIndex> {
+struct ArrayNode : public ListNode<ArrayIndex, ExprSeqIndex> {
     static constexpr auto name { "ArrayList" };
     // #[1, 2];
     // Previously, this would mean the compiler would create the array and you would just access it straight from the
@@ -152,196 +160,182 @@ struct ArrayNode : public priv::ListNode<ArrayNode, ArrayIndex, ExprSeqIndex> {
     bool is_immutable { false };
 };
 
-struct CollectionNode : public priv::Node<CollectionNode(ClassNameIdentifierIndex, ArrayIndex), CollectionIndex> {
+struct CollectionNode : public Node<CollectionIndex(ClassNameIdentifierIndex, ArrayIndex)> {
     static constexpr auto name { "CollectionNode" };
 };
 
-struct DictionaryEntryNode
-    : public priv::Node<DictionaryEntryNode(ExprSeqIndex key, ExprSeqIndex value), DictionaryEntryIndex> {
+struct DictionaryEntryNode : public Node<DictionaryEntryIndex(ExprSeqIndex key, ExprSeqIndex value)> {
     static constexpr auto name { "DictionaryEntryNode" };
 };
 
-struct DictionaryNode : public priv::ListNode<DictionaryNode, DictionaryIndex, DictionaryEntryIndex> {
+struct DictionaryNode : public ListNode<DictionaryIndex, DictionaryEntryIndex> {
     static constexpr auto name { "DictionaryNode" };
 };
 
-struct BlockList : public priv::ListNode<BlockList, BlockListIndex, BlockIndex> {
+struct BlockList : public ListNode<BlockListIndex, BlockIndex> {
     static constexpr auto name { "BlockList" };
 };
 
-struct NamedIdentifier : priv::TerminalNode<NamedIdentifier, NamedIdentifierIndex> {
+struct NamedIdentifier : TerminalNode<NamedIdentifierIndex> {
     static constexpr auto name { "NameNode" };
 };
 
-struct ClassNameIdentifier : priv::TerminalNode<ClassNameIdentifier, ClassNameIdentifierIndex> {
+struct ClassNameIdentifier : TerminalNode<ClassNameIdentifierIndex> {
     static constexpr auto name { "ClassNameIdentitier" };
 };
 
-struct PrimitiveIdentifier : priv::TerminalNode<PrimitiveIdentifier, PrimitiveIdentifierIndex> {
+struct PrimitiveIdentifier : TerminalNode<PrimitiveIdentifierIndex> {
     static constexpr auto name { "PrimitiveIdentifier" };
 };
 
-struct EnvIdentifierNode : priv::Node<EnvIdentifierNode(NamedIdentifierIndex), EnvIdentifierIndex> {
+struct EnvIdentifierNode : Node<EnvIdentifierIndex(NamedIdentifierIndex)> {
     static constexpr auto name { "EnvIdentifierNode" };
 };
 
-struct SelectorNode : priv::TerminalNode<SelectorNode, TypedIndex<NodeFlag::SelectorLiteral>> {
+struct SelectorNode : TerminalNode<TypedIndex<NodeFlag::SelectorLiteral>> {
     static constexpr auto name { "SelectorNode" };
     constexpr SelectorNode(bool infix = false) noexcept: is_infix_keyword(infix) {}
     bool is_infix_keyword;
 };
 
-struct SelectorWAdverb : priv::Node<SelectorWAdverb(SelectorIndex, AdverbIndex), SelectorWAdverbIndex> {
+struct SelectorWAdverb : Node<SelectorWAdverbIndex(SelectorIndex, AdverbIndex)> {
     static constexpr auto name { "SelectorNodeWithAdverb" };
 };
 
 
-struct VariadicArgNode : priv::Node<VariadicArgNode(ExprSeqIndex expr), VariadicArgIndex> {
+struct VariadicArgNode : Node<VariadicArgIndex(ExprSeqIndex expr)> {
     static constexpr auto name { "VariadicArgNode" };
 };
 
-struct ArgumentList : priv::ListNode<ArgumentList, ArgumentListIndex, ArgumentEntryIndex> {
+struct ArgumentList : ListNode<ArgumentListIndex, ArgumentEntryIndex> {
     static constexpr auto name { "ArgumentList" };
 };
 
-struct KwArgNode : priv::Node<KwArgNode(SymbolLitIndex keyword, ExprSeqIndex value), KwArgIndex> {
+struct KwArgNode : Node<KwArgIndex(SymbolLitIndex keyword, ExprSeqIndex value)> {
     static constexpr auto name { "KwArgNode" };
 };
 
-struct AdverbExprNode : priv::Node<AdverbExprNode(ExprSeqIndex), AdverbExprIndex> {
+struct AdverbExprNode : Node<AdverbExprIndex(ExprSeqIndex)> {
     static constexpr auto name { "AdverbExprNode" };
 };
 
-struct MessageNode
-    : priv::Node<MessageNode(maybe<SelectorMaybeAdverbIndex> selector, ArgumentListIndex args), MessageIndex> {
+struct MessageNode : Node<MessageIndex(maybe<SelectorMaybeAdverbIndex> selector, ArgumentListIndex args)> {
     static constexpr auto name { "MessageNode" };
     enum struct SelectorMode { SeeNode, Value, New, At } selector_mode;
     constexpr MessageNode(SelectorMode n = SelectorMode::SeeNode): selector_mode(n) {}
 };
+static_assert(MessageNode::number_of_children == 2);
 
-struct ReferenceNode : priv::Node<ReferenceNode(ExprSeqIndex), ReferenceIndex> {
+struct ReferenceNode : Node<ReferenceIndex(ExprSeqIndex)> {
     static constexpr auto name { "ReferenceNode" };
 };
 
-struct FunctionNode : priv::Node<FunctionNode(ExprSeqIndex body), FunctionLitIndex> {
-    static constexpr auto name { "FunctionNode" };
-};
 
-struct AssignmentNode : priv::Node<AssignmentNode(NamedIdentifierIndex name, ExprSeqIndex expr), AssignmentIndex> {
+struct AssignmentNode : Node<AssignmentIndex(NamedIdentifierIndex name, ExprSeqIndex expr)> {
     static constexpr auto name { "AssignmentNode" };
     enum struct Target { Normal, Environment } target;
     constexpr AssignmentNode(Target t = Target::Normal): target(t) {}
 };
 
 // This isn't a message node due to a nasty quirk in the grammar which was there in the original version.
-struct AssignmentAtNode
-    : priv::Node<AssignmentAtNode(ExprSeqIndex thing, ArgumentListIndex args, ExprSeqIndex value), AssignmentAtIndex> {
+struct AssignmentAtNode : Node<AssignmentAtIndex(ExprSeqIndex thing, ArgumentListIndex args, ExprSeqIndex value)> {
     static constexpr auto name { "AssignmentAt" };
 };
 
 struct SetterNode
-    : priv::Node<SetterNode(join<ArgumentListIndex, ExprSeqIndex> thing, NamedIdentifierIndex name, ExprSeqIndex value),
-                 SetterIndex> {
+    : Node<SetterIndex(join<ArgumentListIndex, ExprSeqIndex> thing, NamedIdentifierIndex name, ExprSeqIndex value)> {
     static constexpr auto name { "SetterNode" };
 };
 
-struct DeclareArgumentWithDefaultNode
-    : priv::Node<DeclareArgumentWithDefaultNode(NamedIdentifierIndex, ExprSeqIndex), DeclareArgumentWithDefaultIndex> {
+struct DeclareArgumentWithDefaultNode : Node<DeclareArgumentWithDefaultIndex(NamedIdentifierIndex, ExprSeqIndex)> {
     static constexpr auto name { "DeclareArgumentWithDefaultNode" };
     bool preserve_nil { false };
-    constexpr DeclareArgumentWithDefaultNode(bool preserve_nil = false): preserve_nil(preserve_nil) {}
+    constexpr DeclareArgumentWithDefaultNode(bool nil = false): preserve_nil(nil) {}
 };
 
-struct DeclareArgumentVariadicNode
-    : priv::Node<DeclareArgumentVariadicNode(NamedIdentifierIndex), DeclareArgumentVariadicIndex> {
+struct DeclareArgumentVariadicNode : Node<DeclareArgumentVariadicIndex(NamedIdentifierIndex)> {
     static constexpr auto name { "DeclareArgumentVariadicNode" };
 };
 
-struct DeclareArgumentList : priv::ListNode<DeclareArgumentList, DeclareArgumentListIndex, DeclareAnyArgumentIndex> {
+struct DeclareArgumentList : ListNode<DeclareArgumentListIndex, DeclareAnyArgumentIndex> {
     static constexpr auto name { "DeclareArgumentList" };
 };
 
-struct DeclareVariableWithDefaultNode
-    : priv::Node<DeclareVariableWithDefaultNode(NamedIdentifierIndex, ExprSeqIndex), DeclareVariableWithDefaultIndex> {
+struct DeclareVariableWithDefaultNode : Node<DeclareVariableWithDefaultIndex(NamedIdentifierIndex, ExprSeqIndex)> {
     static constexpr auto name { "DeclareVariableWithDefaultNode" };
 };
 
-struct DeclareVariableList : priv::ListNode<DeclareVariableList, DeclareVariableListIndex, DeclareAnyVariableIndex> {
+struct DeclareVariableList : ListNode<DeclareVariableListIndex, DeclareAnyVariableIndex> {
     static constexpr auto name { "DeclareVariableList" };
 };
 
-struct BlockContentsList : priv::ListNode<BlockContentsList, BlockContentsListIndex, BlockItemIndex> {
+struct BlockContentsList : ListNode<BlockContentsListIndex, BlockItemIndex> {
     static constexpr auto name { "BlockContentsList" };
 };
 
-struct BlockNode : priv::Node<BlockNode(DeclareArgumentListIndex, maybe<BlockContentsListIndex>), BlockIndex> {
+struct BlockNode : Node<BlockIndex(DeclareArgumentListIndex, maybe<BlockContentsListIndex>)> {
     static constexpr auto name { "BlockNode" };
 };
 
-struct NonLocalReturnExpr : priv::Node<NonLocalReturnExpr(ExprSeqIndex), NonLocalReturnExprIndex> {
+struct NonLocalReturnExpr : Node<NonLocalReturnExprIndex(ExprSeqIndex)> {
     static constexpr auto name { "NonLocalReturnExpr" };
 };
 
-struct Method : priv::Node<Method(MethodNameIndex, DeclareArgumentListIndex, maybe<PrimitiveIdentifierIndex>,
-                                  BlockContentsListIndex),
-                           MethodIndex> {
+struct Method : Node<MethodIndex(MethodNameIndex, DeclareArgumentListIndex, maybe<PrimitiveIdentifierIndex>,
+                                 BlockContentsListIndex)> {
     static constexpr auto name { "Method" };
 };
 
-struct ClassMethod : priv::Node<Method(MethodNameIndex, DeclareArgumentListIndex, maybe<PrimitiveIdentifierIndex>,
-                                       BlockContentsListIndex),
-                                ClassMethodIndex> {
+struct ClassMethod : Node<ClassMethodIndex(MethodNameIndex, DeclareArgumentListIndex, maybe<PrimitiveIdentifierIndex>,
+                                           BlockContentsListIndex)> {
     static constexpr auto name { "ClassMethod" };
 };
 
 
-struct MethodList : priv::ListNode<MethodList, MethodListIndex, AnyMethodIndex> {
+struct MethodList : ListNode<MethodListIndex, AnyMethodIndex> {
     static constexpr auto name { "MethodList" };
 };
 
-struct DeclareClassVar : priv::Node<DeclareClassVar(DeclareAnyVariableIndex), DeclareClassVarIndex> {
+struct DeclareClassVar : Node<DeclareClassVarIndex(DeclareAnyVariableIndex)> {
     static constexpr auto name { "DeclareClassVar" };
     constexpr DeclareClassVar(ReadWriteAccessor rw = ReadWriteAccessor::Private): accessor(rw) {}
     ReadWriteAccessor accessor;
 };
 
-struct DeclareMemberList : priv::ListNode<DeclareMemberList, DeclareMemberListIndex, DeclareClassVarIndex> {
+struct DeclareMemberList : ListNode<DeclareMemberListIndex, DeclareClassVarIndex> {
     static constexpr auto name { "DeclareClassVarList" };
 };
 
-struct DeclareClassMemberList
-    : priv::ListNode<DeclareClassMemberList, DeclareClassMemberListIndex, DeclareClassVarIndex> {
+struct DeclareClassMemberList : ListNode<DeclareClassMemberListIndex, DeclareClassVarIndex> {
     static constexpr auto name { "DeclareClassVarList" };
 };
 
-struct DeclareConstList : priv::ListNode<DeclareConstList, DeclareConstListIndex, DeclareClassVarIndex> {
+struct DeclareConstList : ListNode<DeclareConstListIndex, DeclareClassVarIndex> {
     static constexpr auto name { "DeclareClassVarList" };
 };
 
-struct ClassAnyVarList : priv::ListNode<ClassAnyVarList, DeclareClassAnyVarListIndex, DeclareAnyList> {
+struct ClassAnyVarList : ListNode<DeclareClassAnyVarListIndex, DeclareAnyList> {
     static constexpr auto name { "ClassVarList" };
 };
 struct Class
-    : priv::Node<Class(NamedIdentifierIndex name, maybe<NamedIdentifierIndex> slot,
-                       maybe<ClassNameIdentifierIndex> super, DeclareClassAnyVarListIndex vars, MethodListIndex meths),
-                 ClassIndex> {
+    : Node<ClassIndex(NamedIdentifierIndex name, maybe<NamedIdentifierIndex> slot,
+                      maybe<ClassNameIdentifierIndex> super, DeclareClassAnyVarListIndex vars, MethodListIndex meths)> {
     static constexpr auto name { "Class" };
 };
 
-struct ClassExtension
-    : priv::Node<ClassExtension(NamedIdentifierIndex name, MethodListIndex meths), ClassExtensionIndex> {
+struct ClassExtension : Node<ClassExtensionIndex(NamedIdentifierIndex name, MethodListIndex meths)> {
     static constexpr auto name { "ClassExtension" };
 };
 
-struct ClassOrExtensionList : priv::ListNode<ClassOrExtensionList, ClassOrExtensionListIndex, ClassOrExtensionIndex> {
+struct ClassOrExtensionList : ListNode<ClassOrExtensionListIndex, ClassOrExtensionIndex> {
     static constexpr auto name { "ClassOrExtensionList" };
 };
 
-struct RegionList : priv::ListNode<RegionList, RegionListIndex, error_index<ExprSeqIndex>> {
+struct RegionList : ListNode<RegionListIndex, error_index<ExprSeqIndex>> {
     static constexpr auto name { "RegionList" };
 };
 
-struct Error : priv::ListNode<Error, ErrorIndex, AnyIndex> {
+struct Error : ListNode<ErrorIndex, AnyIndex> {
     static constexpr auto name { "Error" };
 };
 
@@ -349,20 +343,13 @@ struct Error : priv::ListNode<Error, ErrorIndex, AnyIndex> {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-using NodeCollection = priv::IRNodeCollectionHelper<
+using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper<
     Missing, ASCIINode, IntNode, FloatNode, PiNode, AccidentalNode, StringLineNode, StringLineList, SymbolNode,
     BooleanNode, NilNode, CurryNode, BlockList, ArrayNode, NamedIdentifier, PrimitiveIdentifier, ClassNameIdentifier,
     EnvIdentifierNode, SelectorNode, SelectorWAdverb, VariadicArgNode, ArgumentList, BlockNode, KwArgNode, ExprSeq,
-    MessageNode, FunctionNode, AdverbExprNode, ReferenceNode, AssignmentNode, AssignmentAtNode, SetterNode,
-    DictionaryNode, DictionaryEntryNode, CollectionNode, DeclareArgumentWithDefaultNode, DeclareArgumentVariadicNode,
+    MessageNode, AdverbExprNode, ReferenceNode, AssignmentNode, AssignmentAtNode, SetterNode, DictionaryNode,
+    DictionaryEntryNode, CollectionNode, DeclareArgumentWithDefaultNode, DeclareArgumentVariadicNode,
     DeclareArgumentList, DeclareVariableWithDefaultNode, DeclareVariableList, BlockContentsList, NonLocalReturnExpr,
     Method, ClassMethod, Class, ClassExtension, ClassAnyVarList, DeclareMemberList, DeclareClassMemberList,
     DeclareConstList, DeclareClassVar, MethodList, ClassOrExtensionList, RegionList, Error>;
-
-using NodeVariant = NodeCollection::variant;
-// Useful for meta programming
-using NodeTuple = NodeCollection::tuple;
-
-static_assert(NodeCollection::has_node<MessageNode::IndexType>());
-static_assert(NodeCollection::has_node<KwArgNode::IndexType>());
 };

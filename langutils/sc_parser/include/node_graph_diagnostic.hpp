@@ -41,7 +41,7 @@ public:
     [[nodiscard]] const char* name() const { return m_name; }
 
     friend std::ostream& operator<<(std::ostream& s, const Diagnostic& d) {
-        const auto [ptr, sz] = d.m_location.text_info->read(d.m_location.range);
+        //      const auto [ptr, sz] = d.m_location.text_info->read(d.m_location.range);
         const auto& str = d.m_location.text_info->source.as_string();
         s << d.name() << '\n';
         s << str << '\n';

@@ -25,7 +25,6 @@ using AccidentalLitIndex = TypedIndex<NodeFlag::AccidentalLiteral>;
 using StringLineLitIndex = TypedIndex<NodeFlag::StringLineLiteral>;
 using StringLitIndex = TypedIndex<NodeFlag::StringLiteral>;
 
-using FunctionLitIndex = TypedIndex<NodeFlag::FunctionLiteral>;
 using ArrayLitIndex = TypedIndex<NodeFlag::ArrayLiteral>;
 using SymbolLitIndex = TypedIndex<NodeFlag::SymbolLiteral>;
 using BooleanLitIndex = TypedIndex<NodeFlag::BooleanLiteral>;
@@ -40,8 +39,8 @@ using BlockIndex = TypedIndex<NodeFlag::BlockLiteral>;
 using BlockListIndex = TypedIndex<NodeFlag::BlockList>;
 
 using AnyLiteralIndex =
-    join<ASCIIIndex, IntLitIndex, FloatProducingIndex, StringLitIndex, FunctionLitIndex, ArrayLitIndex, BooleanLitIndex,
-         NilLitIndex, SymbolLitIndex, BlockIndex, ArrayIndex, DictionaryIndex, CollectionIndex>;
+    join<ASCIIIndex, IntLitIndex, FloatProducingIndex, StringLitIndex, ArrayLitIndex, BooleanLitIndex, NilLitIndex,
+         SymbolLitIndex, BlockIndex, ArrayIndex, DictionaryIndex, CollectionIndex>;
 
 using ClassNameIdentifierIndex = TypedIndex<NodeFlag::ClassNameIdentifier>;
 using NamedIdentifierIndex = TypedIndex<NodeFlag::NameIdentifier>;
