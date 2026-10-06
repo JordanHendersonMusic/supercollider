@@ -2480,9 +2480,9 @@ int parser::parse() {
                 {
                     if (yystack_[1].location.end.line_number != yystack_[0].location.begin.line_number) {
                         auto first_child =
-                            cxt.graph.get_edges(*yystack_[1].value.as<RegionListIndex>()).first_child.value();
-                        auto last_child = cxt.graph.get_edges(Index { first_child }).last_sibling;
-                        auto loc = cxt.graph.get_location(last_child ? Index { *last_child } : Index { first_child });
+                            cxt.graph.edges(*yystack_[1].value.as<RegionListIndex>()).first_child.value();
+                        auto last_child = cxt.graph.edges(Index { first_child }).last_sibling;
+                        auto loc = cxt.graph.location(last_child ? Index { *last_child } : Index { first_child });
                         error_recovery::region_separator(cxt, loc);
                         cxt.region_recovery = sc::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
                         static_assert(std::is_same_v<decltype(yyerrstatus_), int>);
@@ -2900,7 +2900,7 @@ int parser::parse() {
                     if (yystack_[0].value.as<BlockListIndex>()) {
                         cxt.graph.merge_list(yystack_[2].value.as<ArgumentListIndex>(),
                                              yystack_[0].value.as<BlockListIndex>());
-                        cxt.graph.get_location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                        cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
                             yystack_[2].location.begin, yystack_[0].location.end
                         }; // spans arguments and block list
                     }
@@ -2937,7 +2937,7 @@ int parser::parse() {
                     if (yystack_[0].value.as<BlockListIndex>()) {
                         cxt.graph.merge_list(yystack_[2].value.as<ArgumentListIndex>(),
                                              yystack_[0].value.as<BlockListIndex>());
-                        cxt.graph.get_location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                        cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
                             yystack_[2].location.begin, yystack_[0].location.end
                         }; // spans arguments and block list
                     }
@@ -2974,13 +2974,13 @@ int parser::parse() {
                     if (yystack_[0].value.as<BlockListIndex>()) {
                         cxt.graph.merge_list(yystack_[1].value.as<ArgumentListIndex>(),
                                              yystack_[0].value.as<BlockListIndex>());
-                        cxt.graph.get_location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                        cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
                             yystack_[1].location.begin, yystack_[0].location.end
                         }; // spans arguments and block list
                     }
                     cxt.graph.prepend_to_list(yystack_[1].value.as<ArgumentListIndex>(),
                                               yystack_[4].value.as<ExprSeqIndex>()); // put the receiver in place
-                    cxt.graph.get_location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                    cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
                         yystack_[4].location.begin, yystack_[1].location.end
                     }; // spans arguments and block list
                     yylhs.value.as<ExprSeqIndex>() =
@@ -2996,13 +2996,13 @@ int parser::parse() {
                     if (yystack_[0].value.as<BlockListIndex>()) {
                         cxt.graph.merge_list(yystack_[1].value.as<ArgumentListIndex>(),
                                              yystack_[0].value.as<BlockListIndex>());
-                        cxt.graph.get_location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                        cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
                             yystack_[1].location.begin, yystack_[0].location.end
                         }; // spans arguments and block list
                     }
                     cxt.graph.prepend_to_list(yystack_[1].value.as<ArgumentListIndex>(),
                                               yystack_[3].value.as<ExprSeqIndex>()); // put the receiver in place
-                    cxt.graph.get_location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                    cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
                         yystack_[3].location.begin, yystack_[1].location.end
                     }; // spans arguments and block list
                     yylhs.value.as<ExprSeqIndex>() = cxt.create(
@@ -3063,14 +3063,14 @@ int parser::parse() {
                     if (yystack_[0].value.as<BlockListIndex>()) {
                         cxt.graph.merge_list(yystack_[2].value.as<ArgumentListIndex>(),
                                              yystack_[0].value.as<BlockListIndex>());
-                        cxt.graph.get_location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                        cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
                             yystack_[2].location.begin, yystack_[0].location.end
                         }; // spans arguments and block list
                     }
                     cxt.graph.prepend_to_list(
                         yystack_[2].value.as<ArgumentListIndex>(),
                         cxt.create(ClassNameIdentifier {}, yystack_[4].location)); // put the receiver in place
-                    cxt.graph.get_location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                    cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
                         yystack_[2].location.begin, yystack_[0].location.end
                     }; // spans arguments and block list
                     yylhs.value.as<ExprSeqIndex>() = cxt.create(
@@ -3145,7 +3145,7 @@ int parser::parse() {
                 {
                     cxt.graph.prepend_to_list(yystack_[1].value.as<ArgumentListIndex>(),
                                               yystack_[3].value.as<ExprSeqIndex>()); // put receiver in place.
-                    cxt.graph.get_location(*yystack_[1].value.as<ArgumentListIndex>()) = yylhs.location;
+                    cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = yylhs.location;
                     yylhs.value.as<ExprSeqIndex>() = cxt.create(
                         MessageNode { MessageNode::SelectorMode::At }, yylhs.location,
                         cxt.create(Missing {}, yystack_[2].location), yystack_[1].value.as<ArgumentListIndex>());
@@ -3317,7 +3317,7 @@ int parser::parse() {
                     // This piece of logic is here because exprs can contain expr.seq, so we avoid creating the list
                     // node if we can.
                     if (cxt.graph.is_a<ExprSeqIndex>(*yystack_[2].value.as<ExprSeqIndex>())) {
-                        cxt.graph.get_location(*yystack_[2].value.as<ExprSeqIndex>()) =
+                        cxt.graph.location(*yystack_[2].value.as<ExprSeqIndex>()) =
                             yylhs.location; // updates the location of the list
                         cxt.graph.append_to_list(yystack_[2].value.as<ExprSeqIndex>(),
                                                  yystack_[0].value.as<ExprSeqIndex>()); // appends to the list
@@ -3981,7 +3981,7 @@ int parser::parse() {
                 case 163: // literal.dictionary: OPENPAREN literal.dictionary.entries comma.opt CLOSEPAREN
 #line 768 "langutils/sc_parser/src/sc_grammar.y"
                 {
-                    cxt.graph.get_location(*yystack_[2].value.as<DictionaryIndex>()) = yylhs.location;
+                    cxt.graph.location(*yystack_[2].value.as<DictionaryIndex>()) = yylhs.location;
                     yylhs.value.as<DictionaryIndex>() = yystack_[2].value.as<DictionaryIndex>();
                 }
 #line 3580 "langutils/sc_parser/src/sc_grammar_parser.cpp"
@@ -3990,7 +3990,7 @@ int parser::parse() {
                 case 164: // literal.array: OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
 #line 773 "langutils/sc_parser/src/sc_grammar.y"
                 {
-                    cxt.graph.get_location(*yystack_[2].value.as<ArrayIndex>()) = yylhs.location;
+                    cxt.graph.location(*yystack_[2].value.as<ArrayIndex>()) = yylhs.location;
                     yylhs.value.as<ArrayIndex>() = yystack_[2].value.as<ArrayIndex>();
                 }
 #line 3586 "langutils/sc_parser/src/sc_grammar_parser.cpp"
@@ -3999,8 +3999,8 @@ int parser::parse() {
                 case 165: // literal.array: HASH OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
 #line 775 "langutils/sc_parser/src/sc_grammar.y"
                 {
-                    cxt.graph.get_payload(yystack_[2].value.as<ArrayIndex>()).is_immutable = true;
-                    cxt.graph.get_location(*yystack_[2].value.as<ArrayIndex>()) = yylhs.location;
+                    cxt.graph.payload(yystack_[2].value.as<ArrayIndex>()).is_immutable = true;
+                    cxt.graph.location(*yystack_[2].value.as<ArrayIndex>()) = yylhs.location;
                     yylhs.value.as<ArrayIndex>() = yystack_[2].value.as<ArrayIndex>();
                 }
 #line 3596 "langutils/sc_parser/src/sc_grammar_parser.cpp"
@@ -4232,7 +4232,7 @@ int parser::parse() {
 #line 846 "langutils/sc_parser/src/sc_grammar.y"
                 {
                     // Reaches into the previous integer and changes its sign.
-                    cxt.graph.get_payload(yystack_[0].value.as<IntLitIndex>()).sign = IntNode::Sign::Negative;
+                    cxt.graph.payload(yystack_[0].value.as<IntLitIndex>()).sign = IntNode::Sign::Negative;
                     yylhs.value.as<IntLitIndex>() = yystack_[0].value.as<IntLitIndex>();
                 }
 #line 3768 "langutils/sc_parser/src/sc_grammar_parser.cpp"
@@ -4282,7 +4282,7 @@ int parser::parse() {
                 case 203: // float.raw: MINUS float.raw_unsigned
 #line 864 "langutils/sc_parser/src/sc_grammar.y"
                 {
-                    cxt.graph.get_payload(yystack_[0].value.as<FloatLitIndex>()).sign = FloatNode::Sign::Negative;
+                    cxt.graph.payload(yystack_[0].value.as<FloatLitIndex>()).sign = FloatNode::Sign::Negative;
                     yylhs.value.as<FloatLitIndex>() = yystack_[0].value.as<FloatLitIndex>();
                 }
 #line 3804 "langutils/sc_parser/src/sc_grammar_parser.cpp"
@@ -4317,8 +4317,7 @@ int parser::parse() {
                 case 207: // accidental: MINUS accidental.unsigned
 #line 878 "langutils/sc_parser/src/sc_grammar.y"
                 {
-                    cxt.graph.get_payload(yystack_[0].value.as<AccidentalLitIndex>()).sign =
-                        AccidentalNode::Sign::Negative;
+                    cxt.graph.payload(yystack_[0].value.as<AccidentalLitIndex>()).sign = AccidentalNode::Sign::Negative;
                     yylhs.value.as<AccidentalLitIndex>() = yystack_[0].value.as<AccidentalLitIndex>();
                 }
 #line 3828 "langutils/sc_parser/src/sc_grammar_parser.cpp"

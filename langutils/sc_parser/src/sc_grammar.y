@@ -250,9 +250,9 @@ region
 	| region[r] error[e] 
 		{
 			if (@r.end.line_number != @e.begin.line_number){
-				auto first_child = cxt.graph.get_edges(*$r).first_child.value();
-				auto last_child = cxt.graph.get_edges(Index{first_child}).last_sibling;
-				auto loc = cxt.graph.get_location(last_child ? Index{*last_child} : Index{first_child});
+				auto first_child = cxt.graph.edges(*$r).first_child.value();
+				auto last_child = cxt.graph.edges(Index{first_child}).last_sibling;
+				auto loc = cxt.graph.location(last_child ? Index{*last_child} : Index{first_child});
 				error_recovery::region_separator(cxt, loc);
 				cxt.region_recovery = sc::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
 				static_assert(std::is_same_v<decltype(yyerrstatus_), int>);
@@ -404,7 +404,7 @@ msgsend
 		{
 			if ($blocks) {
 				cxt.graph.merge_list($args, $blocks);
-				cxt.graph.get_location(*$args) = {@args.begin, @blocks.end}; // spans arguments and block list
+				cxt.graph.location(*$args) = {@args.begin, @blocks.end}; // spans arguments and block list
 			}
 			$$ = cxt.create(MessageNode{}, @$, $selector, $args);
 		}
@@ -420,7 +420,7 @@ msgsend
 		{ 
 			if($5){
 				cxt.graph.merge_list($3, $5);
-				cxt.graph.get_location(*$3) = {@3.begin, @5.end}; // spans arguments and block list
+				cxt.graph.location(*$3) = {@3.begin, @5.end}; // spans arguments and block list
 			}
 			$$ = cxt.create(MessageNode{}, @$, $1, $3); 
 		}
@@ -435,10 +435,10 @@ msgsend
 		{ 
 			if ($5) {
 				cxt.graph.merge_list($4, $5);
-				cxt.graph.get_location(*$4) = {@4.begin, @5.end}; // spans arguments and block list
+				cxt.graph.location(*$4) = {@4.begin, @5.end}; // spans arguments and block list
 			}
 			cxt.graph.prepend_to_list($4, $1); // put the receiver in place
-			cxt.graph.get_location(*$4) = {@1.begin, @4.end}; // spans arguments and block list
+			cxt.graph.location(*$4) = {@1.begin, @4.end}; // spans arguments and block list
 			$$ = cxt.create(MessageNode{}, @$, $3, $4);
 		}
 
@@ -446,10 +446,10 @@ msgsend
 		{ 
 			if ($4) {
 				cxt.graph.merge_list($3, $4);
-				cxt.graph.get_location(*$3) = {@3.begin, @4.end}; // spans arguments and block list
+				cxt.graph.location(*$3) = {@3.begin, @4.end}; // spans arguments and block list
 			}
 			cxt.graph.prepend_to_list($3, $1); // put the receiver in place
-			cxt.graph.get_location(*$3) = {@1.begin, @3.end}; // spans arguments and block list
+			cxt.graph.location(*$3) = {@1.begin, @3.end}; // spans arguments and block list
 			$$ = cxt.create(MessageNode{MessageNode::SelectorMode::Value}, @$, cxt.create(Missing{}, @2), $3);
 		}
 	| expr[rec] DOT OPENPAREN CLOSEPAREN block.opt_list[blocks]
@@ -480,10 +480,10 @@ msgsend
 		{
 			if ($blocks) {
 				cxt.graph.merge_list($args, $blocks);
-				cxt.graph.get_location(*$args) = {@args.begin, @blocks.end}; // spans arguments and block list
+				cxt.graph.location(*$args) = {@args.begin, @blocks.end}; // spans arguments and block list
 			}
 			cxt.graph.prepend_to_list($args, cxt.create(ClassNameIdentifier{}, @1)); // put the receiver in place
-			cxt.graph.get_location(*$args) = {@args.begin, @blocks.end}; // spans arguments and block list
+			cxt.graph.location(*$args) = {@args.begin, @blocks.end}; // spans arguments and block list
 			$$ = cxt.create(MessageNode{MessageNode::SelectorMode::New}, @$, cxt.create(Missing{}, @1), $args);
 		}
 
@@ -515,7 +515,7 @@ expr.base
 	| expr.base OPENSQUARE arguments CLOSESQUARE
 		{ 
 			cxt.graph.prepend_to_list($3, $1); // put receiver in place.
-			cxt.graph.get_location(*$3) = @$;
+			cxt.graph.location(*$3) = @$;
 			$$ = cxt.create(MessageNode{MessageNode::SelectorMode::At}, @$, cxt.create(Missing{}, @2), $3); 
 		}
 
@@ -589,7 +589,7 @@ expr.seq.base
 		{
 			// This piece of logic is here because exprs can contain expr.seq, so we avoid creating the list node if we can.
 			if(cxt.graph.is_a<ExprSeqIndex>(*$1)) {
-				cxt.graph.get_location(*$1) = @$; // updates the location of the list
+				cxt.graph.location(*$1) = @$; // updates the location of the list
 				cxt.graph.append_to_list($1, $3); // appends to the list
 				$$ = $1;
 			} else {
@@ -765,16 +765,16 @@ literal.dictionary.entries
 
 literal.dictionary 
 	: OPENPAREN literal.dictionary.entries comma.opt CLOSEPAREN 
-		{ cxt.graph.get_location(*$2) = @$; $$ = $2; }
+		{ cxt.graph.location(*$2) = @$; $$ = $2; }
 	;
 
 literal.array	
 	: OPENSQUARE literal.array.contents comma.opt CLOSESQUARE 
-		{  cxt.graph.get_location(*$2) = @$; $$ = $2; }	
+		{  cxt.graph.location(*$2) = @$; $$ = $2; }	
 	| HASH OPENSQUARE literal.array.contents comma.opt CLOSESQUARE 
 		{  
-			cxt.graph.get_payload($3).is_immutable = true;
-			cxt.graph.get_location(*$3) = @$;
+			cxt.graph.payload($3).is_immutable = true;
+			cxt.graph.location(*$3) = @$;
 			$$ = $3;
 		}	
 	;
@@ -845,7 +845,7 @@ integer
 	| MINUS integer %prec UMINUS 
 		{
 			// Reaches into the previous integer and changes its sign.
-			cxt.graph.get_payload($2).sign = IntNode::Sign::Negative;
+			cxt.graph.payload($2).sign = IntNode::Sign::Negative;
 			$$ = $2;
 		}
 	;
@@ -861,7 +861,7 @@ float.raw
 	: float.raw_unsigned 
 		{ $$ = $1; }
 	| MINUS float.raw_unsigned %prec UMINUS 
-		{ cxt.graph.get_payload($2).sign = FloatNode::Sign::Negative; $$ = $2; }
+		{ cxt.graph.payload($2).sign = FloatNode::Sign::Negative; $$ = $2; }
 	;
 
 accidental.unsigned 
@@ -875,7 +875,7 @@ accidental
 	: accidental.unsigned 
 		{ $$ = $1; }
 	| MINUS accidental.unsigned %prec UMINUS 
-		{ cxt.graph.get_payload($2).sign = AccidentalNode::Sign::Negative; $$ = $2; }
+		{ cxt.graph.payload($2).sign = AccidentalNode::Sign::Negative; $$ = $2; }
 	;
 
 float	
