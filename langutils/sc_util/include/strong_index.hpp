@@ -16,12 +16,16 @@ template <typename UNDERLYING, typename TAG> struct StrongIndex {
     [[nodiscard]] constexpr Underlying operator*() const { return m_value; }
     [[nodiscard]] constexpr Underlying value() const { return m_value; }
 
+    [[nodiscard]] constexpr bool operator==(StrongIndex<UNDERLYING, TAG> other) const {
+        return m_value == other.m_value;
+    }
+
     struct Hasher {
         std::size_t operator()(const StrongIndex<Underlying, TAG>& k) const { return std::hash<Underlying>()(*k); }
     };
 
 private:
-    Underlying m_value;
+    Underlying m_value {};
 };
 
 template <typename UNDERLYING, typename TAG, UNDERLYING INVALID_VALUE> struct StrongOptionalIndex {
@@ -43,12 +47,15 @@ template <typename UNDERLYING, typename TAG, UNDERLYING INVALID_VALUE> struct St
     [[nodiscard]] constexpr Underlying value() const { return m_value; }
     [[nodiscard]] constexpr operator bool() const { return m_value != INVALID_VALUE; }
 
+    [[nodiscard]] constexpr bool operator==(StrongOptionalIndex<UNDERLYING, TAG, INVALID_VALUE> other) const {
+        return m_value == other.m_value;
+    }
     struct Hasher {
         std::size_t operator()(const StrongIndex<Underlying, TAG>& k) const { return std::hash<Underlying>()(*k); }
     };
 
 private:
-    Underlying m_value;
+    Underlying m_value { INVALID_VALUE };
 };
 
 template <typename T, typename Y> [[nodiscard]] static constexpr bool is_a_pair() {

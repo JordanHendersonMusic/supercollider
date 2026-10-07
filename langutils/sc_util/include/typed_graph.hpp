@@ -3,8 +3,11 @@
 #include "strong_index.hpp"
 #include "type_set_index.hpp"
 #include "typed_graph_node.hpp"
+#include <algorithm>
+#include <functional>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -140,7 +143,12 @@ public: // This is meant to be privately inherited from.
 
     ////////////////////////////////////////////////////////////////////////////////
     using UntypedNodeIndex = typename Helper::UntypedStrongIndex;
-    // Unfortunately, some times the node indexs need to be optional.
+    using Variant = typename Helper::Variant;
+
+    template <typename I>
+    using NodeTypeFromIndex = typename decltype(Helper::template get_node_type_from_index_type<I>())::type;
+
+    // Unfortunately, some times the node indexes need to be optional.
     static constexpr bool NodesAreOptional = std::is_same_v<UntypedNodeIndex, OptIndex>;
 
     // Additionally, the last_sibling is stored in a separate header as it is only needed when inserting, not when
@@ -153,10 +161,11 @@ public: // This is meant to be privately inherited from.
     // The data.
     ////////////////////////////////////////////////////////////////////////////////
 
-    std::vector<std::size_t> m_dead_nodes;
-    std::vector<Edges> m_edges;
-    std::vector<OptIndex> m_last_child;
-    std::vector<typename Helper::Variant> m_node_payload;
+    std::vector<std::size_t> m_dead_nodes {};
+    std::vector<Edges> m_edges {};
+    std::vector<OptIndex> m_last_child {};
+    std::vector<typename Helper::Variant> m_node_payload {};
+    std::vector<Index> m_orphans {};
 
     ////////////////////////////////////////////////////////////////////////////////
     // Create
@@ -173,8 +182,8 @@ public: // This is meant to be privately inherited from.
               typename = std::enable_if<Helper::template has_node<Node>()>, //
               typename = std::enable_if<(std::is_convertible_v<ChildrenIndexes, UntypedNodeIndex> && ...)> //
               >
-    [[nodiscard]] typename Node::Index create(Node node, ChildrenIndexes&&... child_indexes) {
-        static_assert(Node::template is_constructible<ChildrenIndexes...>(),
+    [[nodiscard]] typename Node::Index create(Node&& node, ChildrenIndexes&&... child_indexes) {
+        static_assert(Node::template constructible_from<ChildrenIndexes...>(),
                       "The children index types do not match the constructor");
         const typename Node::Index index = [&]() {
             if (m_dead_nodes.empty()) {
@@ -182,29 +191,50 @@ public: // This is meant to be privately inherited from.
                 m_node_payload.push_back(std::move(node));
                 m_edges.push_back({});
                 m_last_child.push_back({});
-                return Node::Index(index_raw);
+                return index_raw;
             } else {
-                const auto index_raw = m_dead_nodes.back();
+                const size_t index_raw = m_dead_nodes.back();
                 m_dead_nodes.pop_back();
                 m_node_payload[index_raw] = std::move(node);
                 m_edges[index_raw] = {};
                 m_last_child[index_raw] = {};
-                return Node::Index(index_raw);
+                return index_raw;
             }
         }();
 
-        (append_to_parent_unchecked(index, std::forward<ChildrenIndexes>(child_indexes)), ...);
+        m_orphans.push_back(Index { *index });
+
+        // Just call the unchecked version, but if the child is invalid, and we are allowed invalid nodes, it will skip
+        // it.
+        const auto append_node = [&](auto c) {
+            if constexpr (NodesAreOptional) {
+                if constexpr (Node::is_list()) {
+                    if (c) {
+                        append_to_parent_unchecked(index, c);
+                    }
+                } else {
+                    append_to_parent_unchecked(index, c);
+                }
+            } else {
+                append_to_parent_unchecked(index, c);
+            }
+        };
+
+        (append_node(std::forward<ChildrenIndexes>(child_indexes)), ...);
+
         return index;
     }
 
+    /// Returns set of currently orphaned nodes.
+    /// This does a copy
+    [[nodiscard]] std::vector<Index> orphans() const { return m_orphans; }
 
     ////////////////////////////////////////////////////////////////////////////////
     // accessors
     ////////////////////////////////////////////////////////////////////////////////
     template <typename TypedIndex, typename = std::enable_if<typed_index::is_type_set_index<TypedIndex>()>>
-    [[nodiscard]] constexpr auto& payload(TypedIndex i) {
-        using R = typename decltype(Helper::template get_node_type_from_index_type<TypedIndex>())::type;
-        return std::get<R>(m_node_payload[*i]);
+    [[nodiscard]] constexpr NodeTypeFromIndex<TypedIndex>& payload(TypedIndex i) {
+        return std::get<NodeTypeFromIndex<TypedIndex>>(m_node_payload[*i]);
     }
 
     template <typename TypedIndex, typename = std::enable_if<typed_index::is_type_set_index<TypedIndex>()>>
@@ -223,14 +253,15 @@ public: // This is meant to be privately inherited from.
     [[nodiscard]] constexpr Edges& edges(UntypedNodeIndex i) { return m_edges[*i]; }
     [[nodiscard]] constexpr const Edges& edges(UntypedNodeIndex i) const { return m_edges[*i]; }
 
+    [[nodiscard]] constexpr auto last_child(UntypedNodeIndex i) const { return m_last_child[*i]; }
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // Checks type of untyped node.
     ////////////////////////////////////////////////////////////////////////////////
     template <typename TypedIndex, typename = std::enable_if<typed_index::is_type_set_index<TypedIndex>()>>
     [[nodiscard]] constexpr bool is_a(UntypedNodeIndex i) const {
-        using R = typename decltype(Helper::template get_node_type_from_index_type<TypedIndex>())::type;
-        return std::get_if<R>(m_node_payload[*i]) != nullptr;
+        return std::get_if<NodeTypeFromIndex<TypedIndex>>(&m_node_payload[*i]) != nullptr;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -238,7 +269,7 @@ public: // This is meant to be privately inherited from.
     ////////////////////////////////////////////////////////////////////////////////
     template <typename TypedIndex, typename = std::enable_if<typed_index::is_type_set_index<TypedIndex>()>>
     [[nodiscard]] constexpr auto children(TypedIndex i) {
-        using NodeType = typename decltype(Helper::template get_node_type_from_index_type<TypedIndex>())::type;
+        using NodeType = NodeTypeFromIndex<TypedIndex>;
         if constexpr (NodeType::is_terminal())
             return NoChildren {};
         else if constexpr (NodeType::is_node()) {
@@ -249,6 +280,135 @@ public: // This is meant to be privately inherited from.
         }
     }
 
+    ////////////////////////////////////////////////////////////////////////////////
+    // List operations, all assume the parent is node list type.
+    ////////////////////////////////////////////////////////////////////////////////
+    template <typename ParentI, typename ChildI> //
+    ParentI append(ParentI p, ChildI c) {
+        static_assert(typed_index::is_type_set_index<ParentI>());
+        static_assert(typed_index::is_type_set_index<ChildI>());
+        using Parent = NodeTypeFromIndex<ParentI>;
+        static_assert(Parent::is_list());
+        static_assert(std::is_convertible_v<ChildI, typename Parent::HeldType>);
+
+        append_to_parent_unchecked(p, c);
+        return p;
+    }
+
+    template <typename ParentI, typename ChildI> //
+    ParentI prepend(ParentI p, ChildI child) {
+        static_assert(typed_index::is_type_set_index<ParentI>());
+        static_assert(typed_index::is_type_set_index<ChildI>());
+        using Parent = NodeTypeFromIndex<ParentI>;
+        static_assert(Parent::is_list());
+        static_assert(std::is_convertible_v<ChildI, typename Parent::HeldType>);
+
+        auto& parent_edges = m_edges[*p];
+
+        // No existing children, same as append.
+        if (!parent_edges.first_child) {
+            append_to_parent_unchecked(p, child);
+            return p;
+        }
+
+        const auto old_first_child = parent_edges.first_child;
+
+        // Re-parent new sub graph.
+        UntypedNodeIndex last_valid = child;
+        for (OptIndex c = last_valid; c; c = m_edges[*c].next_sibling) {
+            m_edges[*c].parent = p;
+            if (auto fnd = std::find(m_orphans.begin(), m_orphans.end(), Index(*c)); fnd != m_orphans.end())
+                m_orphans.erase(fnd);
+            last_valid = *c;
+        }
+
+        m_edges[*last_valid].next_sibling = old_first_child;
+        m_edges[*old_first_child].prev_sibling = last_valid;
+        parent_edges.first_child = child;
+
+        return p;
+    }
+
+    /**
+        @brief After this call [eaten] will no longer be alive.
+        [eaten] cannot have a parent assigned already.
+    */
+    template <typename Surviving, typename Eaten> //
+    Surviving merge(Surviving s, Eaten e) {
+        static_assert(typed_index::is_type_set_index<Surviving>());
+        static_assert(typed_index::is_type_set_index<Eaten>());
+
+        using SurvivingType = NodeTypeFromIndex<Surviving>;
+        using EatenType = NodeTypeFromIndex<Eaten>;
+        static_assert(SurvivingType::is_list());
+        static_assert(EatenType::is_list());
+
+        static_assert(std::is_convertible_v<typename EatenType::ChildIndex, typename SurvivingType::ChildIndex>);
+
+
+        auto& eaten_edges = m_edges[*e];
+        assert(!eaten_edges.parent);
+        if (auto c = eaten_edges.first_child)
+            append_to_parent_unchecked(s, c);
+
+        eaten_edges = {};
+        m_dead_nodes.push_back(*e);
+
+        if (auto fnd = std::find(m_orphans.begin(), m_orphans.end(), Index(*e)); fnd != m_orphans.end())
+            m_orphans.erase(fnd);
+        return s;
+    }
+
+    template <typename To, typename FromIndex, typename... ARGS>
+    typename To::Index cast(FromIndex from_index, ARGS&&... args) {
+        using ToIndex = typename To::Index;
+        using From = NodeTypeFromIndex<FromIndex>;
+        static_assert(From::type == To::type);
+        static_assert(std::is_convertible_v<typename From::HeldType, typename To::HeldType>);
+        payload(UntypedNodeIndex { *from_index }) = To { std::forward<ARGS>(args)... };
+        return ToIndex { *from_index };
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Traversal
+    ////////////////////////////////////////////////////////////////////////////////
+
+
+    template <typename F> //
+    [[nodiscard]] static constexpr bool signature() {
+        return std::is_invocable_v<F, const Edges&, const Variant&, Index>;
+    }
+
+
+    template <typename F, typename = std::enable_if<signature<F>()>> //
+    void flat_walk(F f) const {
+        const auto sz = m_node_payload.size();
+        for (size_t i { 0 }; i < sz; ++i) {
+            std::invoke(f, m_edges[i], m_node_payload[i], i);
+        }
+    }
+
+    template <typename F, typename = std::enable_if<signature<F>()>> //
+    void traverse_only_children(F f, Index i) const {
+        const auto& edge = m_edges[i];
+        if (auto start = edge.first_child) {
+            for (OptIndex c = start; c; c = m_edges[*c].next_sibling) {
+                f(m_edges[*c], m_node_payload[*c], Index { *c });
+            }
+        }
+    }
+
+    template <typename EnterNode, typename BeforeChildren, typename AfterChildren, typename ExitNode,
+              typename = std::enable_if<signature<EnterNode>()>, //
+              typename = std::enable_if<signature<BeforeChildren>()>, //
+              typename = std::enable_if<signature<AfterChildren>()>, //
+              typename = std::enable_if<signature<ExitNode>()> //
+              > //
+    void depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children,
+                              AfterChildren after_children, ExitNode exit_node) {
+        size_t visited { 0 };
+        depth_first_traverse_impl(enter_node, before_children, after_children, exit_node, *i, visited);
+    }
 
 private:
     /// [child] can be either a single node, or a list.
@@ -260,12 +420,16 @@ private:
             f_c_edges.next_sibling = child;
             m_edges[*child].prev_sibling = final_child;
         } else {
+            m_edges[*child].prev_sibling = {};
             parent_edges.first_child = child;
         }
 
         UntypedNodeIndex last_valid = child;
         for (OptIndex c = last_valid; c; c = m_edges[*c].next_sibling) {
             m_edges[*c].parent = parent;
+
+            if (auto fnd = std::find(m_orphans.begin(), m_orphans.end(), Index(*c)); fnd != m_orphans.end())
+                m_orphans.erase(fnd);
             last_valid = *c;
         }
         m_last_child[*parent] = last_valid;
@@ -283,6 +447,33 @@ private:
         // The order is well defined here because this is an initalized list.
         return Tuple { postIncrement(IS)... };
     };
+
+    template <typename EnterNode, typename BeforeChildren, typename AfterChildren, typename ExitNode,
+              typename = std::enable_if<signature<EnterNode>()>, //
+              typename = std::enable_if<signature<BeforeChildren>()>, //
+              typename = std::enable_if<signature<AfterChildren>()>, //
+              typename = std::enable_if<signature<ExitNode>()>>
+    void depth_first_traverse_impl(EnterNode enter_node, BeforeChildren before_children, AfterChildren after_children,
+                                   ExitNode exit_node, size_t i, size_t& visited, size_t depth = 0) {
+        assert(visited < 999'999'999);
+        visited += 1;
+        const auto call = [&](auto& f) { f(m_edges[i], m_node_payload[i], Index(i), depth); };
+
+        const auto& edge = m_edges[i];
+
+        call(enter_node);
+        if (edge.first_child) {
+            call(before_children);
+            depth_first_traverse_impl(enter_node, before_children, after_children, exit_node, *edge.first_child,
+                                      visited, depth + 1);
+            call(after_children);
+        }
+        call(exit_node);
+
+        if (edge.next_sibling)
+            depth_first_traverse_impl(enter_node, before_children, after_children, exit_node, *edge.next_sibling,
+                                      visited, depth);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
