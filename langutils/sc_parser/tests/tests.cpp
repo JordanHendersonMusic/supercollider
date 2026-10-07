@@ -22,26 +22,31 @@ const auto tester_base = [](const char* src, bool is_class_file) {
     auto [graph, result] = P::parse(text_info);
     BOOST_TEST(result == 0);
     namespace N = P::nodes;
+    using Graph = P::graph::NodeGraph;
 
-    //  graph.flat_walk([&](sc::lex::SourceCodeRange loc, const N::Edges& e, const N::NodeVariant& payload, size_t i) {
-    //      std::cout << i << " " << N::NodeCollection::get_name(payload);
-    //      std::cout << " ";
-    //      std::cout << "parent: " << *e.parent;
-    //      std::cout << std::endl;
-    //  });
+    // graph.flat_walk(
+    //     [&](const Graph::Edges& e, const Graph::Variant& payload, const sc::lex::SourceCodeRange& loc, size_t i) {
+    //         std::cout << i << " " << Graph::node_name(payload);
+    //         std::cout << " ";
+    //         std::cout << "parent: " << *e.parent << " first_child " << *e.first_child << " next " << *e.next_sibling
+    //         << " prev " << *e.prev_sibling; std::cout << std::endl;
+    //     });
 
     const auto root = graph.root_any();
     BOOST_TEST(root.has_value());
 
-    for (const auto& d : graph.diagnostics())
-        std::cout << d << std::endl;
+    //    std::cout << "ROOT == " << **root << '\n';
+
+    // for (const auto& d : graph.diagnostics())
+    //     std::cout << d << std::endl;
 
     graph.depth_first_traverse(*root,
-                               [&](const sc::lex::SourceCodeRange& loc, const N::NodeVariant& payload, size_t depth) {
+                               [&](const Graph::Edges& e, const Graph::Variant& payload,
+                                   const sc::lex::SourceCodeRange& loc, P::Index i, size_t depth) {
                                    for (size_t di { 0 }; di < depth; ++di)
                                        std::cout << "|  ";
 
-                                   std::cout << N::NodeCollectionHelper::get_name(payload) << ": ";
+                                   std::cout << Graph::node_name(payload) << ": ";
 
                                    const auto [ptr, sz] = text_info->read(loc);
                                    for (size_t i { 0 }; i < sz; ++i) {

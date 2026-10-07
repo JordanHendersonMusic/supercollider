@@ -70,12 +70,12 @@ change the definitions below.
 */
 
 namespace sc::parser::nodes {
-template <typename Index> using TerminalNode = sc::util::typed_graph_node::TerminalNode<Index>;
+template <typename Index> using TerminalNode = sc::util::typed_graph::TerminalNode<Index>;
 
-template <typename Index, typename ChildIndex> using ListNode = sc::util::typed_graph_node::ListNode<Index, ChildIndex>;
+template <typename Index, typename ChildIndex> using ListNode = sc::util::typed_graph::ListNode<Index, ChildIndex>;
 
 template <class ThisTypedIndex, typename... CHILD_INDEXES>
-using Node = sc::util::typed_graph_node::Node<ThisTypedIndex, CHILD_INDEXES...>;
+using Node = sc::util::typed_graph::Node<ThisTypedIndex, CHILD_INDEXES...>;
 
 
 struct Missing : public TerminalNode<MissingIndex> {
