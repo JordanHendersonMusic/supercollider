@@ -1,9 +1,10 @@
 #include "sc_grammar_impl.hpp"
-#include "node_graph_diagnostic.hpp"
-#include "parser_context.hpp"
-#include "text_location.hpp"
 
-void sc::parser::parser::report_syntax_error(const context& symbol_cxt) const {
+#include "parser_context.hpp"
+#include "sc_diagnostic/sc_diagnostic.hpp"
+#include "sc_lexer/text_location.hpp"
+
+void sc::ast::parser::parser::report_syntax_error(const context& symbol_cxt) const {
     std::vector<symbol_kind_type> expected(12);
     expected.resize(static_cast<size_t>(symbol_cxt.expected_tokens(expected.data(), 12)));
 
@@ -15,55 +16,37 @@ void sc::parser::parser::report_syntax_error(const context& symbol_cxt) const {
                                                    static_cast<int>(symbol_cxt.lookahead().kind_) };
 }
 
-void sc::parser::parser::error(const sc::lex::SourceCodeRange&, const std::string&) {
+void sc::ast::parser::parser::error(const sc::lex::SourceCodeRange&, const std::string&) {
     // TODO: temporary code.
     ////////////////	cxt.error_handler->operator()(cxt.text_info, loc, message);
 }
 
 
-namespace sc::parser::error_recovery {
+namespace sc::ast::parser::error_recovery {
 
 void region_separator(ParserContext& cxt, sc ::lex::SourceCodeRange last_valid) {
-    auto unexpected = cxt.consume_error();
-    std::string msg { "Insert ';' after this expression to separate it from the following." };
-
-    const auto [highlight_ptr, highlight_sz] = cxt.text_info->read(last_valid);
-    msg += " Recommendation: '";
-    msg.append(highlight_ptr, highlight_sz);
-    msg += ";'.";
-    cxt.graph.add_diagnostic({ "Missing semicolon between regions.",
-                               { cxt.text_info, { last_valid.end, last_valid.end } },
-                               graph::Diagnostic::Severity::Warning,
-                               msg });
+    auto _ = cxt.consume_error();
+    cxt.graph.add_diagnostic(diag::Diagnostic::regionMissingSemi({cxt.text_info, last_valid}));
 }
 
 void expr(ParserContext& cxt) {
-    using Symbol = sc::parser::parser::symbol_kind_type;
+    using Symbol = sc::ast::parser::parser::symbol_kind_type;
     auto unexpected = *cxt.consume_error();
     const auto got = static_cast<Symbol>(unexpected.got);
-    // const sc::lex::SourceCodeRange& loc = unexpected.location;
 
-    const char* got_name = sc::parser::parser::symbol_name(got);
+    const char* got_name = sc::ast::parser::parser::symbol_name(got);
 
-    std::string msg = "Expected: ";
+    std::string expected;
     const auto sz = unexpected.expected.size();
     for (size_t i { 0 }; i < sz; ++i) {
-        msg += sc::parser::parser::symbol_name(static_cast<Symbol>(unexpected.expected[i]));
-
+        expected += sc::ast::parser::parser::symbol_name(static_cast<Symbol>(unexpected.expected[i]));
         if (i + 2 == sz)
-            msg += ", or ";
+            expected += ", or ";
         else if (i + 2 < sz)
-            msg += ", ";
+            expected += ", ";
     }
 
-    msg += " but received ";
-    msg += got_name;
-
-    const auto [highlight_ptr, highlight_sz] = cxt.text_info->read(unexpected.location);
-    msg.append(highlight_ptr, highlight_sz);
-
-    cxt.graph.add_diagnostic(
-        { "Unexpected token.", { cxt.text_info, unexpected.location }, graph::Diagnostic::Severity::Error, msg, {} });
+    cxt.graph.add_diagnostic( diag::Diagnostic::unexpectedToken({cxt.text_info, unexpected.location}, expected, got_name));
 }
 
 }

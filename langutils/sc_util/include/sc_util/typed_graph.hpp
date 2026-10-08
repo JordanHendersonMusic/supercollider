@@ -13,21 +13,38 @@
 
 namespace sc::util::typed_graph {
 
-template <class T> struct TypeWrapper { using type = T; };
+template <class T> struct TypeWrapper {
+    using type = T;
+};
 
-struct TypedGraphHelperBase {};
 
-template <typename... Nodes> struct TypedGraphHelper : TypedGraphHelperBase {
+struct TypedGraphHelperBase { };
+
+template <typename ENUM, template <ENUM...> typename INDEXCREATOR, typename... Nodes>
+struct TypedGraphHelper : TypedGraphHelperBase {
     static_assert((std::is_base_of_v<NodeBaseBase, Nodes> && ...));
     using Variant = std::variant<Nodes...>;
     using Tuple = std::tuple<Nodes...>;
     using IndexSequence = std::make_index_sequence<sizeof...(Nodes)>;
     using UntypedStrongIndex = typename std::tuple_element_t<0, Tuple>::Index::UnderlyingIndex;
 
-    template <class ToFind> [[nodiscard]] static constexpr bool has_node() noexcept {
+    using UnderlyingEnum = ENUM;
+    template <UnderlyingEnum... Es> using IndexCreator = INDEXCREATOR<Es...>;
+
+    template <typename E, E EValue> [[nodiscard]] static constexpr auto node_type_from_enum() {
+        return node_type_from_enum_impl<0, E, EValue>();
+    }
+
+    template <class ToFind> [[nodiscard]] static constexpr bool has_node()  {
         return has_node_impl<0, std::remove_reference_t<std::remove_cv_t<ToFind>>>();
     }
+
+    template <ENUM E> [[nodiscard]] static constexpr bool has_node_with_enum()  {
+        return has_node_impl<0, IndexCreator<E>>();
+    }
+
     template <class IndexT> constexpr static auto get_node_type_from_index_type() {
+        static_assert(IndexT::size_of_set == 1);
         return get_node_type_from_index_type_impl<0, IndexT>();
     }
 
@@ -40,35 +57,58 @@ template <typename... Nodes> struct TypedGraphHelper : TypedGraphHelperBase {
 protected:
     // For some reason clang-format confuses clang-d (funny since they are both clang!)
     // clang-format off
-    template <std::size_t CurrentI, class IndexT, typename IndexT2 = std::enable_if_t<CurrentI<sizeof...(Nodes), IndexT>> 
-    [[nodiscard]] constexpr static auto get_node_type_from_index_type_impl() noexcept {
-        using CurrentT = std::tuple_element_t<CurrentI, Tuple>;
-        if constexpr (std::is_same_v<typename CurrentT::Index, IndexT2>) {
-            return TypeWrapper<CurrentT> { };
-        } else {
-            static_assert(CurrentI + 1 < sizeof...(Nodes), "Could not find type. Either the type isn't in the variant, or you have failed to pass it to the graph helper.");
-            return get_node_type_from_index_type_impl<CurrentI + 1, IndexT2>();
+    template <std::size_t CurrentI, class Target, typename = std::enable_if<CurrentI < std::tuple_size_v<Tuple>>>
+    [[nodiscard]] constexpr static auto get_node_type_from_index_type_impl()  {
+        // clang-format on
+        static_assert(CurrentI < sizeof...(Nodes));
+        if constexpr (CurrentI < sizeof...(Nodes)) {
+            using T = std::tuple_element_t<CurrentI, Tuple>;
+            if constexpr (std::is_same_v<typename T::Index, Target>) {
+                return TypeWrapper<T> { };
+            } else {
+                return get_node_type_from_index_type_impl<CurrentI + 1, Target>();
+            }
         }
     }
 
-    template <std::size_t CurrentI, class ToFind> 
-    [[nodiscard]] constexpr static bool has_node_impl() noexcept {
-        using CurrentT = std::tuple_element_t<CurrentI, Tuple>;
-        if constexpr (std::is_same_v<typename CurrentT::Index, ToFind>) {
-            return true;
-        } else if constexpr (CurrentI + 1 < sizeof...(Nodes)) {
-            return has_node_impl<CurrentI + 1, ToFind>();
-        } else {
-            return false;
+    // clang-format off
+    template <std::size_t CurrentI, class Enum, Enum Target, typename = std::enable_if<CurrentI < sizeof ... (Nodes)>>
+    [[nodiscard]] constexpr static auto node_type_from_enum_impl()  {
+        // clang-format on
+        static_assert(CurrentI < sizeof...(Nodes));
+        if constexpr (CurrentI < sizeof...(Nodes)) {
+            using CurrentT = std::tuple_element_t<CurrentI, Tuple>;
+            if constexpr (CurrentT::Index::Possible[0] == Target) {
+                return TypeWrapper<CurrentT> { };
+            } else {
+                return node_type_from_enum_impl<CurrentI + 1, Enum, Target>();
+            }
         }
     }
-    // clang-format on
+
+    // clang-format off
+    template <std::size_t CurrentI, class ToFind, typename = std::enable_if<CurrentI<sizeof...(Nodes)>> 
+    [[nodiscard]] constexpr static bool has_node_impl()  {
+        // clang-format on
+        static_assert(CurrentI < sizeof...(Nodes));
+        if constexpr (CurrentI < sizeof...(Nodes)) {
+            using CurrentT = std::tuple_element_t<CurrentI, Tuple>;
+            if constexpr (std::is_same_v<typename CurrentT::Index, ToFind>) {
+                return true;
+            } else if constexpr (CurrentI + 1 < sizeof...(Nodes)) {
+                return has_node_impl<CurrentI + 1, ToFind>();
+            } else {
+                return false;
+            }
+        }
+    }
 };
 
 struct IsTrivial {
     template <typename T> [[nodiscard]] constexpr bool operator()() const {
-        return std::is_trivially_move_constructible_v<
-                   T> && std::is_trivially_destructible_v<T> && std::is_nothrow_move_constructible_v<T> && std::is_trivially_move_assignable_v<T> && std::is_nothrow_move_assignable_v<T>;
+        return std::is_trivially_move_constructible_v<T> && std::is_trivially_destructible_v<T>
+            && std::is_nothrow_move_constructible_v<T> && std::is_trivially_move_assignable_v<T>
+            && std::is_nothrow_move_assignable_v<T>;
     }
 };
 
@@ -80,7 +120,7 @@ template <typename OptNodeIndex, //
 struct Iter {
     static_assert(std::is_integral_v<typename OptNodeIndex::Underlying>);
     static_assert(std::is_convertible_v<OptNodeIndex, bool>);
-    constexpr Iter(OptNodeIndex current, const std::vector<Edges>& edge): m_current(current), m_edges(edge) {}
+    constexpr Iter(OptNodeIndex current, const std::vector<Edges>& edge): m_current(current), m_edges(edge) { }
 
     Iter& operator+=(int offset);
     [[nodiscard]] Iter operator++(int);
@@ -96,8 +136,8 @@ private:
 
 template <typename OptNodeIndex, typename Edges, typename T> //
 struct Container {
-    constexpr Container(const std::vector<Edges>& edges, OptNodeIndex first): m_edges(edges), m_first(first) {}
-    [[nodiscard]] Iter<OptNodeIndex, Edges, T> iter() { return Iter { m_first, m_edges }; }
+    constexpr Container(const std::vector<Edges>& edges, OptNodeIndex first): m_edges(edges), m_first(first) { }
+    [[nodiscard]] Iter<OptNodeIndex, Edges, T> iter() const { return { m_first, m_edges }; }
 
 private:
     const std::vector<Edges>& m_edges;
@@ -105,7 +145,7 @@ private:
 };
 
 // Used when destructing children from a node.
-struct NoChildren {};
+struct NoChildren { };
 
 /**
 @brief
@@ -124,26 +164,27 @@ declaration.
 */
 template <typename OptIndex, //
           typename Index, //
-          typename Helper, //
-          typename = std::enable_if<std::is_base_of_v<TypedGraphHelperBase, Helper>> //
+          typename HELPER, //
+          typename = std::enable_if<std::is_base_of_v<TypedGraphHelperBase, HELPER>> //
           >
 struct GraphImplementation {
 public: // This is meant to be privately inherited from.
     ////////////////////////////////////////////////////////////////////////////////
-    static_assert(Helper::template all_node_types<IsTrivial>());
+    static_assert(HELPER::template all_node_types<IsTrivial>());
     static_assert(sc::util::is_a_pair<OptIndex, Index>(),
                   "Should have an optional and an non-optional strong index here. ");
     static_assert(std::is_convertible_v<OptIndex, bool>, "Probably got OptIndex and Index the wrong way around.");
-    static_assert(std::is_same_v<typename Helper::UntypedStrongIndex,
-                                 OptIndex> || std::is_same_v<typename Helper::UntypedStrongIndex, Index>,
+    static_assert(std::is_same_v<typename HELPER::UntypedStrongIndex, OptIndex>
+                      || std::is_same_v<typename HELPER::UntypedStrongIndex, Index>,
                   "Index types aren't the ones the nodes use.");
 
     template <typename OptNodeIndex, typename Edges, typename T> friend struct Container;
     template <typename OptNodeIndex, typename Edges, typename T> friend struct Iter;
 
     ////////////////////////////////////////////////////////////////////////////////
-    using UntypedNodeIndex = typename Helper::UntypedStrongIndex;
-    using Variant = typename Helper::Variant;
+    using UntypedNodeIndex = typename HELPER::UntypedStrongIndex;
+    using Variant = typename HELPER::Variant;
+    using Helper = HELPER;
 
     template <typename I>
     using NodeTypeFromIndex = typename decltype(Helper::template get_node_type_from_index_type<I>())::type;
@@ -161,11 +202,12 @@ public: // This is meant to be privately inherited from.
     // The data.
     ////////////////////////////////////////////////////////////////////////////////
 
-    std::vector<std::size_t> m_dead_nodes {};
-    std::vector<Edges> m_edges {};
-    std::vector<OptIndex> m_last_child {};
-    std::vector<typename Helper::Variant> m_node_payload {};
-    std::vector<Index> m_orphans {};
+    std::vector<std::size_t> m_dead_nodes { };
+    std::vector<OptIndex> m_last_child { };
+    std::vector<Index> m_orphans { };
+    // One entry per node.
+    std::vector<Edges> m_node_edges { };
+    std::vector<typename Helper::Variant> m_node_payload { };
 
     ////////////////////////////////////////////////////////////////////////////////
     // Create
@@ -189,15 +231,15 @@ public: // This is meant to be privately inherited from.
             if (m_dead_nodes.empty()) {
                 const auto index_raw = m_node_payload.size();
                 m_node_payload.push_back(std::move(node));
-                m_edges.push_back({});
-                m_last_child.push_back({});
+                m_node_edges.push_back({ });
+                m_last_child.push_back({ });
                 return index_raw;
             } else {
                 const size_t index_raw = m_dead_nodes.back();
                 m_dead_nodes.pop_back();
                 m_node_payload[index_raw] = std::move(node);
-                m_edges[index_raw] = {};
-                m_last_child[index_raw] = {};
+                m_node_edges[index_raw] = { };
+                m_last_child[index_raw] = { };
                 return index_raw;
             }
         }();
@@ -241,7 +283,6 @@ public: // This is meant to be privately inherited from.
     [[nodiscard]] constexpr const auto& payload(TypedIndex i) const {
         using R = typename decltype(Helper::template get_node_type_from_index_type<TypedIndex>())::type;
         return std::get<R>(m_node_payload[*i]);
-        return m_node_payload[*i];
     }
 
     [[nodiscard]] constexpr typename Helper::Variant& payload(UntypedNodeIndex i) { return m_node_payload[*i]; };
@@ -250,8 +291,8 @@ public: // This is meant to be privately inherited from.
         return m_node_payload[*i];
     }
 
-    [[nodiscard]] constexpr Edges& edges(UntypedNodeIndex i) { return m_edges[*i]; }
-    [[nodiscard]] constexpr const Edges& edges(UntypedNodeIndex i) const { return m_edges[*i]; }
+    [[nodiscard]] constexpr Edges& edges(UntypedNodeIndex i) { return m_node_edges[*i]; }
+    [[nodiscard]] constexpr const Edges& edges(UntypedNodeIndex i) const { return m_node_edges[*i]; }
 
     [[nodiscard]] constexpr auto last_child(UntypedNodeIndex i) const { return m_last_child[*i]; }
 
@@ -264,21 +305,43 @@ public: // This is meant to be privately inherited from.
         return std::get_if<NodeTypeFromIndex<TypedIndex>>(&m_node_payload[*i]) != nullptr;
     }
 
+    template <typename TypedIndex> [[nodiscard]] constexpr std::optional<TypedIndex> as_a(UntypedNodeIndex i) const {
+        if (std::get_if<NodeTypeFromIndex<TypedIndex>>(&m_node_payload[*i])) {
+            return { TypedIndex { *i } };
+        } else {
+            return std::nullopt;
+        }
+    }
+
     ////////////////////////////////////////////////////////////////////////////////
     // Return children of a node in a structured way.
     ////////////////////////////////////////////////////////////////////////////////
     template <typename TypedIndex, typename = std::enable_if<typed_index::is_type_set_index<TypedIndex>()>>
-    [[nodiscard]] constexpr auto children(TypedIndex i) {
-        using NodeType = NodeTypeFromIndex<TypedIndex>;
-        if constexpr (NodeType::is_terminal())
-            return NoChildren {};
-        else if constexpr (NodeType::is_node()) {
-            using Tup = typename NodeType::ChildrenIndexTupleType;
+    [[nodiscard]] constexpr auto children(TypedIndex i) const {
+        static_assert(TypedIndex::size_of_set == 1);
+        using N = NodeTypeFromIndex<TypedIndex>;
+        if constexpr (N::is_terminal())
+            return NoChildren { };
+        else if constexpr (N::is_node()) {
+            using Tup = typename N::ChildrenIndexTupleType;
             return build_node_children_tuple<Tup>(i, std::make_index_sequence<std::tuple_size_v<Tup>>());
         } else {
-            return Container<OptIndex, Edges, typename NodeType::HeldType> { m_edges, m_edges[*i].first_child };
+            return Container<OptIndex, Edges, typename N::HeldType> { m_node_edges, m_node_edges[*i].first_child };
         }
     }
+
+    template <typename TypedIndex, typename = std::enable_if<typed_index::is_type_set_index<TypedIndex>()>>
+    [[nodiscard]] constexpr auto index_to_variant(TypedIndex i) const {
+        return std::visit([&](const auto& node) { return GraphImplementation::as_variant(i, node); }, m_node_payload[*i]);
+    }
+
+
+    template <typename Action, typename TypedIndex> auto visit(Action action, TypedIndex i) const {
+        return std::visit(
+            action,
+            std::visit([&](const auto& node) { return GraphImplementation::as_variant(i, node); }, m_node_payload[*i]));
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////////
     // List operations, all assume the parent is node list type.
@@ -287,7 +350,7 @@ public: // This is meant to be privately inherited from.
     ParentI append(ParentI p, ChildI c) {
         static_assert(typed_index::is_type_set_index<ParentI>());
         static_assert(typed_index::is_type_set_index<ChildI>());
-        using Parent = NodeTypeFromIndex<ParentI>;
+        using Parent = typename decltype(Helper::template get_node_type_from_index_type<ParentI>())::type;
         static_assert(Parent::is_list());
         static_assert(std::is_convertible_v<ChildI, typename Parent::HeldType>);
 
@@ -303,7 +366,7 @@ public: // This is meant to be privately inherited from.
         static_assert(Parent::is_list());
         static_assert(std::is_convertible_v<ChildI, typename Parent::HeldType>);
 
-        auto& parent_edges = m_edges[*p];
+        auto& parent_edges = m_node_edges[*p];
 
         // No existing children, same as append.
         if (!parent_edges.first_child) {
@@ -315,15 +378,15 @@ public: // This is meant to be privately inherited from.
 
         // Re-parent new sub graph.
         UntypedNodeIndex last_valid = child;
-        for (OptIndex c = last_valid; c; c = m_edges[*c].next_sibling) {
-            m_edges[*c].parent = p;
+        for (OptIndex c = last_valid; c; c = m_node_edges[*c].next_sibling) {
+            m_node_edges[*c].parent = p;
             if (auto fnd = std::find(m_orphans.begin(), m_orphans.end(), Index(*c)); fnd != m_orphans.end())
                 m_orphans.erase(fnd);
             last_valid = *c;
         }
 
-        m_edges[*last_valid].next_sibling = old_first_child;
-        m_edges[*old_first_child].prev_sibling = last_valid;
+        m_node_edges[*last_valid].next_sibling = old_first_child;
+        m_node_edges[*old_first_child].prev_sibling = last_valid;
         parent_edges.first_child = child;
 
         return p;
@@ -346,12 +409,12 @@ public: // This is meant to be privately inherited from.
         static_assert(std::is_convertible_v<typename EatenType::ChildIndex, typename SurvivingType::ChildIndex>);
 
 
-        auto& eaten_edges = m_edges[*e];
+        auto& eaten_edges = m_node_edges[*e];
         assert(!eaten_edges.parent);
         if (auto c = eaten_edges.first_child)
             append_to_parent_unchecked(s, c);
 
-        eaten_edges = {};
+        eaten_edges = { };
         m_dead_nodes.push_back(*e);
 
         if (auto fnd = std::find(m_orphans.begin(), m_orphans.end(), Index(*e)); fnd != m_orphans.end())
@@ -384,16 +447,16 @@ public: // This is meant to be privately inherited from.
     void flat_walk(F f) const {
         const auto sz = m_node_payload.size();
         for (size_t i { 0 }; i < sz; ++i) {
-            std::invoke(f, m_edges[i], m_node_payload[i], i);
+            std::invoke(f, m_node_edges[i], m_node_payload[i], i);
         }
     }
 
     template <typename F, typename = std::enable_if<signature<F>()>> //
     void traverse_only_children(F f, Index i) const {
-        const auto& edge = m_edges[i];
+        const auto& edge = m_node_edges[i];
         if (auto start = edge.first_child) {
-            for (OptIndex c = start; c; c = m_edges[*c].next_sibling) {
-                f(m_edges[*c], m_node_payload[*c], Index { *c });
+            for (OptIndex c = start; c; c = m_node_edges[*c].next_sibling) {
+                f(m_node_edges[*c], m_node_payload[*c], Index { *c });
             }
         }
     }
@@ -413,20 +476,20 @@ public: // This is meant to be privately inherited from.
 private:
     /// [child] can be either a single node, or a list.
     void append_to_parent_unchecked(UntypedNodeIndex parent, UntypedNodeIndex child) {
-        auto& parent_edges = m_edges[*parent];
+        auto& parent_edges = m_node_edges[*parent];
 
         if (auto final_child = m_last_child[*parent]) {
-            auto& f_c_edges = m_edges[*final_child];
+            auto& f_c_edges = m_node_edges[*final_child];
             f_c_edges.next_sibling = child;
-            m_edges[*child].prev_sibling = final_child;
+            m_node_edges[*child].prev_sibling = final_child;
         } else {
-            m_edges[*child].prev_sibling = {};
+            m_node_edges[*child].prev_sibling = { };
             parent_edges.first_child = child;
         }
 
         UntypedNodeIndex last_valid = child;
-        for (OptIndex c = last_valid; c; c = m_edges[*c].next_sibling) {
-            m_edges[*c].parent = parent;
+        for (OptIndex c = last_valid; c; c = m_node_edges[*c].next_sibling) {
+            m_node_edges[*c].parent = parent;
 
             if (auto fnd = std::find(m_orphans.begin(), m_orphans.end(), Index(*c)); fnd != m_orphans.end())
                 m_orphans.erase(fnd);
@@ -436,11 +499,11 @@ private:
     }
 
     template <typename Tuple, size_t... IS>
-    Tuple build_node_children_tuple(UntypedNodeIndex parent, std::index_sequence<IS...>) {
-        auto first = m_edges[*parent].first_child;
+    Tuple build_node_children_tuple(UntypedNodeIndex parent, std::index_sequence<IS...>) const {
+        auto first = m_node_edges[*parent].first_child;
         const auto postIncrement = [&](size_t) {
             auto out = first;
-            first = m_edges[*first].next_sibling;
+            first = m_node_edges[*first].next_sibling;
             return out;
         };
 
@@ -457,9 +520,9 @@ private:
                                    ExitNode exit_node, size_t i, size_t& visited, size_t depth = 0) {
         assert(visited < 999'999'999);
         visited += 1;
-        const auto call = [&](auto& f) { f(m_edges[i], m_node_payload[i], Index(i), depth); };
+        const auto call = [&](auto& f) { f(m_node_edges[i], m_node_payload[i], Index(i), depth); };
 
-        const auto& edge = m_edges[i];
+        const auto& edge = m_node_edges[i];
 
         call(enter_node);
         if (edge.first_child) {
@@ -473,6 +536,33 @@ private:
         if (edge.next_sibling)
             depth_first_traverse_impl(enter_node, before_children, after_children, exit_node, *edge.next_sibling,
                                       visited, depth);
+    }
+
+    template <typename... Accepted> //
+    struct SubVariantBuilder {
+        using Tup = std::tuple<Accepted...>;
+        using Variant = std::variant<Accepted...>;
+        static_assert((typed_index::is_type_set_index<Accepted>() && ...));
+        static_assert(((Accepted::size_of_set == 1) && ...));
+        Index underlying_index;
+
+        template <typename Node> [[nodiscard]] Variant operator()(const Node&) const {
+            if constexpr ((std::is_convertible_v<typename Node::Index, Accepted> || ...)) {
+                typename Node::Index i { *underlying_index };
+                return Variant { i };
+            } else {
+                assert(false); // this should not happen.
+                // This is a bogus implementation to silence the compiler.
+                return Variant { std::tuple_element_t<0, Tup> { *underlying_index } };
+            }
+        }
+    };
+
+    template <typename TypedIndex, typename Node> [[nodiscard]] static auto as_variant(TypedIndex i, const Node&) {
+        using NodeIndex = typename Node::Index;
+        static_assert(NodeIndex::size_of_set == 1);
+        static_assert(Helper::template has_node_with_enum<NodeIndex::Possible[0]>());
+        return i.template as_variant<NodeIndex::Possible[0]>();
     }
 };
 

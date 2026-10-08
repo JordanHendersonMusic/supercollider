@@ -4,7 +4,7 @@
 
 %define api.value.type variant
 %define api.token.prefix {TOKEN_}
-%define api.namespace {sc::parser}
+%define api.namespace {sc::ast::parser}
 %define parse.error custom
 
 %locations
@@ -16,7 +16,7 @@
 {
 
 #include "parser_context.hpp"
-#include "sc_grammar_shared.hpp"
+#include "sc_parser/sc_grammar_shared.hpp"
 
 }
 
@@ -30,28 +30,27 @@
 %code top
 {
 
+#include "sc_lexer/lexer.hpp"
+#include "sc_parser/indexes_typed.hpp"
+#include "sc_parser/nodes.hpp"
+
 #include "sc_grammar_parser.hpp"
-#include "indexes_typed.hpp"
-#include "nodes.hpp"
-#include "lexer.hpp"
 #include "sc_grammar_impl.hpp"
 #include "parser_context.hpp"
 
-#include <iostream>
+namespace sc::ast::parser{ class parser; } // forward declare the parser
 
-namespace sc::parser{ class parser; } // forward declare the parser
+//static int yylex(sc::ast::parser::parser::value_type* v, sc::lex::SourceCodeRange* loc, sc::ast::ParserContext& cxt);
 
-//static int yylex(sc::parser::parser::value_type* v, sc::lex::SourceCodeRange* loc, sc::parser::ParserContext& cxt);
-
-using namespace sc::parser::nodes;
+using namespace sc::ast;
 
 template<typename... REJECTS>
-auto create_error(sc::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, REJECTS...rejects) {
+auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, REJECTS...rejects) {
 	const auto orphans = cxt.graph.orphans();
 	auto er = cxt.create(Error{}, loc);
 	for(auto o : orphans){
 		if (!((*o == *rejects) || ...))
-			cxt.graph.append(er, sc::parser::AnyIndex{*o});
+			cxt.graph.append(er, sc::ast::AnyIndex{*o});
 	}
 	return er;
 }
@@ -88,7 +87,7 @@ auto create_error(sc::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, 
 %type <ClassListOrExprListIndex> go
 
 %type <RegionListIndex> region
-%type <error_index<ExprSeqIndex>> region.item 
+%type <error_index<AnyExprIndex>> region.item 
 
 %type <ClassOrExtensionListIndex> classOrExtList.list
 %type <ClassOrExtensionIndex> classOrExtList.item
@@ -106,14 +105,14 @@ auto create_error(sc::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, 
 
 %type <DeclareClassVarIndex> class.vars.entry.item 
 
-%type <MethodNameIndex> method.name
+%type <SelectorIndex> method.name
 %type <AnyMethodIndex> method 
 %type <MethodIndex> method.base
 %type <MethodListIndex> method.list method.list.opt
 
-%type<error_index<ExprSeqIndex>> expr.error
+%type<error_index<AnyExprIndex>> expr.error
 
-%type <ExprSeqIndex> msgsend // not all msgsends result in a message node!
+%type <AnyExprIndex> msgsend // not all msgsends result in a message node!
 
 %type<ArgumentEntryIndex> arguments.entries
 %type<ArgumentListIndex> arguments arguments.no_trailing arguments.paren arguments.maybe_paren
@@ -125,8 +124,8 @@ auto create_error(sc::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, 
 
 %type<BlockListIndex> block.opt_list block.list
 
-%type <ExprSeqIndex> expr expr.base
-%type <ExprSeqIndex> expr.seq expr.seq.base 
+%type <AnyExprIndex> expr expr.base
+%type <AnyExprIndex> expr.seq expr.seq.base 
 
 %type <NamedIdentifierIndex> name 
 
@@ -150,7 +149,7 @@ auto create_error(sc::parser::ParserContext& cxt, sc::lex::SourceCodeRange loc, 
 %type <StringLitIndex> string
 %type <IntLitIndex> integer
 %type <FloatLitIndex> float.raw float.raw_unsigned
-%type <AccidentalLitIndex> accidental accidental.unsigned
+%type <AccidentalIndex> accidental accidental.unsigned
 %type <FloatProducingIndex> float
 %type <ASCIIIndex> ascii
 
@@ -254,7 +253,7 @@ region
 				auto last_child = cxt.graph.last_child(*$r);
 				auto loc = cxt.graph.location(last_child ? Index{*last_child} : Index{first_child});
 				error_recovery::region_separator(cxt, loc);
-				cxt.region_recovery = sc::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
+				cxt.region_recovery = sc::ast::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
 				static_assert(std::is_same_v<decltype(yyerrstatus_), int>);
 				yyerrstatus_ = 0; // this is NOT in the api, but the only way to get errors to re-emit.
 				yyclearin;
@@ -583,14 +582,13 @@ expr
 		{ $$ = cxt.create(AssignmentAtNode{}, @$, $1, cxt.create(ArgumentList{}, @3), $e); }
 	;
 
-expr.seq.base  	
+expr.seq.base  
 	: expr { $$ = $1; }		
 	| expr.seq.base SEMICOLON expr 
 		{
 			// This piece of logic is here because exprs can contain expr.seq, so we avoid creating the list node if we can.
-			if(cxt.graph.is_a<ExprSeqIndex>(*$1)) {
-				cxt.graph.location(*$1) = @$; // updates the location of the list
-				cxt.graph.append($1, $3); // appends to the list
+			if(auto expr_seq = cxt.graph.as_a<ExprSeqIndex>(*$1)) {
+				cxt.graph.append(*expr_seq, @$, $3);
 				$$ = $1;
 			} else {
 				$$ = cxt.create(ExprSeq{}, @$, $1, $3);

@@ -8,6 +8,8 @@
 #include <cassert>
 #include <optional>
 #include <type_traits>
+#include <utility>
+#include <variant>
 
 /*
 The heart of this is an index type that has a compile time set of enum values associated with it.
@@ -92,7 +94,6 @@ namespace sc::util::typed_index {
 
 // This should be passed to every single template below.
 template <typename INDEX_TYPE, typename ENUM_SET, typename GraphTypeID = void> struct Spec {
-    static_assert(std::is_integral_v<INDEX_TYPE>);
     static_assert(std::is_enum_v<ENUM_SET>);
     using IndexType = INDEX_TYPE;
     using EnumSet = ENUM_SET;
@@ -134,29 +135,93 @@ template <typename Enum, Enum ToCheck, Enum... ElementsInSet> [[nodiscard]] inli
     return ((ToCheck == ElementsInSet) || ...);
 }
 
-struct TypedIndexBase {};
+
+struct TypedIndexBase { };
 
 template <typename SPEC, typename INDEX_BASE, typename SPEC::EnumSet... ThisSet>
 struct TypedIndexHelper : public INDEX_BASE, public TypedIndexBase {
+private:
+    template <typename SPEC::EnumSet T> static constexpr bool contained_exactly_once() {
+        return ((T == ThisSet ? 1 : 0) + ...) == 1;
+    }
+    // While this might be slow, the compile time bugs that are produced by duplicates are crazy.
+    static_assert((contained_exactly_once<ThisSet>() && ...), "Duplicates are not allowed.");
+
+public:
     using UnderlyingIndex = INDEX_BASE;
-    using EnumSet = typename SPEC::EnumSet;
+    using EnumType = typename SPEC::EnumSet;
     static_assert(sizeof...(ThisSet) > 0, "Must provide at least one 'Type' per TypedIndex.");
-    static constexpr auto Possible { std::array<EnumSet, sizeof...(ThisSet)> { ThisSet... } };
+    static constexpr auto size_of_set { sizeof...(ThisSet) };
+    static constexpr auto Possible { std::array<EnumType, sizeof...(ThisSet)> { ThisSet... } };
+    using UnderlyingEnum = std::underlying_type_t<EnumType>;
+    using EnumSequence = std::integer_sequence<UnderlyingEnum, static_cast<UnderlyingEnum>(ThisSet)...>;
+
+    TypedIndexHelper(TypedIndexHelper&&) noexcept = default;
+    TypedIndexHelper(const TypedIndexHelper&) noexcept = default;
+    TypedIndexHelper& operator=(TypedIndexHelper&&) noexcept = default;
+    TypedIndexHelper& operator=(const TypedIndexHelper&) noexcept = default;
 
     using INDEX_BASE::INDEX_BASE;
     using INDEX_BASE::operator*;
 
-    template <EnumSet... OtherSet> [[nodiscard]] static constexpr bool is_sub_set_of() {
-        return ((details::enum_set_includes<EnumSet, ThisSet, OtherSet...>()) && ...);
+    template <EnumType... OtherSet> [[nodiscard]] static constexpr bool is_sub_set_of() {
+        return ((details::enum_set_includes<EnumType, ThisSet, OtherSet...>()) && ...);
     }
+    
 
     // This does the conversion, it looks complicate, but it is just an `operator T()`.
     // We have to do the conversion check in SFINAE rather than a static assert because we want to delete the function,
     //    this means it will work with things like std::variant assignments.
-    template <EnumSet... OtherSet, typename = std::enable_if_t<is_sub_set_of<OtherSet...>()>>
+    template <EnumType... OtherSet, typename = std::enable_if_t<is_sub_set_of<OtherSet...>()>>
     [[nodiscard]] constexpr operator TypedIndexHelper<SPEC, INDEX_BASE, OtherSet...>() const noexcept {
         return TypedIndexHelper<SPEC, INDEX_BASE, OtherSet...> { **this };
     }
+
+    /**
+    Converts an index of many, into a variant of many.
+    This is how you undo the type erasure.
+    NOTE: it is the call-sight's job to ensure the passed in enum matches what the index actually represents.
+     */
+    template <EnumType T, typename = std::enable_if<sizeof...(ThisSet) != 0>> //
+    [[nodiscard]] constexpr std::variant<TypedIndexHelper<SPEC, INDEX_BASE, ThisSet>...> as_variant() const {
+        // This might look weird, as this is compile time known, but for some reason compilers need it to be written
+        // like this. I wonder if this is because this should be a consteval function but we don't have this in c++17?
+        if constexpr ((((T == ThisSet) || ...))) {
+            return TypedIndexHelper<SPEC, INDEX_BASE, T> { **this };
+        } else {
+            assert(false);
+            return TypedIndexHelper<SPEC, INDEX_BASE, Possible[0]> { **this };
+        }
+    }
+
+    template<EnumType ToRemove> 
+    [[nodiscard]] static constexpr auto remove_from_set() {
+        return Remover<ToRemove>::remove(std::make_index_sequence<sizeof...(ThisSet) - 1>{});
+    }
+
+private:
+    template <typename T> struct TypeWrapper {
+        using type = T;
+    };
+
+    // Removes an enum value from the set.
+    template <EnumType ToRemove> struct Remover {
+        static_assert(((ToRemove == ThisSet) || ...));
+
+        template <size_t... Is> [[nodiscard]] static constexpr auto remove(std::index_sequence<Is...>) {
+            static_assert(sizeof...(Is) + 1 == sizeof...(ThisSet));
+            using R = TypedIndexHelper< //
+                SPEC, //
+                INDEX_BASE, //
+                Possible[Is + offset(std::make_index_sequence<Is> { })]... //
+                >;
+            return TypeWrapper<R> { };
+        }
+
+        template <size_t... Is> [[nodiscard]] static constexpr auto offset(std::index_sequence<Is...>) {
+            return (((Possible[Is] == ToRemove) || ...) ? 1 : 0);
+        }
+    };
 };
 
 } // details
@@ -238,6 +303,7 @@ template <typename SPEC, typename SPEC::EnumSet... Set>
 [[nodiscard]] auto as_index(OptionalTypedIndex<SPEC, Set...> t) noexcept -> std::optional<TypedIndex<SPEC, Set...>> {
     return t ? std::optional<TypedIndex<SPEC, Set...>> { *t } : std::nullopt;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Auto define all types given a spec
@@ -331,7 +397,6 @@ template <template <Elements...> typename IndexType> struct Tester {
 
     static_assert(!convertible<AB_Index, A_Index>());
 
-    static_assert(!convertible<AB_Index, A_Index>());
     static_assert(!convertible<A_Index, C_Index>());
 
     static_assert(convertible<A_Index, A_Index>());
@@ -349,6 +414,23 @@ template <template <Elements...> typename IndexType> struct Tester {
         A_Index a { std::size_t(0) };
         AB_Index ab { a };
         return *ab == 0;
+    }());
+
+    template <typename... Ts> struct o : Ts... {
+        using Ts::operator()...;
+    };
+    template <class... Ts> o(Ts...) -> o<Ts...>;
+
+
+    static_assert([]() -> bool {
+        using V = std::variant<A_Index, B_Index>;
+        AB_Index ab { 0 };
+        V v = ab.template as_variant<Elements::A>();
+        return std::visit(o {
+                              [](A_Index) { return true; },
+                              [](B_Index) { return false; },
+                          },
+                          v);
     }());
 };
 

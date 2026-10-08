@@ -3,41 +3,44 @@
 
 #include "index.hpp"
 #include "indexes_typed.hpp"
-#include "node_graph_diagnostic.hpp"
-#include "sc_grammar_shared.hpp"
-#include "text_location.hpp"
+#include "sc_lexer/text_info.hpp"
+#include "sc_lexer/text_location.hpp"
 #include "nodes.hpp"
-#include "type_set_index.hpp"
-#include "typed_graph.hpp"
-#include <algorithm>
+#include "sc_util/type_set_index.hpp"
+#include "sc_util/typed_graph.hpp"
+
+#include "sc_diagnostic/sc_diagnostic.hpp"
+
 #include <functional>
+#include <memory>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-namespace sc::parser::nodes {
-}
 
-namespace sc::parser::graph {
+namespace sc::ast {
 
 namespace priv {
-template <typename... Os> struct overload : Os... { using Os::operator()...; };
+template <typename... Os> struct overload : Os... {
+    using Os::operator()...;
+};
 
 template <typename... Os> overload(Os...) -> overload<Os...>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-class NodeGraph
-    : private sc::util::typed_graph::GraphImplementation<OptionalIndex, Index, nodes::NodeCollectionHelper> {
-    using Base = sc::util::typed_graph::GraphImplementation<OptionalIndex, Index, nodes::NodeCollectionHelper>;
+class ASTGraph : private sc::util::typed_graph::GraphImplementation<OptionalIndex, Index, NodeCollectionHelper> {
+    using Base = sc::util::typed_graph::GraphImplementation<OptionalIndex, Index, NodeCollectionHelper>;
+    using Helper = Base::Helper;
 
 public:
-    NodeGraph() = default;
-    NodeGraph(const NodeGraph&) = default;
-    NodeGraph(NodeGraph&&) noexcept = default;
-    NodeGraph& operator=(const NodeGraph&) = delete;
-    NodeGraph& operator=(NodeGraph&&) = delete;
+    ASTGraph(std::shared_ptr<const lex::TextInfo> text_info): m_text_info(text_info) { }
+    ASTGraph(const ASTGraph&) = default;
+    ASTGraph(ASTGraph&&) noexcept = default;
+    ASTGraph& operator=(const ASTGraph&) = delete;
+    ASTGraph& operator=(ASTGraph&&) = delete;
 
     using Edges = Base::Edges;
     using Variant = Base::Variant;
@@ -66,12 +69,21 @@ public:
     // node type operations
     ////////////////////////////////////////////////////////////////////////////////
 
+    using Base::as_a;
     using Base::cast;
     using Base::is_a;
 
     template <typename TypedIndex, typename = std::enable_if<sc::util::typed_index::is_type_set_index<TypedIndex>()>>
     [[nodiscard]] static constexpr const char* node_name(TypedIndex);
     [[nodiscard]] static constexpr const char* node_name(const Variant& variant);
+
+    /// Turns as missing<NODEINDEX> into a std::optional<NODEINDEX>
+    template <typename TypedIndex, typename = std::enable_if<sc::util::typed_index::is_type_set_index<TypedIndex>()>>
+    [[nodiscard]] constexpr auto present(TypedIndex i) const
+        -> std::optional<typename decltype(TypedIndex::template remove_from_set<NodeFlag::Missing>())::type> //
+    {
+        return is_a<MissingIndex>(i) ? std::nullopt : std::optional { *i };
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -83,14 +95,20 @@ public:
     using Base::orphans;
     using Base::payload;
 
-    const sc::lex::SourceCodeRange& location(UntypedNodeIndex i) const { return m_locations[*i]; }
-    sc::lex::SourceCodeRange& location(UntypedNodeIndex i) { return m_locations[*i]; }
+    const sc::lex::SourceCodeRange& location(UntypedNodeIndex i) const { return m_node_locations[*i]; }
+    sc::lex::SourceCodeRange& location(UntypedNodeIndex i) { return m_node_locations[*i]; }
+
+    [[nodiscard]] std::shared_ptr<const lex::TextInfo> text_info() const { return m_text_info; }
+
+    [[nodiscard]] std::string_view string(UntypedNodeIndex i) const { return m_text_info->read(location(i)); }
 
     ////////////////////////////////////////////////////////////////////////////////
     // Children. This is the type safe way to walk the graph.
     ////////////////////////////////////////////////////////////////////////////////
 
     using Base::children;
+    using Base::index_to_variant;
+    using Base::visit;
 
     ////////////////////////////////////////////////////////////////////////////////
     // Roots
@@ -100,15 +118,16 @@ public:
     ClassOrExtensionListIndex assign_root(ClassOrExtensionListIndex i);
 
     [[nodiscard]] std::optional<Index> root_any() const;
-    [[nodiscard]] std::variant<std::monostate, RegionListIndex, ClassOrExtensionListIndex> root() const;
+
+    [[nodiscard]] std::optional<std::variant<RegionListIndex, ClassOrExtensionListIndex>> root() const;
 
     ////////////////////////////////////////////////////////////////////////////////
     // Diagnostics
     ////////////////////////////////////////////////////////////////////////////////
     [[nodiscard]] explicit operator bool() const;
-    void add_diagnostic(Diagnostic d);
-    [[nodiscard]] const std::vector<Diagnostic>& diagnostics() const&;
-    [[nodiscard]] std::vector<Diagnostic> diagnostics() &&;
+    void add_diagnostic(sc::diag::Diagnostic d);
+    [[nodiscard]] const std::vector<sc::diag::Diagnostic>& diagnostics() const&;
+    [[nodiscard]] std::vector<sc::diag::Diagnostic> diagnostics() &&;
 
     ////////////////////////////////////////////////////////////////////////////////
     // Traversal
@@ -125,13 +144,13 @@ public:
     void traverse_only_children(F& f, Index i);
 
     struct Default {
-        void operator()(const Edges& e, const Variant& v, const lex::SourceCodeRange&, Index i, size_t depth) {}
+        void operator()(const Edges&, const Variant&, const lex::SourceCodeRange&, Index, size_t /*depth*/) { }
     };
 
 
     /**
-    @brief Expects functions of the signature (const Edges& e, const Variant& v, const lex::SourceCodeRange&, Index i,
-    size_t depth)
+    @brief Expects functions of the signature:
+        (const Edges& e, const Variant& v, const lex::SourceCodeRange&, Index i, size_t depth)
     */
     template <typename EnterNode, typename BeforeChildren = Default, typename AfterChildren = Default,
               typename ExitNode = Default,
@@ -140,71 +159,75 @@ public:
               typename = std::enable_if<signature_check<AfterChildren>()>, //
               typename = std::enable_if<signature_check<ExitNode>()>>
 
-    void depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children = {},
-                              AfterChildren after_children = {}, ExitNode exit_node = {});
+    void depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children = { },
+                              AfterChildren after_children = { }, ExitNode exit_node = { });
 
 
 private:
-    std::vector<lex::SourceCodeRange> m_locations;
+    std::shared_ptr<const lex::TextInfo> m_text_info;
+    std::vector<lex::SourceCodeRange> m_node_locations;
 
-    std::vector<Diagnostic> m_diagnostics {};
+    std::vector<sc::diag::Diagnostic> m_diagnostics { };
 
     bool m_has_fatal_diagnostic { false };
 
-    std::variant<std::monostate, RegionListIndex, ClassOrExtensionListIndex> m_roots {};
+    std::variant<std::monostate, RegionListIndex, ClassOrExtensionListIndex> m_roots { };
 };
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename F, typename> inline void NodeGraph::flat_walk(F f) {
-    Base::flat_walk([&](const Edges& e, const Variant& v, size_t i) { std::invoke(f, e, v, m_locations[i], i); });
+template <typename F, typename> inline void ASTGraph::flat_walk(F f) {
+    Base::flat_walk([&](const Edges& e, const Variant& v, size_t i) { std::invoke(f, e, v, m_node_locations[i], i); });
 }
 
 template <typename TypedIndex, typename> //
-[[nodiscard]] constexpr const char* NodeGraph::node_name(TypedIndex) {
+[[nodiscard]] constexpr const char* ASTGraph::node_name(TypedIndex) {
     using NodeType = NodeTypeFromIndex<TypedIndex>;
     return NodeType::name;
 }
 
 template <typename I, typename... Children>
-inline auto NodeGraph::append(I p, lex::SourceCodeRange range, Children... children) {
+inline auto ASTGraph::append(I p, lex::SourceCodeRange range, Children... children) {
     (Base::append(p, children), ...);
     // At this point we know this is valid because the base does the checks
-    m_locations[*p] = std::move(range);
+    m_node_locations[*p] = std::move(range);
     return p;
 };
 
 template <typename EnterNode, typename BeforeChildren, typename AfterChildren, typename ExitNode, typename, typename,
           typename, typename>
-inline void NodeGraph::depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children,
-                                            AfterChildren after_children, ExitNode exit_node) {
+inline void ASTGraph::depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children,
+                                           AfterChildren after_children, ExitNode exit_node) {
     const auto wrap = [&](auto& f) {
-        return [&](const Edges& e, const Variant& v, Index i, size_t d) { f(e, v, m_locations[*i], i, d); };
+        return [&](const Edges& e, const Variant& v, Index index, size_t d) {
+            f(e, v, m_node_locations[*index], index, d);
+        };
     };
     Base::depth_first_traverse(i, wrap(enter_node), wrap(before_children), wrap(after_children), wrap(exit_node));
 }
 
 
 template <typename Node, typename... ChildrenIndexes>
-typename Node::Index NodeGraph::create(Node&& node, lex::SourceCodeRange location, ChildrenIndexes&&... child_indexes) {
+typename Node::Index ASTGraph::create(Node&& node, lex::SourceCodeRange location, ChildrenIndexes&&... child_indexes) {
     const auto index = Base::create(std::forward<Node>(node), std::forward<ChildrenIndexes>(child_indexes)...);
 
-    if (*index < m_locations.size()) {
-        m_locations[*index] = std::move(location);
+    if (*index < m_node_locations.size()) {
+        m_node_locations[*index] = std::move(location);
     } else {
-        assert(*index == m_locations.size());
-        m_locations.push_back(std::move(location));
+        assert(*index == m_node_locations.size());
+        m_node_locations.push_back(std::move(location));
     }
 
     return index;
 }
 
-template <typename F, typename> inline void NodeGraph::traverse_only_children(F& f, Index i) {
-    Base::traverse_only_children([&](const Edges& e, const Variant& v, Index i) { f(e, v, m_locations[*i], i); });
+template <typename F, typename> inline void ASTGraph::traverse_only_children(F& f, Index i) {
+    Base::traverse_only_children(
+        [&](const Edges& e, const Variant& v, Index index) { f(e, v, m_node_locations[*index], index); }, i);
 }
 
-[[nodiscard]] constexpr const char* NodeGraph::node_name(const Variant& variant) {
+[[nodiscard]] constexpr const char* ASTGraph::node_name(const Variant& variant) {
     return std::visit(
         [](const auto& v) -> const char* {
             using V = std::remove_reference_t<std::remove_cv_t<decltype(v)>>;

@@ -1,8 +1,8 @@
 #pragma once
-#include "type_set_index.hpp"
+#include "sc_util/type_set_index.hpp"
 #include <cstdint>
 
-namespace sc::parser {
+namespace sc::ast {
 
 // Elements the indexs can represent.
 // The types of node in the graph.
@@ -22,7 +22,7 @@ enum struct NodeFlag {
     ASCIILiteral,
     AccidentalLiteral,
     StringLiteral,
-    FunctionLiteral,
+
     ArrayLiteral,
     SymbolLiteral,
     SelectorLiteral,
