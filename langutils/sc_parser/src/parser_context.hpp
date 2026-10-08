@@ -1,15 +1,18 @@
 // Copyright Jordan Henderson 2026
 #pragma once
 
-#include "node_graph.hpp"
+#include "sc_parser/ast.hpp"
+
+#include "sc_lexer/normalise_source.hpp"
+#include "sc_lexer/text_location.hpp"
+#include "sc_lexer/tokens.hpp"
+
 #include <memory>
 #include <utility>
-#include "normalise_source.hpp"
-#include "text_location.hpp"
-#include "tokens.hpp"
 #include <optional>
+#include <vector>
 
-namespace sc::parser {
+namespace sc::ast::parser {
 
 
 using UnderlyingTokenType = std::underlying_type_t<sc::lex::TokenType>;
@@ -42,15 +45,15 @@ public:
                          std::optional<SourceCodeRange> e = std::nullopt) noexcept:
             token(static_cast<TokenType>(t)),
             range(r),
-            extra(e) {}
+            extra(e) { }
         constexpr Output(TokenType t, SourceCodeRange r, std::optional<SourceCodeRange> e = std::nullopt) noexcept:
             token(t),
             range(r),
-            extra(e) {}
+            extra(e) { }
 
         TokenType token;
         SourceCodeRange range;
-        std::optional<SourceCodeRange> extra {};
+        std::optional<SourceCodeRange> extra { };
     };
 
 
@@ -107,7 +110,7 @@ public:
     }
 
 private:
-    std::vector<std::pair<TokenType, SourceCodeRange>> closing_bracket_stack {};
+    std::vector<std::pair<TokenType, SourceCodeRange>> closing_bracket_stack { };
 
     template <TokenType T> constexpr TokenType get_closing_bracket() const {
         static_assert(sc::lex::matches(T, TokenType::OpenParen, TokenType::OpenSquare, TokenType::OpenCurly,
@@ -130,15 +133,15 @@ struct UnexpectedToken {
 };
 struct ParserContext {
     enum struct Mode { ClassLibrary, CommandInitial, CommandContinue };
-    std::shared_ptr<const sc::parser::TextInfo> text_info;
+    std::shared_ptr<const sc::lex::TextInfo> text_info;
     sc::lex::CodePointStream cps;
     Action action;
     Mode mode;
 
     std::optional<Action::Output> previous { std::nullopt };
-    sc::parser::graph::NodeGraph graph {};
+    sc::ast::ASTGraph graph { text_info };
 
-    std::optional<UnexpectedToken> unexpected_token_error {};
+    std::optional<UnexpectedToken> unexpected_token_error { };
 
     std::optional<UnexpectedToken> consume_error() { return std::move(unexpected_token_error); }
 

@@ -377,7 +377,7 @@ Nonterminals, with rules where they appear
     go <ClassListOrExprListIndex> (62)
         on left: 1 2
         on right: 0
-    region.item <error_index<ExprSeqIndex>> (63)
+    region.item <error_index<AnyExprIndex>> (63)
         on left: 3 4 5
         on right: 10 11
     region <RegionListIndex> (64)
@@ -416,7 +416,7 @@ Nonterminals, with rules where they appear
     class.vars.opt <DeclareClassAnyVarListIndex> (75)
         on left: 31 32
         on right: 17
-    method.name <MethodNameIndex> (76)
+    method.name <SelectorIndex> (76)
         on left: 33 34
         on right: 35 36 37 38
     method.base <MethodIndex> (77)
@@ -449,19 +449,19 @@ Nonterminals, with rules where they appear
     block.contents.item <BlockItemIndex> (86)
         on left: 55 56 57
         on right: 53 54
-    msgsend <ExprSeqIndex> (87)
+    msgsend <AnyExprIndex> (87)
         on left: 58 59 60 61 62 63 64 65 66 67 68 69 70 71
         on right: 74
-    expr.base <ExprSeqIndex> (88)
+    expr.base <AnyExprIndex> (88)
         on left: 72 73 74 75 76 77 78
         on right: 77 78 79 89 90
-    expr <ExprSeqIndex> (89)
+    expr <AnyExprIndex> (89)
         on left: 79 80 81 82 83 84 85 86 87 88 89 90 91 92
         on right: 3 6 55 57 64 65 66 67 81 82 83 84 85 86 87 88 89 90 91 92 93 94 128 157
-    expr.seq.base <ExprSeqIndex> (90)
+    expr.seq.base <AnyExprIndex> (90)
         on left: 93 94
         on right: 94 95
-    expr.seq <ExprSeqIndex> (91)
+    expr.seq <AnyExprIndex> (91)
         on left: 95
         on right: 98 101 102 105 106 110 111 115 116 129 133 134 135 151 152 153 154 155 156 157 158
     adverb <AdverbIndex> (92)
@@ -566,10 +566,10 @@ Nonterminals, with rules where they appear
     float.raw <FloatLitIndex> (125)
         on left: 201 202
         on right: 207 209
-    accidental.unsigned <AccidentalLitIndex> (126)
+    accidental.unsigned <AccidentalIndex> (126)
         on left: 203 204
         on right: 205 206
-    accidental <AccidentalLitIndex> (127)
+    accidental <AccidentalIndex> (127)
         on left: 205 206
         on right: 208
     float <FloatProducingIndex> (128)

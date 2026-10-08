@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace sc::parser {
+namespace sc::ast{
 // Used as the semantic value when returning a token from the lexer in the bison parser.
 struct LexerToken {};
 

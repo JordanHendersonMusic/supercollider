@@ -28,6 +28,7 @@ template <
 >
 // clang-format on
 struct NodeBase : NodeBaseBase {
+    static_assert(ThisTypedIndex::size_of_set == 1, "Nodes must be represented by indexes that have exactly one enum.");
     using Index = ThisTypedIndex;
     static constexpr NodeType type { T };
     [[nodiscard]] static constexpr bool is_list() { return type == NodeType::List; }

@@ -1,4 +1,4 @@
-#include "tokens.hpp"
+#include "sc_lexer/tokens.hpp"
 
 [[nodiscard]] const char* sc::lex::to_string(TokenType t) noexcept {
     switch (t) {

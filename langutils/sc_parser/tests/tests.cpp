@@ -1,18 +1,18 @@
-#include "nodes.hpp"
-#include "normalise_source.hpp"
-#include "sc_parser.hpp"
-#include "text_location.hpp"
+#include "sc_parser/nodes.hpp"
+#include "sc_lexer/normalise_source.hpp"
+#include "sc_parser/sc_parser.hpp"
+#include "sc_lexer/text_location.hpp"
 #include <memory>
 #define BOOST_TEST_MODULE sc_parser_tests
 #include <boost/test/included/unit_test.hpp>
 
-namespace P = sc ::parser;
+namespace P = sc::ast;
 
 const auto tester_base = [](const char* src, bool is_class_file) {
     std::cout << "\n--------------------------------\n src: ";
     std::cout << src << "\n";
 
-    auto text_info = std::shared_ptr<P::TextInfo>(new P::TextInfo {
+    auto text_info = std::shared_ptr<sc::lex::TextInfo>(new sc::lex::TextInfo {
         sc::lex::NormalisedSource(src),
         sc::lex::FileCodeLocation {},
         "test_file",

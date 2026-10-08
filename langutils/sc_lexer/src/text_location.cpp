@@ -1,4 +1,4 @@
-#include <text_location.hpp>
+#include "sc_lexer/text_location.hpp"
 
 using namespace sc::lex;
 

@@ -1,14 +1,14 @@
-#include "lexer.hpp"
-#include "node_graph_diagnostic.hpp"
+#pragma once
+
+#include "sc_lexer/lexer.hpp"
+
 #include "parser_context.hpp"
 #include "sc_grammar_parser.hpp"
-#include "sc_grammar_shared.hpp"
-#include "text_info.hpp"
-#include "text_location.hpp"
-#include <memory>
+#include "sc_parser/sc_grammar_shared.hpp"
+#include "sc_lexer/text_location.hpp"
 
-inline sc::parser::parser::token_kind_type to_parser_token(sc::lex::TokenType t) {
-    using T = sc::parser::parser::token_kind_type;
+inline sc::ast::parser::parser::token_kind_type to_parser_token(sc::lex::TokenType t) {
+    using T = sc::ast::parser::parser::token_kind_type;
     using TokenType = sc::lex::TokenType;
     switch (t) {
     case TokenType::EndOfFile:
@@ -136,29 +136,29 @@ inline sc::parser::parser::token_kind_type to_parser_token(sc::lex::TokenType t)
     }
 }
 
-inline int yylex(sc::parser::parser::value_type* v, sc::lex::SourceCodeRange* loc, sc::parser::ParserContext& cxt) {
-    using T = sc::parser::parser::token_kind_type;
+inline int yylex(sc::ast::parser::parser::value_type* v, sc::lex::SourceCodeRange* loc, sc::ast::parser::ParserContext& cxt) {
+    using T = sc::ast::parser::parser::token_kind_type;
 
     // Ugly hack for region detection recovery.
-    if (cxt.region_recovery == sc::parser::ParserContext::RegionRecovery::EmitRegionSeparator) {
+    if (cxt.region_recovery == sc::ast::parser::ParserContext::RegionRecovery::EmitRegionSeparator) {
         assert(cxt.previous);
-        cxt.region_recovery = sc::parser::ParserContext::RegionRecovery::EmitPrevious;
+        cxt.region_recovery = sc::ast::parser::ParserContext::RegionRecovery::EmitPrevious;
         return T::TOKEN_REGION_SEPARATOR;
     }
 
-    else if (cxt.region_recovery == sc::parser::ParserContext::RegionRecovery::EmitPrevious) {
+    else if (cxt.region_recovery == sc::ast::parser::ParserContext::RegionRecovery::EmitPrevious) {
         assert(cxt.previous);
-        cxt.region_recovery = sc::parser::ParserContext::RegionRecovery::None;
+        cxt.region_recovery = sc::ast::parser::ParserContext::RegionRecovery::None;
 
         const auto [lex_token, location, extra_location] = *cxt.previous;
         *loc = location;
-        v->emplace<sc::parser::LexerToken>();
+        v->emplace<sc::ast::LexerToken>();
         return static_cast<int>(to_parser_token(lex_token));
     }
 
-    if (cxt.mode == sc::parser::ParserContext::Mode::CommandInitial) {
-        cxt.mode = sc::parser::ParserContext::Mode::CommandContinue;
-        v->emplace<sc::parser::LexerToken>();
+    if (cxt.mode == sc::ast::parser::ParserContext::Mode::CommandInitial) {
+        cxt.mode = sc::ast::parser::ParserContext::Mode::CommandContinue;
+        v->emplace<sc::ast::LexerToken>();
         *loc = {};
         return T::TOKEN_INTERPRET;
     }
@@ -167,7 +167,7 @@ inline int yylex(sc::parser::parser::value_type* v, sc::lex::SourceCodeRange* lo
     cxt.previous = sc::lex::lexer(cxt.cps, cxt.action);
     const auto [lex_token, location, extra_location] = *cxt.previous;
     *loc = location;
-    v->emplace<sc::parser::LexerToken>();
+    v->emplace<sc::ast::LexerToken>();
 
     if (sc::lex::is_error(lex_token)) {
         // cxt.error_handler->operator()(cxt.text_info, lex_token, location, extra_location);
@@ -177,7 +177,7 @@ inline int yylex(sc::parser::parser::value_type* v, sc::lex::SourceCodeRange* lo
     return static_cast<int>(to_parser_token(lex_token));
 }
 
-namespace sc::parser::error_recovery {
+namespace sc::ast::parser::error_recovery {
 
 void region_separator(ParserContext&, sc ::lex::SourceCodeRange last_valid);
 void expr(ParserContext&);
