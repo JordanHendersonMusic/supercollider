@@ -2,6 +2,9 @@ include(${CMAKE_SOURCE_DIR}/cmake_modules/CompilerWarnings.cmake)
 
 add_library(sc_sema STATIC 
 	src/create_graph.cpp
+	#
+	src/ast2ir/expr.cpp
+	src/ast2ir/region.cpp
 )
 
 target_include_directories(sc_sema PUBLIC include)
@@ -14,3 +17,5 @@ if(ENABLE_TESTSUITE)
 	#add_subdirectory(tests)
 endif()
 
+
+add_subdirectory(standalone)

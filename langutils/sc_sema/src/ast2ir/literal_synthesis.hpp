@@ -18,6 +18,7 @@ namespace sc::ir {
 }
 
 [[nodiscard]] inline double synthesize_literal(const ast::FloatNode& node, std::string_view str) {
+    (void)str;
     if (node.kind == ast::FloatNode::Kind::Inf) {
         return std::numeric_limits<double>::infinity();
     }

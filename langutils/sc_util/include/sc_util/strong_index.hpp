@@ -91,17 +91,13 @@ namespace std {
 template <typename UNDERLYING, typename TAG>//
 struct hash<sc::util::StrongIndex<UNDERLYING, TAG>> {
     using T = sc::util::StrongIndex<UNDERLYING, TAG>;
-    std::size_t operator()(const T& t) const {
-        return std::hash {*t};
-    }
+    std::size_t operator()(const T& t) const { return std::hash<UNDERLYING> {}(*t); }
 };
 
 template <typename UNDERLYING, typename TAG, UNDERLYING INVALID>//
 struct hash<sc::util::StrongOptionalIndex<UNDERLYING, TAG, INVALID>> {
     using T = sc::util::StrongOptionalIndex<UNDERLYING, TAG, INVALID>;
-    std::size_t operator()(const T& t) const {
-        return std::hash {*t};
-    }
+    std::size_t operator()(const T& t) const { return std::hash<UNDERLYING> {}(*t); }
 };
 
 

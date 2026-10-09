@@ -263,6 +263,7 @@ public: // This is meant to be privately inherited from.
         };
 
         (append_node(std::forward<ChildrenIndexes>(child_indexes)), ...);
+        (void)append_node; // warnings get triggered without this, it can't see this is variadic.
 
         return index;
     }

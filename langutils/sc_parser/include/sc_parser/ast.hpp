@@ -165,7 +165,7 @@ public:
 
 private:
     std::shared_ptr<const lex::TextInfo> m_text_info;
-    std::vector<lex::SourceCodeRange> m_node_locations;
+    std::vector<lex::SourceCodeRange> m_node_locations {};
 
     std::vector<sc::diag::Diagnostic> m_diagnostics { };
 

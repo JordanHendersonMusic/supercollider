@@ -1,10 +1,3 @@
-A {
-	+ {^\plus }
-	- {^\minus }
-	* + { ^\star_plus }
-	* - { ^\star_minus }
-}
-
 Object : AbstractObjectExperimental {
 	classvar <dependantsDictionary, currentEnvironment, topEnvironment, <uniqueMethods;
 

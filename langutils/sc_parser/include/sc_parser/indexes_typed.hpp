@@ -41,9 +41,7 @@ using BlockListIndex = TypedIndex<NodeFlag::BlockList>;
 using AnyDefiniteLiteralIndex =
     join<ASCIIIndex, IntLitIndex, FloatProducingIndex, StringLitIndex, BooleanLitIndex, NilLitIndex, SymbolLitIndex>;
 
-using AnyPossiblyLiteralIndex =
-    join<ASCIIIndex, IntLitIndex, FloatProducingIndex, StringLitIndex, BooleanLitIndex, NilLitIndex, SymbolLitIndex,
-         BlockIndex, ArrayIndex, DictionaryIndex, CollectionIndex>;
+using AnyPossiblyLiteralIndex = join<AnyDefiniteLiteralIndex, BlockIndex, ArrayIndex, DictionaryIndex, CollectionIndex>;
 
 using ClassNameIdentifierIndex = TypedIndex<NodeFlag::ClassNameIdentifier>;
 using NamedIdentifierIndex = TypedIndex<NodeFlag::NameIdentifier>;

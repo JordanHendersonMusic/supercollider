@@ -3,6 +3,7 @@
 #include "sc_parser/indexes_typed.hpp"
 #include "sc_parser/ast.hpp"
 #include "sc_sema/const_expr.hpp"
+#include "sc_sema/create_graph.hpp"
 #include "sc_sema/ir.hpp"
 #include "sc_sema/type_info.hpp"
 
@@ -22,18 +23,17 @@ struct Return {
     std::optional<TypeInfo> type{};
 };
 
-////////////////////////////////////////////////////////////////////////////////
-struct Context {
-    
-    IRGraph& ir_graph;
-    const ast::ASTGraph& ast_graph;
-    ASTGraphIndex ast_index;
-};
+
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Base {
-    Base(IRGraph& ir, const ast::ASTGraph& ast, ASTGraphIndex ast_index) : ir_graph(ir), ast_graph(ast), ast_index(ast_index) {}
-    IRGraph& ir_graph;
+    Base(IRGraph& ir, const ast::ASTGraph& ast, ASTGraphIndex ast_i, Context& cxt):
+        context(cxt),
+        building_ir(ir),
+        ast_graph(ast),
+        ast_index(ast_i) {}
+    Context& context;
+    IRGraph& building_ir;
     const ast::ASTGraph& ast_graph;
     ASTGraphIndex ast_index;
 };
@@ -50,8 +50,10 @@ struct Expr : private Base {
     using Base::Base;
     Return operator()(ast::IntLitIndex i);
     Return operator()(ast::FloatLitIndex i);
-    template<typename T>
-    Return operator()(T) {};
+    template <typename T> Return operator()(T) {
+        assert(false);
+        return Return { NodeIndex { 0 } };
+    };
 };
 
 

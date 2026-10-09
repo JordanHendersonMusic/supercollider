@@ -3,13 +3,15 @@
 
 #include "codepoint_stream.hpp"
 #include "normalise_source.hpp"
+#include <filesystem>
+#include <optional>
 
 namespace sc::lex {
 
 struct TextInfo {
     NormalisedSource source;
     FileCodeLocation source_start_in_file;
-    const char* file_path; // can be nullptr;
+    std::optional<std::filesystem::path> file_path; // can be nullptr;
     bool is_class_file;
 
     [[nodiscard]] std::string_view read(SourceCodeRange r) const noexcept {

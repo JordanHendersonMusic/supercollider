@@ -40,14 +40,24 @@ private:
     std::vector<Diagnostic> m_diagnostics { };
 };
 
+
+using GraphAndIndex = std::pair<ast::ASTGraph, ast::ClassOrExtensionListIndex>;
 // This is the runtime context.
 // It is all the class library information, and the symbol and constant tables.
 // When a irnode compiler pass needs to know something about the rest of the world, it goes through this.
 struct Context {
+    Context(std::vector<GraphAndIndex> lib): ast_of_class_library(std::move(lib)) {}
+    Context(Context&&) = delete;
+    Context(const Context&) = delete;
+    Context& operator=(Context&&) = delete;
+    Context& operator=(const Context&) = delete;
+
+
     SymbolTable symbol_table { };
     ClassDeclarations class_declarations { };
     ConstantTable constant_table { };
     CurrentDiagnostics diagnostics { };
+    const std::vector<GraphAndIndex> ast_of_class_library;
 };
 
 IRGraph create_graph(const ast::ASTGraph&, std::variant<ast::RegionListIndex, ast::ClassOrExtensionListIndex> roots,
@@ -61,20 +71,16 @@ struct IntrinsicConstraints {
 };
 
 struct IRCompiler {
-    using GraphAndIndex = std::pair<ast::ASTGraph, ast::ClassOrExtensionListIndex>;
-
     IRCompiler( //
         std::unordered_map<SymSCClassName, IntrinsicConstraints, std::hash<Symbol>> intrinsic_constraints, //
         std::vector<GraphAndIndex> class_lib, //
         size_t num_threads = std::thread::hardware_concurrency());
 
 private:
-    Context context { };
+    Context context;
 
     std::atomic<bool> m_compile_has_been_called { false };
 
-    // Never mutated.
-    const std::vector<std::pair<ast::ASTGraph, ast::ClassOrExtensionListIndex>> m_class_lib_ast;
 
     struct ClassData {
         SymSCClassName name;
