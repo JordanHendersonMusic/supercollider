@@ -156,6 +156,10 @@ public:
     using UnderlyingEnum = std::underlying_type_t<EnumType>;
     using EnumSequence = std::integer_sequence<UnderlyingEnum, static_cast<UnderlyingEnum>(ThisSet)...>;
 
+    template <typename T> [[nodiscard]] static constexpr TypedIndexHelper from(T t) {
+        return TypedIndexHelper { static_cast<typename UnderlyingIndex::Underlying>(t) };
+    }
+
     TypedIndexHelper(TypedIndexHelper&&) noexcept = default;
     TypedIndexHelper(const TypedIndexHelper&) noexcept = default;
     TypedIndexHelper& operator=(TypedIndexHelper&&) noexcept = default;

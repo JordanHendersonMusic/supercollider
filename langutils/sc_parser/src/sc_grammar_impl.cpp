@@ -14,6 +14,22 @@ void sc::ast::parser::parser::report_syntax_error(const context& symbol_cxt) con
 
     cxt.unexpected_token_error = UnexpectedToken { symbol_cxt.location(), std::move(expected_int),
                                                    static_cast<int>(symbol_cxt.lookahead().kind_) };
+
+    std::string expected_str;
+    const auto sz = expected_int.size();
+
+    using Symbol = sc::ast::parser::parser::symbol_kind_type;
+    for (size_t i { 0 }; i < sz; ++i) {
+        expected_str += sc::ast::parser::parser::symbol_name(static_cast<Symbol>(expected_int[i]));
+        if (i + 2 == sz)
+            expected_str += ", or ";
+        else if (i + 2 < sz)
+            expected_str += ", ";
+    }
+
+    const char* got_name = symbol_cxt.lookahead().name();
+    cxt.graph.add_diagnostic(
+        diag::Diagnostic::unexpectedToken(cxt.text_info, symbol_cxt.location(), expected_str, got_name));
 }
 
 void sc::ast::parser::parser::error(const sc::lex::SourceCodeRange&, const std::string&) {
@@ -26,7 +42,7 @@ namespace sc::ast::parser::error_recovery {
 
 void region_separator(ParserContext& cxt, sc ::lex::SourceCodeRange last_valid) {
     auto _ = cxt.consume_error();
-    cxt.graph.add_diagnostic(diag::Diagnostic::regionMissingSemi({cxt.text_info, last_valid}));
+    cxt.graph.add_diagnostic(diag::Diagnostic::regionMissingSemi(cxt.text_info, last_valid));
 }
 
 void expr(ParserContext& cxt) {
@@ -46,7 +62,7 @@ void expr(ParserContext& cxt) {
             expected += ", ";
     }
 
-    cxt.graph.add_diagnostic( diag::Diagnostic::unexpectedToken({cxt.text_info, unexpected.location}, expected, got_name));
+    cxt.graph.add_diagnostic(diag::Diagnostic::unexpectedToken(cxt.text_info, unexpected.location, expected, got_name));
 }
 
 }

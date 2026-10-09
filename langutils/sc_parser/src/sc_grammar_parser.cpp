@@ -48,8 +48,6 @@
 
 namespace sc::ast::parser{ class parser; } // forward declare the parser
 
-//static int yylex(sc::ast::parser::parser::value_type* v, sc::lex::SourceCodeRange* loc, sc::ast::ParserContext& cxt);
-
 using namespace sc::ast;
 
 template<typename... REJECTS>
@@ -64,9 +62,7 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 }
 
 
-#line 68 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-
-
+#line 66 "langutils/sc_parser/src/sc_grammar_parser.cpp"
 
 
 #include "sc_grammar_parser.hpp"
@@ -164,18 +160,19 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 
 #line 7 "langutils/sc_parser/src/sc_grammar.y"
 namespace sc { namespace ast { namespace parser {
-#line 168 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 166 "langutils/sc_parser/src/sc_grammar_parser.cpp"
 
-  /// Build a parser object.
-  parser::parser (ParserContext& cxt_yyarg)
+/// Build a parser object.
+parser::parser(ParserContext& cxt_yyarg)
 #if YYDEBUG
-    : yydebug_ (false),
-      yycdebug_ (&std::cerr),
+    :
+    yydebug_(false),
+    yycdebug_(&std::cerr),
 #else
     :
 #endif
-      cxt (cxt_yyarg)
-  {}
+    cxt(cxt_yyarg) {
+}
 
   parser::~parser ()
   {}
@@ -200,7 +197,7 @@ namespace sc { namespace ast { namespace parser {
         value.copy< ASCIIIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_126_accidental_unsigned: // accidental.unsigned
+      case symbol_kind::S_127_accidental_unsigned: // accidental.unsigned
       case symbol_kind::S_accidental: // accidental
         value.copy< AccidentalIndex > (YY_MOVE (that.value));
         break;
@@ -210,49 +207,50 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_msgsend: // msgsend
-      case symbol_kind::S_88_expr_base: // expr.base
+      case symbol_kind::S_89_expr_base: // expr.base
       case symbol_kind::S_expr: // expr
-      case symbol_kind::S_90_expr_seq_base: // expr.seq.base
-      case symbol_kind::S_91_expr_seq: // expr.seq
-        value.copy< AnyExprIndex > (YY_MOVE (that.value));
-        break;
-
-      case symbol_kind::S_105_literal_terminal: // literal.terminal
-      case symbol_kind::S_literal: // literal
-        value.copy< AnyPossiblyLiteralIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_91_expr_seq_base: // expr.seq.base
+      case symbol_kind::S_92_expr_seq: // expr.seq
+          value.copy<AnyExprIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_method: // method
         value.copy< AnyMethodIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_100_arguments_entries: // arguments.entries
-        value.copy< ArgumentEntryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_106_literal_terminal: // literal.terminal
+      case symbol_kind::S_literal: // literal
+          value.copy<AnyPossiblyLiteralIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_101_arguments_no_trailing: // arguments.no_trailing
+      case symbol_kind::S_101_arguments_entries: // arguments.entries
+          value.copy<ArgumentEntryIndex>(YY_MOVE(that.value));
+          break;
+
+      case symbol_kind::S_102_arguments_no_trailing: // arguments.no_trailing
       case symbol_kind::S_arguments: // arguments
-      case symbol_kind::S_103_arguments_paren: // arguments.paren
-      case symbol_kind::S_104_arguments_maybe_paren: // arguments.maybe_paren
-        value.copy< ArgumentListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_104_arguments_paren: // arguments.paren
+      case symbol_kind::S_105_arguments_maybe_paren: // arguments.maybe_paren
+          value.copy<ArgumentListIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_106_literal_array_contents: // literal.array.contents
-      case symbol_kind::S_110_literal_array: // literal.array
-        value.copy< ArrayIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_107_literal_array_contents: // literal.array.contents
+      case symbol_kind::S_111_literal_array: // literal.array
+          value.copy<ArrayIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_85_block_contents: // block.contents
-        value.copy< BlockContentsListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_85_block_contents_no_trailing_return: // block.contents.no_trailing_return
+      case symbol_kind::S_86_block_contents: // block.contents
+          value.copy<BlockContentsListIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_block: // block
         value.copy< BlockIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_86_block_contents_item: // block.contents.item
-        value.copy< BlockItemIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_87_block_contents_item: // block.contents.item
+          value.copy<BlockItemIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_83_block_opt_list: // block.opt_list
       case symbol_kind::S_84_block_list: // block.list
@@ -287,16 +285,16 @@ namespace sc { namespace ast { namespace parser {
         value.copy< DeclareAnyList > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_97_variable_declarations_list_item: // variable_declarations.list.item
-        value.copy< DeclareAnyVariableIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_98_variable_declarations_list_item: // variable_declarations.list.item
+          value.copy<DeclareAnyVariableIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_93_argument_declarations_list: // argument_declarations.list
-      case symbol_kind::S_94_argument_declarations_pipelist: // argument_declarations.pipelist
+      case symbol_kind::S_94_argument_declarations_list: // argument_declarations.list
+      case symbol_kind::S_95_argument_declarations_pipelist: // argument_declarations.pipelist
       case symbol_kind::S_argument_declarations: // argument_declarations
-      case symbol_kind::S_96_argument_declarations_opt: // argument_declarations.opt
-        value.copy< DeclareArgumentListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_97_argument_declarations_opt: // argument_declarations.opt
+          value.copy<DeclareArgumentListIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_74_class_vars: // class.vars
       case symbol_kind::S_75_class_vars_opt: // class.vars.opt
@@ -311,24 +309,24 @@ namespace sc { namespace ast { namespace parser {
         value.copy< DeclareMemberListIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_98_variable_declarations_list: // variable_declarations.list
+      case symbol_kind::S_99_variable_declarations_list: // variable_declarations.list
       case symbol_kind::S_variable_declarations: // variable_declarations
         value.copy< DeclareVariableListIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_107_literal_dictionary_entry: // literal.dictionary.entry
-        value.copy< DictionaryEntryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_108_literal_dictionary_entry: // literal.dictionary.entry
+          value.copy<DictionaryEntryIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_108_literal_dictionary_entries: // literal.dictionary.entries
-      case symbol_kind::S_109_literal_dictionary: // literal.dictionary
-        value.copy< DictionaryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_109_literal_dictionary_entries: // literal.dictionary.entries
+      case symbol_kind::S_110_literal_dictionary: // literal.dictionary
+          value.copy<DictionaryIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_124_float_raw_unsigned: // float.raw_unsigned
-      case symbol_kind::S_125_float_raw: // float.raw
-        value.copy< FloatLitIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_125_float_raw_unsigned: // float.raw_unsigned
+      case symbol_kind::S_126_float_raw: // float.raw
+          value.copy<FloatLitIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_float: // float
         value.copy< FloatProducingIndex > (YY_MOVE (that.value));
@@ -425,10 +423,10 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_76_method_name: // method.name
-      case symbol_kind::S_113_binary_op_raw: // binary_op.raw
-      case symbol_kind::S_114_binary_op_no_adverb: // binary_op.no_adverb
-        value.copy< SelectorIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_114_binary_op_raw: // binary_op.raw
+      case symbol_kind::S_115_binary_op_no_adverb: // binary_op.no_adverb
+          value.copy<SelectorIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_binary_op: // binary_op
         value.copy< SelectorMaybeAdverbIndex > (YY_MOVE (that.value));
@@ -489,7 +487,7 @@ namespace sc { namespace ast { namespace parser {
         value.move< ASCIIIndex > (YY_MOVE (s.value));
         break;
 
-      case symbol_kind::S_126_accidental_unsigned: // accidental.unsigned
+      case symbol_kind::S_127_accidental_unsigned: // accidental.unsigned
       case symbol_kind::S_accidental: // accidental
         value.move< AccidentalIndex > (YY_MOVE (s.value));
         break;
@@ -499,49 +497,50 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_msgsend: // msgsend
-      case symbol_kind::S_88_expr_base: // expr.base
+      case symbol_kind::S_89_expr_base: // expr.base
       case symbol_kind::S_expr: // expr
-      case symbol_kind::S_90_expr_seq_base: // expr.seq.base
-      case symbol_kind::S_91_expr_seq: // expr.seq
-        value.move< AnyExprIndex > (YY_MOVE (s.value));
-        break;
-
-      case symbol_kind::S_105_literal_terminal: // literal.terminal
-      case symbol_kind::S_literal: // literal
-        value.move< AnyPossiblyLiteralIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_91_expr_seq_base: // expr.seq.base
+      case symbol_kind::S_92_expr_seq: // expr.seq
+          value.move<AnyExprIndex>(YY_MOVE(s.value));
+          break;
 
       case symbol_kind::S_method: // method
         value.move< AnyMethodIndex > (YY_MOVE (s.value));
         break;
 
-      case symbol_kind::S_100_arguments_entries: // arguments.entries
-        value.move< ArgumentEntryIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_106_literal_terminal: // literal.terminal
+      case symbol_kind::S_literal: // literal
+          value.move<AnyPossiblyLiteralIndex>(YY_MOVE(s.value));
+          break;
 
-      case symbol_kind::S_101_arguments_no_trailing: // arguments.no_trailing
+      case symbol_kind::S_101_arguments_entries: // arguments.entries
+          value.move<ArgumentEntryIndex>(YY_MOVE(s.value));
+          break;
+
+      case symbol_kind::S_102_arguments_no_trailing: // arguments.no_trailing
       case symbol_kind::S_arguments: // arguments
-      case symbol_kind::S_103_arguments_paren: // arguments.paren
-      case symbol_kind::S_104_arguments_maybe_paren: // arguments.maybe_paren
-        value.move< ArgumentListIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_104_arguments_paren: // arguments.paren
+      case symbol_kind::S_105_arguments_maybe_paren: // arguments.maybe_paren
+          value.move<ArgumentListIndex>(YY_MOVE(s.value));
+          break;
 
-      case symbol_kind::S_106_literal_array_contents: // literal.array.contents
-      case symbol_kind::S_110_literal_array: // literal.array
-        value.move< ArrayIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_107_literal_array_contents: // literal.array.contents
+      case symbol_kind::S_111_literal_array: // literal.array
+          value.move<ArrayIndex>(YY_MOVE(s.value));
+          break;
 
-      case symbol_kind::S_85_block_contents: // block.contents
-        value.move< BlockContentsListIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_85_block_contents_no_trailing_return: // block.contents.no_trailing_return
+      case symbol_kind::S_86_block_contents: // block.contents
+          value.move<BlockContentsListIndex>(YY_MOVE(s.value));
+          break;
 
       case symbol_kind::S_block: // block
         value.move< BlockIndex > (YY_MOVE (s.value));
         break;
 
-      case symbol_kind::S_86_block_contents_item: // block.contents.item
-        value.move< BlockItemIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_87_block_contents_item: // block.contents.item
+          value.move<BlockItemIndex>(YY_MOVE(s.value));
+          break;
 
       case symbol_kind::S_83_block_opt_list: // block.opt_list
       case symbol_kind::S_84_block_list: // block.list
@@ -576,16 +575,16 @@ namespace sc { namespace ast { namespace parser {
         value.move< DeclareAnyList > (YY_MOVE (s.value));
         break;
 
-      case symbol_kind::S_97_variable_declarations_list_item: // variable_declarations.list.item
-        value.move< DeclareAnyVariableIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_98_variable_declarations_list_item: // variable_declarations.list.item
+          value.move<DeclareAnyVariableIndex>(YY_MOVE(s.value));
+          break;
 
-      case symbol_kind::S_93_argument_declarations_list: // argument_declarations.list
-      case symbol_kind::S_94_argument_declarations_pipelist: // argument_declarations.pipelist
+      case symbol_kind::S_94_argument_declarations_list: // argument_declarations.list
+      case symbol_kind::S_95_argument_declarations_pipelist: // argument_declarations.pipelist
       case symbol_kind::S_argument_declarations: // argument_declarations
-      case symbol_kind::S_96_argument_declarations_opt: // argument_declarations.opt
-        value.move< DeclareArgumentListIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_97_argument_declarations_opt: // argument_declarations.opt
+          value.move<DeclareArgumentListIndex>(YY_MOVE(s.value));
+          break;
 
       case symbol_kind::S_74_class_vars: // class.vars
       case symbol_kind::S_75_class_vars_opt: // class.vars.opt
@@ -600,24 +599,24 @@ namespace sc { namespace ast { namespace parser {
         value.move< DeclareMemberListIndex > (YY_MOVE (s.value));
         break;
 
-      case symbol_kind::S_98_variable_declarations_list: // variable_declarations.list
+      case symbol_kind::S_99_variable_declarations_list: // variable_declarations.list
       case symbol_kind::S_variable_declarations: // variable_declarations
         value.move< DeclareVariableListIndex > (YY_MOVE (s.value));
         break;
 
-      case symbol_kind::S_107_literal_dictionary_entry: // literal.dictionary.entry
-        value.move< DictionaryEntryIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_108_literal_dictionary_entry: // literal.dictionary.entry
+          value.move<DictionaryEntryIndex>(YY_MOVE(s.value));
+          break;
 
-      case symbol_kind::S_108_literal_dictionary_entries: // literal.dictionary.entries
-      case symbol_kind::S_109_literal_dictionary: // literal.dictionary
-        value.move< DictionaryIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_109_literal_dictionary_entries: // literal.dictionary.entries
+      case symbol_kind::S_110_literal_dictionary: // literal.dictionary
+          value.move<DictionaryIndex>(YY_MOVE(s.value));
+          break;
 
-      case symbol_kind::S_124_float_raw_unsigned: // float.raw_unsigned
-      case symbol_kind::S_125_float_raw: // float.raw
-        value.move< FloatLitIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_125_float_raw_unsigned: // float.raw_unsigned
+      case symbol_kind::S_126_float_raw: // float.raw
+          value.move<FloatLitIndex>(YY_MOVE(s.value));
+          break;
 
       case symbol_kind::S_float: // float
         value.move< FloatProducingIndex > (YY_MOVE (s.value));
@@ -714,10 +713,10 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_76_method_name: // method.name
-      case symbol_kind::S_113_binary_op_raw: // binary_op.raw
-      case symbol_kind::S_114_binary_op_no_adverb: // binary_op.no_adverb
-        value.move< SelectorIndex > (YY_MOVE (s.value));
-        break;
+      case symbol_kind::S_114_binary_op_raw: // binary_op.raw
+      case symbol_kind::S_115_binary_op_no_adverb: // binary_op.no_adverb
+          value.move<SelectorIndex>(YY_MOVE(s.value));
+          break;
 
       case symbol_kind::S_binary_op: // binary_op
         value.move< SelectorMaybeAdverbIndex > (YY_MOVE (s.value));
@@ -848,7 +847,7 @@ namespace sc { namespace ast { namespace parser {
         value.YY_MOVE_OR_COPY< ASCIIIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_126_accidental_unsigned: // accidental.unsigned
+      case symbol_kind::S_127_accidental_unsigned: // accidental.unsigned
       case symbol_kind::S_accidental: // accidental
         value.YY_MOVE_OR_COPY< AccidentalIndex > (YY_MOVE (that.value));
         break;
@@ -858,49 +857,50 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_msgsend: // msgsend
-      case symbol_kind::S_88_expr_base: // expr.base
+      case symbol_kind::S_89_expr_base: // expr.base
       case symbol_kind::S_expr: // expr
-      case symbol_kind::S_90_expr_seq_base: // expr.seq.base
-      case symbol_kind::S_91_expr_seq: // expr.seq
-        value.YY_MOVE_OR_COPY< AnyExprIndex > (YY_MOVE (that.value));
-        break;
-
-      case symbol_kind::S_105_literal_terminal: // literal.terminal
-      case symbol_kind::S_literal: // literal
-        value.YY_MOVE_OR_COPY< AnyPossiblyLiteralIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_91_expr_seq_base: // expr.seq.base
+      case symbol_kind::S_92_expr_seq: // expr.seq
+          value.YY_MOVE_OR_COPY<AnyExprIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_method: // method
         value.YY_MOVE_OR_COPY< AnyMethodIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_100_arguments_entries: // arguments.entries
-        value.YY_MOVE_OR_COPY< ArgumentEntryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_106_literal_terminal: // literal.terminal
+      case symbol_kind::S_literal: // literal
+          value.YY_MOVE_OR_COPY<AnyPossiblyLiteralIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_101_arguments_no_trailing: // arguments.no_trailing
+      case symbol_kind::S_101_arguments_entries: // arguments.entries
+          value.YY_MOVE_OR_COPY<ArgumentEntryIndex>(YY_MOVE(that.value));
+          break;
+
+      case symbol_kind::S_102_arguments_no_trailing: // arguments.no_trailing
       case symbol_kind::S_arguments: // arguments
-      case symbol_kind::S_103_arguments_paren: // arguments.paren
-      case symbol_kind::S_104_arguments_maybe_paren: // arguments.maybe_paren
-        value.YY_MOVE_OR_COPY< ArgumentListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_104_arguments_paren: // arguments.paren
+      case symbol_kind::S_105_arguments_maybe_paren: // arguments.maybe_paren
+          value.YY_MOVE_OR_COPY<ArgumentListIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_106_literal_array_contents: // literal.array.contents
-      case symbol_kind::S_110_literal_array: // literal.array
-        value.YY_MOVE_OR_COPY< ArrayIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_107_literal_array_contents: // literal.array.contents
+      case symbol_kind::S_111_literal_array: // literal.array
+          value.YY_MOVE_OR_COPY<ArrayIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_85_block_contents: // block.contents
-        value.YY_MOVE_OR_COPY< BlockContentsListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_85_block_contents_no_trailing_return: // block.contents.no_trailing_return
+      case symbol_kind::S_86_block_contents: // block.contents
+          value.YY_MOVE_OR_COPY<BlockContentsListIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_block: // block
         value.YY_MOVE_OR_COPY< BlockIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_86_block_contents_item: // block.contents.item
-        value.YY_MOVE_OR_COPY< BlockItemIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_87_block_contents_item: // block.contents.item
+          value.YY_MOVE_OR_COPY<BlockItemIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_83_block_opt_list: // block.opt_list
       case symbol_kind::S_84_block_list: // block.list
@@ -935,16 +935,16 @@ namespace sc { namespace ast { namespace parser {
         value.YY_MOVE_OR_COPY< DeclareAnyList > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_97_variable_declarations_list_item: // variable_declarations.list.item
-        value.YY_MOVE_OR_COPY< DeclareAnyVariableIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_98_variable_declarations_list_item: // variable_declarations.list.item
+          value.YY_MOVE_OR_COPY<DeclareAnyVariableIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_93_argument_declarations_list: // argument_declarations.list
-      case symbol_kind::S_94_argument_declarations_pipelist: // argument_declarations.pipelist
+      case symbol_kind::S_94_argument_declarations_list: // argument_declarations.list
+      case symbol_kind::S_95_argument_declarations_pipelist: // argument_declarations.pipelist
       case symbol_kind::S_argument_declarations: // argument_declarations
-      case symbol_kind::S_96_argument_declarations_opt: // argument_declarations.opt
-        value.YY_MOVE_OR_COPY< DeclareArgumentListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_97_argument_declarations_opt: // argument_declarations.opt
+          value.YY_MOVE_OR_COPY<DeclareArgumentListIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_74_class_vars: // class.vars
       case symbol_kind::S_75_class_vars_opt: // class.vars.opt
@@ -959,24 +959,24 @@ namespace sc { namespace ast { namespace parser {
         value.YY_MOVE_OR_COPY< DeclareMemberListIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_98_variable_declarations_list: // variable_declarations.list
+      case symbol_kind::S_99_variable_declarations_list: // variable_declarations.list
       case symbol_kind::S_variable_declarations: // variable_declarations
         value.YY_MOVE_OR_COPY< DeclareVariableListIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_107_literal_dictionary_entry: // literal.dictionary.entry
-        value.YY_MOVE_OR_COPY< DictionaryEntryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_108_literal_dictionary_entry: // literal.dictionary.entry
+          value.YY_MOVE_OR_COPY<DictionaryEntryIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_108_literal_dictionary_entries: // literal.dictionary.entries
-      case symbol_kind::S_109_literal_dictionary: // literal.dictionary
-        value.YY_MOVE_OR_COPY< DictionaryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_109_literal_dictionary_entries: // literal.dictionary.entries
+      case symbol_kind::S_110_literal_dictionary: // literal.dictionary
+          value.YY_MOVE_OR_COPY<DictionaryIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_124_float_raw_unsigned: // float.raw_unsigned
-      case symbol_kind::S_125_float_raw: // float.raw
-        value.YY_MOVE_OR_COPY< FloatLitIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_125_float_raw_unsigned: // float.raw_unsigned
+      case symbol_kind::S_126_float_raw: // float.raw
+          value.YY_MOVE_OR_COPY<FloatLitIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_float: // float
         value.YY_MOVE_OR_COPY< FloatProducingIndex > (YY_MOVE (that.value));
@@ -1073,10 +1073,10 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_76_method_name: // method.name
-      case symbol_kind::S_113_binary_op_raw: // binary_op.raw
-      case symbol_kind::S_114_binary_op_no_adverb: // binary_op.no_adverb
-        value.YY_MOVE_OR_COPY< SelectorIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_114_binary_op_raw: // binary_op.raw
+      case symbol_kind::S_115_binary_op_no_adverb: // binary_op.no_adverb
+          value.YY_MOVE_OR_COPY<SelectorIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_binary_op: // binary_op
         value.YY_MOVE_OR_COPY< SelectorMaybeAdverbIndex > (YY_MOVE (that.value));
@@ -1121,7 +1121,7 @@ namespace sc { namespace ast { namespace parser {
         value.move< ASCIIIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_126_accidental_unsigned: // accidental.unsigned
+      case symbol_kind::S_127_accidental_unsigned: // accidental.unsigned
       case symbol_kind::S_accidental: // accidental
         value.move< AccidentalIndex > (YY_MOVE (that.value));
         break;
@@ -1131,49 +1131,50 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_msgsend: // msgsend
-      case symbol_kind::S_88_expr_base: // expr.base
+      case symbol_kind::S_89_expr_base: // expr.base
       case symbol_kind::S_expr: // expr
-      case symbol_kind::S_90_expr_seq_base: // expr.seq.base
-      case symbol_kind::S_91_expr_seq: // expr.seq
-        value.move< AnyExprIndex > (YY_MOVE (that.value));
-        break;
-
-      case symbol_kind::S_105_literal_terminal: // literal.terminal
-      case symbol_kind::S_literal: // literal
-        value.move< AnyPossiblyLiteralIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_91_expr_seq_base: // expr.seq.base
+      case symbol_kind::S_92_expr_seq: // expr.seq
+          value.move<AnyExprIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_method: // method
         value.move< AnyMethodIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_100_arguments_entries: // arguments.entries
-        value.move< ArgumentEntryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_106_literal_terminal: // literal.terminal
+      case symbol_kind::S_literal: // literal
+          value.move<AnyPossiblyLiteralIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_101_arguments_no_trailing: // arguments.no_trailing
+      case symbol_kind::S_101_arguments_entries: // arguments.entries
+          value.move<ArgumentEntryIndex>(YY_MOVE(that.value));
+          break;
+
+      case symbol_kind::S_102_arguments_no_trailing: // arguments.no_trailing
       case symbol_kind::S_arguments: // arguments
-      case symbol_kind::S_103_arguments_paren: // arguments.paren
-      case symbol_kind::S_104_arguments_maybe_paren: // arguments.maybe_paren
-        value.move< ArgumentListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_104_arguments_paren: // arguments.paren
+      case symbol_kind::S_105_arguments_maybe_paren: // arguments.maybe_paren
+          value.move<ArgumentListIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_106_literal_array_contents: // literal.array.contents
-      case symbol_kind::S_110_literal_array: // literal.array
-        value.move< ArrayIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_107_literal_array_contents: // literal.array.contents
+      case symbol_kind::S_111_literal_array: // literal.array
+          value.move<ArrayIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_85_block_contents: // block.contents
-        value.move< BlockContentsListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_85_block_contents_no_trailing_return: // block.contents.no_trailing_return
+      case symbol_kind::S_86_block_contents: // block.contents
+          value.move<BlockContentsListIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_block: // block
         value.move< BlockIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_86_block_contents_item: // block.contents.item
-        value.move< BlockItemIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_87_block_contents_item: // block.contents.item
+          value.move<BlockItemIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_83_block_opt_list: // block.opt_list
       case symbol_kind::S_84_block_list: // block.list
@@ -1208,16 +1209,16 @@ namespace sc { namespace ast { namespace parser {
         value.move< DeclareAnyList > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_97_variable_declarations_list_item: // variable_declarations.list.item
-        value.move< DeclareAnyVariableIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_98_variable_declarations_list_item: // variable_declarations.list.item
+          value.move<DeclareAnyVariableIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_93_argument_declarations_list: // argument_declarations.list
-      case symbol_kind::S_94_argument_declarations_pipelist: // argument_declarations.pipelist
+      case symbol_kind::S_94_argument_declarations_list: // argument_declarations.list
+      case symbol_kind::S_95_argument_declarations_pipelist: // argument_declarations.pipelist
       case symbol_kind::S_argument_declarations: // argument_declarations
-      case symbol_kind::S_96_argument_declarations_opt: // argument_declarations.opt
-        value.move< DeclareArgumentListIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_97_argument_declarations_opt: // argument_declarations.opt
+          value.move<DeclareArgumentListIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_74_class_vars: // class.vars
       case symbol_kind::S_75_class_vars_opt: // class.vars.opt
@@ -1232,24 +1233,24 @@ namespace sc { namespace ast { namespace parser {
         value.move< DeclareMemberListIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_98_variable_declarations_list: // variable_declarations.list
+      case symbol_kind::S_99_variable_declarations_list: // variable_declarations.list
       case symbol_kind::S_variable_declarations: // variable_declarations
         value.move< DeclareVariableListIndex > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_107_literal_dictionary_entry: // literal.dictionary.entry
-        value.move< DictionaryEntryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_108_literal_dictionary_entry: // literal.dictionary.entry
+          value.move<DictionaryEntryIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_108_literal_dictionary_entries: // literal.dictionary.entries
-      case symbol_kind::S_109_literal_dictionary: // literal.dictionary
-        value.move< DictionaryIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_109_literal_dictionary_entries: // literal.dictionary.entries
+      case symbol_kind::S_110_literal_dictionary: // literal.dictionary
+          value.move<DictionaryIndex>(YY_MOVE(that.value));
+          break;
 
-      case symbol_kind::S_124_float_raw_unsigned: // float.raw_unsigned
-      case symbol_kind::S_125_float_raw: // float.raw
-        value.move< FloatLitIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_125_float_raw_unsigned: // float.raw_unsigned
+      case symbol_kind::S_126_float_raw: // float.raw
+          value.move<FloatLitIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_float: // float
         value.move< FloatProducingIndex > (YY_MOVE (that.value));
@@ -1346,10 +1347,10 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_76_method_name: // method.name
-      case symbol_kind::S_113_binary_op_raw: // binary_op.raw
-      case symbol_kind::S_114_binary_op_no_adverb: // binary_op.no_adverb
-        value.move< SelectorIndex > (YY_MOVE (that.value));
-        break;
+      case symbol_kind::S_114_binary_op_raw: // binary_op.raw
+      case symbol_kind::S_115_binary_op_no_adverb: // binary_op.no_adverb
+          value.move<SelectorIndex>(YY_MOVE(that.value));
+          break;
 
       case symbol_kind::S_binary_op: // binary_op
         value.move< SelectorMaybeAdverbIndex > (YY_MOVE (that.value));
@@ -1394,7 +1395,7 @@ namespace sc { namespace ast { namespace parser {
         value.copy< ASCIIIndex > (that.value);
         break;
 
-      case symbol_kind::S_126_accidental_unsigned: // accidental.unsigned
+      case symbol_kind::S_127_accidental_unsigned: // accidental.unsigned
       case symbol_kind::S_accidental: // accidental
         value.copy< AccidentalIndex > (that.value);
         break;
@@ -1404,49 +1405,50 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_msgsend: // msgsend
-      case symbol_kind::S_88_expr_base: // expr.base
+      case symbol_kind::S_89_expr_base: // expr.base
       case symbol_kind::S_expr: // expr
-      case symbol_kind::S_90_expr_seq_base: // expr.seq.base
-      case symbol_kind::S_91_expr_seq: // expr.seq
-        value.copy< AnyExprIndex > (that.value);
-        break;
-
-      case symbol_kind::S_105_literal_terminal: // literal.terminal
-      case symbol_kind::S_literal: // literal
-        value.copy< AnyLiteralIndex > (that.value);
-        break;
+      case symbol_kind::S_91_expr_seq_base: // expr.seq.base
+      case symbol_kind::S_92_expr_seq: // expr.seq
+          value.copy<AnyExprIndex>(that.value);
+          break;
 
       case symbol_kind::S_method: // method
         value.copy< AnyMethodIndex > (that.value);
         break;
 
-      case symbol_kind::S_100_arguments_entries: // arguments.entries
-        value.copy< ArgumentEntryIndex > (that.value);
-        break;
+      case symbol_kind::S_106_literal_terminal: // literal.terminal
+      case symbol_kind::S_literal: // literal
+          value.copy<AnyPossiblyLiteralIndex>(that.value);
+          break;
 
-      case symbol_kind::S_101_arguments_no_trailing: // arguments.no_trailing
+      case symbol_kind::S_101_arguments_entries: // arguments.entries
+          value.copy<ArgumentEntryIndex>(that.value);
+          break;
+
+      case symbol_kind::S_102_arguments_no_trailing: // arguments.no_trailing
       case symbol_kind::S_arguments: // arguments
-      case symbol_kind::S_103_arguments_paren: // arguments.paren
-      case symbol_kind::S_104_arguments_maybe_paren: // arguments.maybe_paren
-        value.copy< ArgumentListIndex > (that.value);
-        break;
+      case symbol_kind::S_104_arguments_paren: // arguments.paren
+      case symbol_kind::S_105_arguments_maybe_paren: // arguments.maybe_paren
+          value.copy<ArgumentListIndex>(that.value);
+          break;
 
-      case symbol_kind::S_106_literal_array_contents: // literal.array.contents
-      case symbol_kind::S_110_literal_array: // literal.array
-        value.copy< ArrayIndex > (that.value);
-        break;
+      case symbol_kind::S_107_literal_array_contents: // literal.array.contents
+      case symbol_kind::S_111_literal_array: // literal.array
+          value.copy<ArrayIndex>(that.value);
+          break;
 
-      case symbol_kind::S_85_block_contents: // block.contents
-        value.copy< BlockContentsListIndex > (that.value);
-        break;
+      case symbol_kind::S_85_block_contents_no_trailing_return: // block.contents.no_trailing_return
+      case symbol_kind::S_86_block_contents: // block.contents
+          value.copy<BlockContentsListIndex>(that.value);
+          break;
 
       case symbol_kind::S_block: // block
         value.copy< BlockIndex > (that.value);
         break;
 
-      case symbol_kind::S_86_block_contents_item: // block.contents.item
-        value.copy< BlockItemIndex > (that.value);
-        break;
+      case symbol_kind::S_87_block_contents_item: // block.contents.item
+          value.copy<BlockItemIndex>(that.value);
+          break;
 
       case symbol_kind::S_83_block_opt_list: // block.opt_list
       case symbol_kind::S_84_block_list: // block.list
@@ -1481,16 +1483,16 @@ namespace sc { namespace ast { namespace parser {
         value.copy< DeclareAnyList > (that.value);
         break;
 
-      case symbol_kind::S_97_variable_declarations_list_item: // variable_declarations.list.item
-        value.copy< DeclareAnyVariableIndex > (that.value);
-        break;
+      case symbol_kind::S_98_variable_declarations_list_item: // variable_declarations.list.item
+          value.copy<DeclareAnyVariableIndex>(that.value);
+          break;
 
-      case symbol_kind::S_93_argument_declarations_list: // argument_declarations.list
-      case symbol_kind::S_94_argument_declarations_pipelist: // argument_declarations.pipelist
+      case symbol_kind::S_94_argument_declarations_list: // argument_declarations.list
+      case symbol_kind::S_95_argument_declarations_pipelist: // argument_declarations.pipelist
       case symbol_kind::S_argument_declarations: // argument_declarations
-      case symbol_kind::S_96_argument_declarations_opt: // argument_declarations.opt
-        value.copy< DeclareArgumentListIndex > (that.value);
-        break;
+      case symbol_kind::S_97_argument_declarations_opt: // argument_declarations.opt
+          value.copy<DeclareArgumentListIndex>(that.value);
+          break;
 
       case symbol_kind::S_74_class_vars: // class.vars
       case symbol_kind::S_75_class_vars_opt: // class.vars.opt
@@ -1505,24 +1507,24 @@ namespace sc { namespace ast { namespace parser {
         value.copy< DeclareMemberListIndex > (that.value);
         break;
 
-      case symbol_kind::S_98_variable_declarations_list: // variable_declarations.list
+      case symbol_kind::S_99_variable_declarations_list: // variable_declarations.list
       case symbol_kind::S_variable_declarations: // variable_declarations
         value.copy< DeclareVariableListIndex > (that.value);
         break;
 
-      case symbol_kind::S_107_literal_dictionary_entry: // literal.dictionary.entry
-        value.copy< DictionaryEntryIndex > (that.value);
-        break;
+      case symbol_kind::S_108_literal_dictionary_entry: // literal.dictionary.entry
+          value.copy<DictionaryEntryIndex>(that.value);
+          break;
 
-      case symbol_kind::S_108_literal_dictionary_entries: // literal.dictionary.entries
-      case symbol_kind::S_109_literal_dictionary: // literal.dictionary
-        value.copy< DictionaryIndex > (that.value);
-        break;
+      case symbol_kind::S_109_literal_dictionary_entries: // literal.dictionary.entries
+      case symbol_kind::S_110_literal_dictionary: // literal.dictionary
+          value.copy<DictionaryIndex>(that.value);
+          break;
 
-      case symbol_kind::S_124_float_raw_unsigned: // float.raw_unsigned
-      case symbol_kind::S_125_float_raw: // float.raw
-        value.copy< FloatLitIndex > (that.value);
-        break;
+      case symbol_kind::S_125_float_raw_unsigned: // float.raw_unsigned
+      case symbol_kind::S_126_float_raw: // float.raw
+          value.copy<FloatLitIndex>(that.value);
+          break;
 
       case symbol_kind::S_float: // float
         value.copy< FloatProducingIndex > (that.value);
@@ -1619,10 +1621,10 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_76_method_name: // method.name
-      case symbol_kind::S_113_binary_op_raw: // binary_op.raw
-      case symbol_kind::S_114_binary_op_no_adverb: // binary_op.no_adverb
-        value.copy< SelectorIndex > (that.value);
-        break;
+      case symbol_kind::S_114_binary_op_raw: // binary_op.raw
+      case symbol_kind::S_115_binary_op_no_adverb: // binary_op.no_adverb
+          value.copy<SelectorIndex>(that.value);
+          break;
 
       case symbol_kind::S_binary_op: // binary_op
         value.copy< SelectorMaybeAdverbIndex > (that.value);
@@ -1666,7 +1668,7 @@ namespace sc { namespace ast { namespace parser {
         value.move< ASCIIIndex > (that.value);
         break;
 
-      case symbol_kind::S_126_accidental_unsigned: // accidental.unsigned
+      case symbol_kind::S_127_accidental_unsigned: // accidental.unsigned
       case symbol_kind::S_accidental: // accidental
         value.move< AccidentalIndex > (that.value);
         break;
@@ -1676,49 +1678,50 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_msgsend: // msgsend
-      case symbol_kind::S_88_expr_base: // expr.base
+      case symbol_kind::S_89_expr_base: // expr.base
       case symbol_kind::S_expr: // expr
-      case symbol_kind::S_90_expr_seq_base: // expr.seq.base
-      case symbol_kind::S_91_expr_seq: // expr.seq
-        value.move< AnyExprIndex > (that.value);
-        break;
-
-      case symbol_kind::S_105_literal_terminal: // literal.terminal
-      case symbol_kind::S_literal: // literal
-        value.move< AnyLiteralIndex > (that.value);
-        break;
+      case symbol_kind::S_91_expr_seq_base: // expr.seq.base
+      case symbol_kind::S_92_expr_seq: // expr.seq
+          value.move<AnyExprIndex>(that.value);
+          break;
 
       case symbol_kind::S_method: // method
         value.move< AnyMethodIndex > (that.value);
         break;
 
-      case symbol_kind::S_100_arguments_entries: // arguments.entries
-        value.move< ArgumentEntryIndex > (that.value);
-        break;
+      case symbol_kind::S_106_literal_terminal: // literal.terminal
+      case symbol_kind::S_literal: // literal
+          value.move<AnyPossiblyLiteralIndex>(that.value);
+          break;
 
-      case symbol_kind::S_101_arguments_no_trailing: // arguments.no_trailing
+      case symbol_kind::S_101_arguments_entries: // arguments.entries
+          value.move<ArgumentEntryIndex>(that.value);
+          break;
+
+      case symbol_kind::S_102_arguments_no_trailing: // arguments.no_trailing
       case symbol_kind::S_arguments: // arguments
-      case symbol_kind::S_103_arguments_paren: // arguments.paren
-      case symbol_kind::S_104_arguments_maybe_paren: // arguments.maybe_paren
-        value.move< ArgumentListIndex > (that.value);
-        break;
+      case symbol_kind::S_104_arguments_paren: // arguments.paren
+      case symbol_kind::S_105_arguments_maybe_paren: // arguments.maybe_paren
+          value.move<ArgumentListIndex>(that.value);
+          break;
 
-      case symbol_kind::S_106_literal_array_contents: // literal.array.contents
-      case symbol_kind::S_110_literal_array: // literal.array
-        value.move< ArrayIndex > (that.value);
-        break;
+      case symbol_kind::S_107_literal_array_contents: // literal.array.contents
+      case symbol_kind::S_111_literal_array: // literal.array
+          value.move<ArrayIndex>(that.value);
+          break;
 
-      case symbol_kind::S_85_block_contents: // block.contents
-        value.move< BlockContentsListIndex > (that.value);
-        break;
+      case symbol_kind::S_85_block_contents_no_trailing_return: // block.contents.no_trailing_return
+      case symbol_kind::S_86_block_contents: // block.contents
+          value.move<BlockContentsListIndex>(that.value);
+          break;
 
       case symbol_kind::S_block: // block
         value.move< BlockIndex > (that.value);
         break;
 
-      case symbol_kind::S_86_block_contents_item: // block.contents.item
-        value.move< BlockItemIndex > (that.value);
-        break;
+      case symbol_kind::S_87_block_contents_item: // block.contents.item
+          value.move<BlockItemIndex>(that.value);
+          break;
 
       case symbol_kind::S_83_block_opt_list: // block.opt_list
       case symbol_kind::S_84_block_list: // block.list
@@ -1753,16 +1756,16 @@ namespace sc { namespace ast { namespace parser {
         value.move< DeclareAnyList > (that.value);
         break;
 
-      case symbol_kind::S_97_variable_declarations_list_item: // variable_declarations.list.item
-        value.move< DeclareAnyVariableIndex > (that.value);
-        break;
+      case symbol_kind::S_98_variable_declarations_list_item: // variable_declarations.list.item
+          value.move<DeclareAnyVariableIndex>(that.value);
+          break;
 
-      case symbol_kind::S_93_argument_declarations_list: // argument_declarations.list
-      case symbol_kind::S_94_argument_declarations_pipelist: // argument_declarations.pipelist
+      case symbol_kind::S_94_argument_declarations_list: // argument_declarations.list
+      case symbol_kind::S_95_argument_declarations_pipelist: // argument_declarations.pipelist
       case symbol_kind::S_argument_declarations: // argument_declarations
-      case symbol_kind::S_96_argument_declarations_opt: // argument_declarations.opt
-        value.move< DeclareArgumentListIndex > (that.value);
-        break;
+      case symbol_kind::S_97_argument_declarations_opt: // argument_declarations.opt
+          value.move<DeclareArgumentListIndex>(that.value);
+          break;
 
       case symbol_kind::S_74_class_vars: // class.vars
       case symbol_kind::S_75_class_vars_opt: // class.vars.opt
@@ -1777,24 +1780,24 @@ namespace sc { namespace ast { namespace parser {
         value.move< DeclareMemberListIndex > (that.value);
         break;
 
-      case symbol_kind::S_98_variable_declarations_list: // variable_declarations.list
+      case symbol_kind::S_99_variable_declarations_list: // variable_declarations.list
       case symbol_kind::S_variable_declarations: // variable_declarations
         value.move< DeclareVariableListIndex > (that.value);
         break;
 
-      case symbol_kind::S_107_literal_dictionary_entry: // literal.dictionary.entry
-        value.move< DictionaryEntryIndex > (that.value);
-        break;
+      case symbol_kind::S_108_literal_dictionary_entry: // literal.dictionary.entry
+          value.move<DictionaryEntryIndex>(that.value);
+          break;
 
-      case symbol_kind::S_108_literal_dictionary_entries: // literal.dictionary.entries
-      case symbol_kind::S_109_literal_dictionary: // literal.dictionary
-        value.move< DictionaryIndex > (that.value);
-        break;
+      case symbol_kind::S_109_literal_dictionary_entries: // literal.dictionary.entries
+      case symbol_kind::S_110_literal_dictionary: // literal.dictionary
+          value.move<DictionaryIndex>(that.value);
+          break;
 
-      case symbol_kind::S_124_float_raw_unsigned: // float.raw_unsigned
-      case symbol_kind::S_125_float_raw: // float.raw
-        value.move< FloatLitIndex > (that.value);
-        break;
+      case symbol_kind::S_125_float_raw_unsigned: // float.raw_unsigned
+      case symbol_kind::S_126_float_raw: // float.raw
+          value.move<FloatLitIndex>(that.value);
+          break;
 
       case symbol_kind::S_float: // float
         value.move< FloatProducingIndex > (that.value);
@@ -1891,10 +1894,10 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_76_method_name: // method.name
-      case symbol_kind::S_113_binary_op_raw: // binary_op.raw
-      case symbol_kind::S_114_binary_op_no_adverb: // binary_op.no_adverb
-        value.move< SelectorIndex > (that.value);
-        break;
+      case symbol_kind::S_114_binary_op_raw: // binary_op.raw
+      case symbol_kind::S_115_binary_op_no_adverb: // binary_op.no_adverb
+          value.move<SelectorIndex>(that.value);
+          break;
 
       case symbol_kind::S_binary_op: // binary_op
         value.move< SelectorMaybeAdverbIndex > (that.value);
@@ -2182,7 +2185,7 @@ namespace sc { namespace ast { namespace parser {
         yylhs.value.emplace< ASCIIIndex > ();
         break;
 
-      case symbol_kind::S_126_accidental_unsigned: // accidental.unsigned
+      case symbol_kind::S_127_accidental_unsigned: // accidental.unsigned
       case symbol_kind::S_accidental: // accidental
         yylhs.value.emplace< AccidentalIndex > ();
         break;
@@ -2192,49 +2195,50 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_msgsend: // msgsend
-      case symbol_kind::S_88_expr_base: // expr.base
+      case symbol_kind::S_89_expr_base: // expr.base
       case symbol_kind::S_expr: // expr
-      case symbol_kind::S_90_expr_seq_base: // expr.seq.base
-      case symbol_kind::S_91_expr_seq: // expr.seq
-        yylhs.value.emplace< AnyExprIndex > ();
-        break;
-
-      case symbol_kind::S_105_literal_terminal: // literal.terminal
-      case symbol_kind::S_literal: // literal
-        yylhs.value.emplace< AnyPossiblyLiteralIndex > ();
-        break;
+      case symbol_kind::S_91_expr_seq_base: // expr.seq.base
+      case symbol_kind::S_92_expr_seq: // expr.seq
+          yylhs.value.emplace<AnyExprIndex>();
+          break;
 
       case symbol_kind::S_method: // method
         yylhs.value.emplace< AnyMethodIndex > ();
         break;
 
-      case symbol_kind::S_100_arguments_entries: // arguments.entries
-        yylhs.value.emplace< ArgumentEntryIndex > ();
-        break;
+      case symbol_kind::S_106_literal_terminal: // literal.terminal
+      case symbol_kind::S_literal: // literal
+          yylhs.value.emplace<AnyPossiblyLiteralIndex>();
+          break;
 
-      case symbol_kind::S_101_arguments_no_trailing: // arguments.no_trailing
+      case symbol_kind::S_101_arguments_entries: // arguments.entries
+          yylhs.value.emplace<ArgumentEntryIndex>();
+          break;
+
+      case symbol_kind::S_102_arguments_no_trailing: // arguments.no_trailing
       case symbol_kind::S_arguments: // arguments
-      case symbol_kind::S_103_arguments_paren: // arguments.paren
-      case symbol_kind::S_104_arguments_maybe_paren: // arguments.maybe_paren
-        yylhs.value.emplace< ArgumentListIndex > ();
-        break;
+      case symbol_kind::S_104_arguments_paren: // arguments.paren
+      case symbol_kind::S_105_arguments_maybe_paren: // arguments.maybe_paren
+          yylhs.value.emplace<ArgumentListIndex>();
+          break;
 
-      case symbol_kind::S_106_literal_array_contents: // literal.array.contents
-      case symbol_kind::S_110_literal_array: // literal.array
-        yylhs.value.emplace< ArrayIndex > ();
-        break;
+      case symbol_kind::S_107_literal_array_contents: // literal.array.contents
+      case symbol_kind::S_111_literal_array: // literal.array
+          yylhs.value.emplace<ArrayIndex>();
+          break;
 
-      case symbol_kind::S_85_block_contents: // block.contents
-        yylhs.value.emplace< BlockContentsListIndex > ();
-        break;
+      case symbol_kind::S_85_block_contents_no_trailing_return: // block.contents.no_trailing_return
+      case symbol_kind::S_86_block_contents: // block.contents
+          yylhs.value.emplace<BlockContentsListIndex>();
+          break;
 
       case symbol_kind::S_block: // block
         yylhs.value.emplace< BlockIndex > ();
         break;
 
-      case symbol_kind::S_86_block_contents_item: // block.contents.item
-        yylhs.value.emplace< BlockItemIndex > ();
-        break;
+      case symbol_kind::S_87_block_contents_item: // block.contents.item
+          yylhs.value.emplace<BlockItemIndex>();
+          break;
 
       case symbol_kind::S_83_block_opt_list: // block.opt_list
       case symbol_kind::S_84_block_list: // block.list
@@ -2269,16 +2273,16 @@ namespace sc { namespace ast { namespace parser {
         yylhs.value.emplace< DeclareAnyList > ();
         break;
 
-      case symbol_kind::S_97_variable_declarations_list_item: // variable_declarations.list.item
-        yylhs.value.emplace< DeclareAnyVariableIndex > ();
-        break;
+      case symbol_kind::S_98_variable_declarations_list_item: // variable_declarations.list.item
+          yylhs.value.emplace<DeclareAnyVariableIndex>();
+          break;
 
-      case symbol_kind::S_93_argument_declarations_list: // argument_declarations.list
-      case symbol_kind::S_94_argument_declarations_pipelist: // argument_declarations.pipelist
+      case symbol_kind::S_94_argument_declarations_list: // argument_declarations.list
+      case symbol_kind::S_95_argument_declarations_pipelist: // argument_declarations.pipelist
       case symbol_kind::S_argument_declarations: // argument_declarations
-      case symbol_kind::S_96_argument_declarations_opt: // argument_declarations.opt
-        yylhs.value.emplace< DeclareArgumentListIndex > ();
-        break;
+      case symbol_kind::S_97_argument_declarations_opt: // argument_declarations.opt
+          yylhs.value.emplace<DeclareArgumentListIndex>();
+          break;
 
       case symbol_kind::S_74_class_vars: // class.vars
       case symbol_kind::S_75_class_vars_opt: // class.vars.opt
@@ -2293,24 +2297,24 @@ namespace sc { namespace ast { namespace parser {
         yylhs.value.emplace< DeclareMemberListIndex > ();
         break;
 
-      case symbol_kind::S_98_variable_declarations_list: // variable_declarations.list
+      case symbol_kind::S_99_variable_declarations_list: // variable_declarations.list
       case symbol_kind::S_variable_declarations: // variable_declarations
         yylhs.value.emplace< DeclareVariableListIndex > ();
         break;
 
-      case symbol_kind::S_107_literal_dictionary_entry: // literal.dictionary.entry
-        yylhs.value.emplace< DictionaryEntryIndex > ();
-        break;
+      case symbol_kind::S_108_literal_dictionary_entry: // literal.dictionary.entry
+          yylhs.value.emplace<DictionaryEntryIndex>();
+          break;
 
-      case symbol_kind::S_108_literal_dictionary_entries: // literal.dictionary.entries
-      case symbol_kind::S_109_literal_dictionary: // literal.dictionary
-        yylhs.value.emplace< DictionaryIndex > ();
-        break;
+      case symbol_kind::S_109_literal_dictionary_entries: // literal.dictionary.entries
+      case symbol_kind::S_110_literal_dictionary: // literal.dictionary
+          yylhs.value.emplace<DictionaryIndex>();
+          break;
 
-      case symbol_kind::S_124_float_raw_unsigned: // float.raw_unsigned
-      case symbol_kind::S_125_float_raw: // float.raw
-        yylhs.value.emplace< FloatLitIndex > ();
-        break;
+      case symbol_kind::S_125_float_raw_unsigned: // float.raw_unsigned
+      case symbol_kind::S_126_float_raw: // float.raw
+          yylhs.value.emplace<FloatLitIndex>();
+          break;
 
       case symbol_kind::S_float: // float
         yylhs.value.emplace< FloatProducingIndex > ();
@@ -2407,10 +2411,10 @@ namespace sc { namespace ast { namespace parser {
         break;
 
       case symbol_kind::S_76_method_name: // method.name
-      case symbol_kind::S_113_binary_op_raw: // binary_op.raw
-      case symbol_kind::S_114_binary_op_no_adverb: // binary_op.no_adverb
-        yylhs.value.emplace< SelectorIndex > ();
-        break;
+      case symbol_kind::S_114_binary_op_raw: // binary_op.raw
+      case symbol_kind::S_115_binary_op_no_adverb: // binary_op.no_adverb
+          yylhs.value.emplace<SelectorIndex>();
+          break;
 
       case symbol_kind::S_binary_op: // binary_op
         yylhs.value.emplace< SelectorMaybeAdverbIndex > ();
@@ -2456,1418 +2460,2101 @@ namespace sc { namespace ast { namespace parser {
         {
           switch (yyn)
             {
-  case 2: // go: region $end
-#line 174 "langutils/sc_parser/src/sc_grammar.y"
-                       { yylhs.value.as < ClassListOrExprListIndex > () = cxt.graph.assign_root(yystack_[1].value.as < RegionListIndex > ()); }
-#line 2463 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 2: // go: region $end
+#line 172 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ClassListOrExprListIndex>() =
+                  cxt.graph.assign_root(yystack_[1].value.as<RegionListIndex>());
+          }
+#line 2468 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 3: // go: classOrExtList.list $end
-#line 175 "langutils/sc_parser/src/sc_grammar.y"
-                                              { yylhs.value.as < ClassListOrExprListIndex > () = cxt.graph.assign_root(yystack_[1].value.as < ClassOrExtensionListIndex > ()); }
-#line 2469 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 3: // go: classOrExtList.list $end
+#line 173 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ClassListOrExprListIndex>() =
+                  cxt.graph.assign_root(yystack_[1].value.as<ClassOrExtensionListIndex>());
+          }
+#line 2474 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 4: // region.item: expr
+          case 4: // region.item: expr
+#line 179 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<error_index<AnyExprIndex>>() = yystack_[0].value.as<AnyExprIndex>();
+          }
+#line 2480 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 5: // region.item: OPENPAREN argument_declarations block.contents CLOSEPAREN
 #line 181 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < error_index<AnyExprIndex> > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 2475 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              auto block = cxt.create(BlockNode {}, yylhs.location, yystack_[2].value.as<DeclareArgumentListIndex>(),
+                                      yystack_[1].value.as<BlockContentsListIndex>());
 
-  case 5: // region.item: OPENPAREN argument_declarations block.contents CLOSEPAREN
-#line 183 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto block = cxt.create(BlockNode{}, yylhs.location, yystack_[2].value.as < DeclareArgumentListIndex > (), yystack_[1].value.as < BlockContentsListIndex > ()); 
+              yylhs.value.as<error_index<AnyExprIndex>>() = cxt.create(
+                  MessageNode { MessageNode::SelectorMode::Value }, yylhs.location,
+                  cxt.create(Missing {}, yylhs.location), cxt.create(ArgumentList {}, yylhs.location, block));
+          }
+#line 2495 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-			yylhs.value.as < error_index<AnyExprIndex> > () = cxt.create(
-				MessageNode{MessageNode::SelectorMode::Value}, 
-				yylhs.location, 
-				cxt.create(Missing{}, yylhs.location),
-				cxt.create(ArgumentList{}, yylhs.location, block)
-			);
-		}
-#line 2490 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 6: // region.item: OPENPAREN argument_declarations CLOSEPAREN
+#line 192 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto block = cxt.create(BlockNode {}, yylhs.location, yystack_[1].value.as<DeclareArgumentListIndex>(),
+                                      cxt.create(BlockContentsList {}, yylhs.location));
 
-  case 6: // region.item: OPENPAREN argument_declarations CLOSEPAREN
-#line 194 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto block = cxt.create(BlockNode{}, yylhs.location, yystack_[1].value.as < DeclareArgumentListIndex > (), cxt.create(BlockContentsList{}, yylhs.location));
+              yylhs.value.as<error_index<AnyExprIndex>>() = cxt.create(
+                  MessageNode { MessageNode::SelectorMode::Value }, yylhs.location,
+                  cxt.create(Missing {}, yylhs.location), cxt.create(ArgumentList {}, yylhs.location, block));
+          }
+#line 2510 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-			yylhs.value.as < error_index<AnyExprIndex> > () = cxt.create(
-				MessageNode{MessageNode::SelectorMode::Value}, 
-				yylhs.location, 
-				cxt.create(Missing{}, yylhs.location),
-				cxt.create(ArgumentList{}, yylhs.location, block)
-			);
-		}
-#line 2505 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 7: // region: INTERPRET expr
+#line 206 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<RegionListIndex>() =
+                  cxt.create(RegionList {}, yylhs.location, yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 2518 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 7: // region: INTERPRET expr
-#line 208 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			yylhs.value.as < RegionListIndex > () = cxt.create(RegionList{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ());
-		}
-#line 2513 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 8: // region: INTERPRET error
+#line 210 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              error_recovery::expr(cxt);
+              yyclearin;
+              yylhs.value.as<RegionListIndex>() =
+                  cxt.create(RegionList {}, yylhs.location, create_error(cxt, yystack_[0].location));
+          }
+#line 2528 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 8: // region: INTERPRET error
-#line 212 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			error_recovery::expr(cxt);
-			yyclearin;
-			yylhs.value.as < RegionListIndex > () = cxt.create(RegionList{}, yylhs.location, create_error(cxt, yystack_[0].location));
-		}
-#line 2523 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 9: // region: INTERPRET OPENPAREN argument_declarations block.contents semicolon.opt CLOSEPAREN
+#line 216 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto block = cxt.create(BlockNode {}, yylhs.location, yystack_[3].value.as<DeclareArgumentListIndex>(),
+                                      yystack_[2].value.as<BlockContentsListIndex>());
 
-  case 9: // region: INTERPRET OPENPAREN argument_declarations block.contents semicolon.opt CLOSEPAREN
-#line 218 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto block = cxt.create(BlockNode{}, yylhs.location, yystack_[3].value.as < DeclareArgumentListIndex > (), yystack_[2].value.as < BlockContentsListIndex > ()); 
+              auto msg = cxt.create(MessageNode { MessageNode::SelectorMode::Value }, yylhs.location,
+                                    cxt.create(Missing {}, yylhs.location),
+                                    cxt.create(ArgumentList {}, yylhs.location, block));
+              yylhs.value.as<RegionListIndex>() = cxt.create(RegionList {}, yylhs.location, msg);
+          }
+#line 2544 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-			auto msg = cxt.create(
-				MessageNode{MessageNode::SelectorMode::Value}, 
-				yylhs.location, 
-				cxt.create(Missing{}, yylhs.location),
-				cxt.create(ArgumentList{}, yylhs.location, block)
-			);
-			yylhs.value.as < RegionListIndex > () = cxt.create(RegionList{}, yylhs.location, msg);
-		}
-#line 2539 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 10: // region: INTERPRET OPENPAREN argument_declarations CLOSEPAREN
+#line 228 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto block = cxt.create(BlockNode {}, yylhs.location, yystack_[1].value.as<DeclareArgumentListIndex>(),
+                                      cxt.create(BlockContentsList {}, yylhs.location));
 
-  case 10: // region: INTERPRET OPENPAREN argument_declarations CLOSEPAREN
-#line 230 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto block = cxt.create(BlockNode{}, yylhs.location, yystack_[1].value.as < DeclareArgumentListIndex > (), cxt.create(BlockContentsList{}, yylhs.location));
+              auto msg = cxt.create(MessageNode { MessageNode::SelectorMode::Value }, yylhs.location,
+                                    cxt.create(Missing {}, yylhs.location),
+                                    cxt.create(ArgumentList {}, yylhs.location, block));
 
-			auto msg = cxt.create(
-				MessageNode{MessageNode::SelectorMode::Value}, 
-				yylhs.location, 
-				cxt.create(Missing{}, yylhs.location),
-				cxt.create(ArgumentList{}, yylhs.location, block)
-			);
+              yylhs.value.as<RegionListIndex>() = cxt.create(RegionList {}, yylhs.location, msg);
+          }
+#line 2561 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-			yylhs.value.as < RegionListIndex > () = cxt.create(RegionList{}, yylhs.location, msg);
-		}
-#line 2556 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 11: // region: region SEMICOLON region.item
+#line 242 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<RegionListIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<RegionListIndex>(), yylhs.location,
+                                   yystack_[0].value.as<error_index<AnyExprIndex>>());
+          }
+#line 2567 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 11: // region: region SEMICOLON region.item
-#line 244 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < RegionListIndex > () = cxt.graph.append(yystack_[2].value.as < RegionListIndex > (), yylhs.location, yystack_[0].value.as < error_index<AnyExprIndex> > ()); }
-#line 2562 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 12: // region: region REGION_SEPARATOR region.item
+#line 245 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<RegionListIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<RegionListIndex>(), yylhs.location,
+                                   yystack_[0].value.as<error_index<AnyExprIndex>>());
+          }
+#line 2573 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 12: // region: region REGION_SEPARATOR region.item
-#line 247 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < RegionListIndex > () = cxt.graph.append(yystack_[2].value.as < RegionListIndex > (), yylhs.location, yystack_[0].value.as < error_index<AnyExprIndex> > ()); }
-#line 2568 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 13: // region: region error
+#line 248 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              if (yystack_[1].location.end.line_number != yystack_[0].location.begin.line_number) {
+                  auto first_child = cxt.graph.edges(*yystack_[1].value.as<RegionListIndex>()).first_child.value();
+                  auto last_child = cxt.graph.last_child(*yystack_[1].value.as<RegionListIndex>());
+                  auto loc = cxt.graph.location(last_child ? Index { *last_child } : Index { first_child });
+                  error_recovery::region_separator(cxt, loc);
+                  cxt.region_recovery = sc::ast::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
+                  static_assert(std::is_same_v<decltype(yyerrstatus_), int>);
+                  yyerrstatus_ = 0; // this is NOT in the api, but the only way to get errors to re-emit.
+                  yyclearin;
+                  yylhs.value.as<RegionListIndex>() = yystack_[1].value.as<RegionListIndex>();
+              } else {
+                  error_recovery::expr(cxt);
+                  yylhs.value.as<RegionListIndex>() = cxt.graph.append(
+                      yystack_[1].value.as<RegionListIndex>(),
+                      create_error(cxt, yystack_[0].location, yystack_[1].value.as<RegionListIndex>()));
+                  yyclearin;
+              }
+          }
+#line 2595 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 13: // region: region error
-#line 250 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			if (yystack_[1].location.end.line_number != yystack_[0].location.begin.line_number){
-				auto first_child = cxt.graph.edges(*yystack_[1].value.as < RegionListIndex > ()).first_child.value();
-				auto last_child = cxt.graph.last_child(*yystack_[1].value.as < RegionListIndex > ());
-				auto loc = cxt.graph.location(last_child ? Index{*last_child} : Index{first_child});
-				error_recovery::region_separator(cxt, loc);
-				cxt.region_recovery = sc::ast::parser::ParserContext::RegionRecovery::EmitRegionSeparator;
-				static_assert(std::is_same_v<decltype(yyerrstatus_), int>);
-				yyerrstatus_ = 0; // this is NOT in the api, but the only way to get errors to re-emit.
-				yyclearin;
-				yylhs.value.as < RegionListIndex > () = yystack_[1].value.as < RegionListIndex > ();
-			} else {
-				error_recovery::expr(cxt);
-				yylhs.value.as < RegionListIndex > () = cxt.graph.append(yystack_[1].value.as < RegionListIndex > (), create_error(cxt, yystack_[0].location, yystack_[1].value.as < RegionListIndex > ()));
-				yyclearin;
-			} 
-		}
-#line 2590 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 14: // classOrExtList.list: classOrExtList.item
+#line 274 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ClassOrExtensionListIndex>() =
+                  cxt.create(ClassOrExtensionList {}, yylhs.location, yystack_[0].value.as<ClassOrExtensionIndex>());
+          }
+#line 2601 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 14: // classOrExtList.list: classOrExtList.item
+          case 15: // classOrExtList.list: classOrExtList.list classOrExtList.item
 #line 276 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ClassOrExtensionListIndex > () = cxt.create(ClassOrExtensionList{}, yylhs.location, yystack_[0].value.as < ClassOrExtensionIndex > ()); }
-#line 2596 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<ClassOrExtensionListIndex>() = cxt.graph.append(
+                  yystack_[1].value.as<ClassOrExtensionListIndex>(), yystack_[0].value.as<ClassOrExtensionIndex>());
+          }
+#line 2607 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 15: // classOrExtList.list: classOrExtList.list classOrExtList.item
-#line 278 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ClassOrExtensionListIndex > () = cxt.graph.append(yystack_[1].value.as < ClassOrExtensionListIndex > (), yystack_[0].value.as < ClassOrExtensionIndex > ()); }
-#line 2602 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 16: // classOrExtList.item: class
+#line 280 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ClassOrExtensionIndex>() = yystack_[0].value.as<ClassIndex>();
+          }
+#line 2613 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 16: // classOrExtList.item: class
-#line 282 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ClassOrExtensionIndex > () = yystack_[0].value.as < ClassIndex > (); }
-#line 2608 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 17: // classOrExtList.item: class.extension
+#line 281 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ClassOrExtensionIndex>() = yystack_[0].value.as<ClassExtensionIndex>();
+          }
+#line 2619 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 17: // classOrExtList.item: class.extension
-#line 283 "langutils/sc_parser/src/sc_grammar.y"
-                          { yylhs.value.as < ClassOrExtensionIndex > () = yystack_[0].value.as < ClassExtensionIndex > (); }
-#line 2614 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 18: // class: CLASSNAME class.slot.opt class.super.opt OPENCURLY class.vars.opt method.list.opt
+                   // CLOSECURLY
+#line 286 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ClassIndex>() = cxt.create(
+                  Class {}, yylhs.location, cxt.create(ClassNameIdentifier {}, yystack_[6].location),
+                  yystack_[5].value.as<maybe<NamedIdentifierIndex>>(),
+                  yystack_[4].value.as<maybe<ClassNameIdentifierIndex>>(),
+                  yystack_[2].value.as<DeclareClassAnyVarListIndex>(), yystack_[1].value.as<MethodListIndex>());
+          }
+#line 2625 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 18: // class: CLASSNAME class.slot.opt class.super.opt OPENCURLY class.vars.opt method.list.opt CLOSECURLY
-#line 288 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ClassIndex > () = cxt.create(Class{}, yylhs.location, cxt.create(ClassNameIdentifier{}, yystack_[6].location), yystack_[5].value.as < maybe<NamedIdentifierIndex> > (), yystack_[4].value.as < maybe<ClassNameIdentifierIndex> > (), yystack_[2].value.as < DeclareClassAnyVarListIndex > (), yystack_[1].value.as < MethodListIndex > ()); }
-#line 2620 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 19: // class.super.opt: %empty
+#line 290 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<maybe<ClassNameIdentifierIndex>>() = cxt.create(Missing {}, yylhs.location);
+          }
+#line 2631 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 19: // class.super.opt: %empty
-#line 292 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < maybe<ClassNameIdentifierIndex> > () = cxt.create(Missing{}, yylhs.location); }
-#line 2626 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 20: // class.super.opt: COLON CLASSNAME
+#line 291 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<maybe<ClassNameIdentifierIndex>>() =
+                  cxt.create(ClassNameIdentifier {}, yystack_[0].location);
+          }
+#line 2637 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 20: // class.super.opt: COLON CLASSNAME
-#line 293 "langutils/sc_parser/src/sc_grammar.y"
-                          { yylhs.value.as < maybe<ClassNameIdentifierIndex> > () = cxt.create(ClassNameIdentifier{}, yystack_[0].location); }
-#line 2632 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 21: // class.slot.opt: %empty
+#line 295 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<maybe<NamedIdentifierIndex>>() = cxt.create(Missing {}, yylhs.location);
+          }
+#line 2643 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 21: // class.slot.opt: %empty
-#line 297 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < maybe<NamedIdentifierIndex> > () = cxt.create(Missing{}, yylhs.location); }
-#line 2638 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 22: // class.slot.opt: OPENSQUARE name CLOSESQUARE
+#line 296 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<maybe<NamedIdentifierIndex>>() = yystack_[1].value.as<NamedIdentifierIndex>();
+          }
+#line 2649 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 22: // class.slot.opt: OPENSQUARE name CLOSESQUARE
-#line 298 "langutils/sc_parser/src/sc_grammar.y"
-                                      { yylhs.value.as < maybe<NamedIdentifierIndex> > () = yystack_[1].value.as < NamedIdentifierIndex > (); }
-#line 2644 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 23: // class.extension: ADD CLASSNAME OPENCURLY method.list.opt CLOSECURLY
+#line 301 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ClassExtensionIndex>() = cxt.create(
+                  ClassExtension {}, yylhs.location, cxt.create(ClassNameIdentifier {}, yystack_[3].location),
+                  yystack_[1].value.as<MethodListIndex>());
+          }
+#line 2655 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 23: // class.extension: ADD CLASSNAME OPENCURLY method.list.opt CLOSECURLY
-#line 303 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ClassExtensionIndex > () = cxt.create(ClassExtension{}, yylhs.location, cxt.create(ClassNameIdentifier{}, yystack_[3].location), yystack_[1].value.as < MethodListIndex > ()); }
-#line 2650 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 24: // class.vars.entry.item: accessor variable_declarations.list.item
+#line 306 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareClassVarIndex>() =
+                  cxt.create(DeclareClassVar { yystack_[1].value.as<ReadWriteAccessor>() }, yylhs.location,
+                             yystack_[0].value.as<DeclareAnyVariableIndex>());
+          }
+#line 2661 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 24: // class.vars.entry.item: accessor variable_declarations.list.item
-#line 308 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareClassVarIndex > () = cxt.create(DeclareClassVar{yystack_[1].value.as < ReadWriteAccessor > ()}, yylhs.location, yystack_[0].value.as < DeclareAnyVariableIndex > ());}
-#line 2656 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 25: // class.vars.entry.list: class.vars.entry.item
+#line 311 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareMemberListIndex>() =
+                  cxt.create(DeclareMemberList {}, yylhs.location, yystack_[0].value.as<DeclareClassVarIndex>());
+          }
+#line 2667 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 25: // class.vars.entry.list: class.vars.entry.item
+          case 26: // class.vars.entry.list: class.vars.entry.list COMMA class.vars.entry.item
 #line 313 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareMemberListIndex > () = cxt.create(DeclareMemberList{}, yylhs.location, yystack_[0].value.as < DeclareClassVarIndex > ()); }
-#line 2662 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareMemberListIndex>() = cxt.graph.append(
+                  yystack_[2].value.as<DeclareMemberListIndex>(), yystack_[0].value.as<DeclareClassVarIndex>());
+          }
+#line 2673 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 26: // class.vars.entry.list: class.vars.entry.list COMMA class.vars.entry.item
-#line 315 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareMemberListIndex > () = cxt.graph.append(yystack_[2].value.as < DeclareMemberListIndex > (), yystack_[0].value.as < DeclareClassVarIndex > ()); }
-#line 2668 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 27: // class.vars.entry: CLASSVAR class.vars.entry.list
+#line 318 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareAnyList>() =
+                  cxt.graph.cast<DeclareClassMemberList>(yystack_[0].value.as<DeclareMemberListIndex>());
+          }
+#line 2679 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 27: // class.vars.entry: CLASSVAR class.vars.entry.list
+          case 28: // class.vars.entry: VAR class.vars.entry.list
 #line 320 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareAnyList > () = cxt.graph.cast<DeclareClassMemberList>(yystack_[0].value.as < DeclareMemberListIndex > ()); }
-#line 2674 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareAnyList>() =
+                  cxt.graph.cast<DeclareMemberList>(yystack_[0].value.as<DeclareMemberListIndex>());
+          }
+#line 2685 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 28: // class.vars.entry: VAR class.vars.entry.list
+          case 29: // class.vars.entry: CONST class.vars.entry.list
 #line 322 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareAnyList > () = cxt.graph.cast<DeclareMemberList>(yystack_[0].value.as < DeclareMemberListIndex > ()); }
-#line 2680 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareAnyList>() =
+                  cxt.graph.cast<DeclareConstList>(yystack_[0].value.as<DeclareMemberListIndex>());
+          }
+#line 2691 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 29: // class.vars.entry: CONST class.vars.entry.list
-#line 324 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareAnyList > () = cxt.graph.cast<DeclareConstList>(yystack_[0].value.as < DeclareMemberListIndex > ()); }
-#line 2686 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 30: // class.vars: class.vars.entry
+#line 327 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareClassAnyVarListIndex>() =
+                  cxt.create(ClassAnyVarList {}, yylhs.location, yystack_[0].value.as<DeclareAnyList>());
+          }
+#line 2697 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 30: // class.vars: class.vars.entry
+          case 31: // class.vars: class.vars SEMICOLON class.vars.entry
 #line 329 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareClassAnyVarListIndex > () = cxt.create(ClassAnyVarList{}, yylhs.location, yystack_[0].value.as < DeclareAnyList > ());}
-#line 2692 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareClassAnyVarListIndex>() = cxt.graph.append(
+                  yystack_[2].value.as<DeclareClassAnyVarListIndex>(), yystack_[0].value.as<DeclareAnyList>());
+          }
+#line 2703 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 31: // class.vars: class.vars SEMICOLON class.vars.entry
-#line 331 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareClassAnyVarListIndex > () = cxt.graph.append(yystack_[2].value.as < DeclareClassAnyVarListIndex > (), yystack_[0].value.as < DeclareAnyList > ()); }
-#line 2698 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 32: // class.vars.opt: %empty
+#line 333 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareClassAnyVarListIndex>() = cxt.create(ClassAnyVarList {}, yylhs.location);
+          }
+#line 2709 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 32: // class.vars.opt: %empty
-#line 335 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < DeclareClassAnyVarListIndex > () = cxt.create(ClassAnyVarList{}, yylhs.location); }
-#line 2704 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 33: // class.vars.opt: class.vars semicolon.opt
+#line 334 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareClassAnyVarListIndex>() = yystack_[1].value.as<DeclareClassAnyVarListIndex>();
+          }
+#line 2715 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 33: // class.vars.opt: class.vars semicolon.opt
-#line 336 "langutils/sc_parser/src/sc_grammar.y"
-                                   { yylhs.value.as < DeclareClassAnyVarListIndex > () = yystack_[1].value.as < DeclareClassAnyVarListIndex > (); }
-#line 2710 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 34: // method.name: name
+#line 338 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = yystack_[0].value.as<NamedIdentifierIndex>();
+          }
+#line 2721 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 34: // method.name: name
-#line 340 "langutils/sc_parser/src/sc_grammar.y"
-               { yylhs.value.as < SelectorIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 2716 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 35: // method.name: binary_op.raw
+#line 339 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = yystack_[0].value.as<SelectorIndex>();
+          }
+#line 2727 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 35: // method.name: binary_op.raw
-#line 341 "langutils/sc_parser/src/sc_grammar.y"
-                        { yylhs.value.as < SelectorIndex > () = yystack_[0].value.as < SelectorIndex > (); }
-#line 2722 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 36: // method.base: method.name OPENCURLY argument_declarations.opt block.contents semicolon.opt
+                   // CLOSECURLY
+#line 344 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<MethodIndex>() = cxt.create(
+                  Method {}, yylhs.location, yystack_[5].value.as<SelectorIndex>(),
+                  yystack_[3].value.as<DeclareArgumentListIndex>(), cxt.create(Missing {}, yystack_[4].location),
+                  yystack_[2].value.as<BlockContentsListIndex>());
+          }
+#line 2733 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 36: // method.base: method.name OPENCURLY argument_declarations.opt block.contents semicolon.opt CLOSECURLY
+          case 37: // method.base: method.name OPENCURLY argument_declarations.opt CLOSECURLY
 #line 346 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < MethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[5].value.as < SelectorIndex > (), yystack_[3].value.as < DeclareArgumentListIndex > (), cxt.create(Missing{},yystack_[4].location), yystack_[2].value.as < BlockContentsListIndex > ()); }
-#line 2728 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<MethodIndex>() = cxt.create(
+                  Method {}, yylhs.location, yystack_[3].value.as<SelectorIndex>(),
+                  yystack_[1].value.as<DeclareArgumentListIndex>(), cxt.create(Missing {}, yystack_[2].location),
+                  cxt.create(BlockList {}, yystack_[0].location));
+          }
+#line 2739 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 37: // method.base: method.name OPENCURLY argument_declarations.opt CLOSECURLY
+          case 38: // method.base: method.name OPENCURLY argument_declarations.opt PRIMITIVENAME semicolon.opt
+                   // block.contents semicolon.opt CLOSECURLY
 #line 348 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < MethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[3].value.as < SelectorIndex > (), yystack_[1].value.as < DeclareArgumentListIndex > (), cxt.create(Missing{},yystack_[2].location), cxt.create(BlockList{}, yystack_[0].location)); }
-#line 2734 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<MethodIndex>() =
+                  cxt.create(Method {}, yylhs.location, yystack_[7].value.as<SelectorIndex>(),
+                             yystack_[5].value.as<DeclareArgumentListIndex>(),
+                             cxt.create(PrimitiveIdentifier {}, yystack_[4].location),
+                             yystack_[2].value.as<BlockContentsListIndex>());
+          }
+#line 2745 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 38: // method.base: method.name OPENCURLY argument_declarations.opt PRIMITIVENAME block.contents semicolon.opt CLOSECURLY
+          case 39: // method.base: method.name OPENCURLY argument_declarations.opt PRIMITIVENAME semicolon.opt
+                   // CLOSECURLY
 #line 350 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < MethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[6].value.as < SelectorIndex > (), yystack_[4].value.as < DeclareArgumentListIndex > (), cxt.create(PrimitiveIdentifier{}, yystack_[3].location), yystack_[2].value.as < BlockContentsListIndex > ()); }
-#line 2740 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<MethodIndex>() =
+                  cxt.create(Method {}, yylhs.location, yystack_[5].value.as<SelectorIndex>(),
+                             yystack_[3].value.as<DeclareArgumentListIndex>(),
+                             cxt.create(PrimitiveIdentifier {}, yystack_[2].location),
+                             cxt.create(BlockList {}, yystack_[1].location));
+          }
+#line 2751 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 39: // method.base: method.name OPENCURLY argument_declarations.opt PRIMITIVENAME CLOSECURLY
-#line 352 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < MethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[4].value.as < SelectorIndex > (), yystack_[2].value.as < DeclareArgumentListIndex > (), cxt.create(PrimitiveIdentifier{}, yystack_[1].location), cxt.create(BlockList{}, yystack_[0].location)); }
-#line 2746 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 40: // method: method.base
+#line 354 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyMethodIndex>() = yystack_[0].value.as<MethodIndex>();
+          }
+#line 2757 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 40: // method: method.base
+          case 41: // method: MULTIPLY method.base
 #line 356 "langutils/sc_parser/src/sc_grammar.y"
-                      { yylhs.value.as < AnyMethodIndex > () = yystack_[0].value.as < MethodIndex > (); }
-#line 2752 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyMethodIndex>() = cxt.graph.cast<ClassMethod>(yystack_[0].value.as<MethodIndex>());
+          }
+#line 2763 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 41: // method: MULTIPLY method.base
-#line 358 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyMethodIndex > () = cxt.graph.cast<ClassMethod>(yystack_[0].value.as < MethodIndex > ()); }
-#line 2758 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 42: // method.list: method
+#line 360 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<MethodListIndex>() =
+                  cxt.create(MethodList {}, yylhs.location, yystack_[0].value.as<AnyMethodIndex>());
+          }
+#line 2769 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 42: // method.list: method
-#line 362 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < MethodListIndex > () = cxt.create(MethodList{}, yylhs.location, yystack_[0].value.as < AnyMethodIndex > ()); }
-#line 2764 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 43: // method.list: method.list method
+#line 361 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<MethodListIndex>() = cxt.graph.append(
+                  yystack_[1].value.as<MethodListIndex>(), yylhs.location, yystack_[0].value.as<AnyMethodIndex>());
+          }
+#line 2775 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 43: // method.list: method.list method
-#line 363 "langutils/sc_parser/src/sc_grammar.y"
-                             { yylhs.value.as < MethodListIndex > () = cxt.graph.append(yystack_[1].value.as < MethodListIndex > (), yylhs.location, yystack_[0].value.as < AnyMethodIndex > ()); }
-#line 2770 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 44: // method.list.opt: %empty
+#line 365 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<MethodListIndex>() = cxt.create(MethodList {}, yylhs.location);
+          }
+#line 2781 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 44: // method.list.opt: %empty
-#line 367 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < MethodListIndex > () = cxt.create(MethodList{}, yylhs.location); }
-#line 2776 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 45: // method.list.opt: method.list
+#line 366 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<MethodListIndex>() = yystack_[0].value.as<MethodListIndex>();
+          }
+#line 2787 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 45: // method.list.opt: method.list
-#line 368 "langutils/sc_parser/src/sc_grammar.y"
-                      { yylhs.value.as < MethodListIndex > () = yystack_[0].value.as < MethodListIndex > (); }
-#line 2782 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 48: // block: block.open argument_declarations.opt block.contents semicolon.opt CLOSECURLY
+#line 373 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockIndex>() =
+                  cxt.create(BlockNode {}, yylhs.location, yystack_[3].value.as<DeclareArgumentListIndex>(),
+                             yystack_[2].value.as<BlockContentsListIndex>());
+          }
+#line 2793 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 48: // block: block.open argument_declarations.opt block.contents semicolon.opt CLOSECURLY
+          case 49: // block: block.open argument_declarations.opt CLOSECURLY
 #line 375 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < BlockIndex > () = cxt.create(BlockNode{}, yylhs.location, yystack_[3].value.as < DeclareArgumentListIndex > (), yystack_[2].value.as < BlockContentsListIndex > ()); }
-#line 2788 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<BlockIndex>() =
+                  cxt.create(BlockNode {}, yylhs.location, yystack_[1].value.as<DeclareArgumentListIndex>(),
+                             cxt.create(BlockContentsList {}, yylhs.location));
+          }
+#line 2799 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 49: // block: block.open argument_declarations.opt CLOSECURLY
-#line 377 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < BlockIndex > () = cxt.create(BlockNode{}, yylhs.location, yystack_[1].value.as < DeclareArgumentListIndex > (), cxt.create(BlockContentsList{}, yylhs.location)); }
-#line 2794 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 50: // block.opt_list: %empty
+#line 379 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockListIndex>() = {};
+          }
+#line 2805 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 50: // block.opt_list: %empty
-#line 381 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < BlockListIndex > () = {}; }
-#line 2800 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 51: // block.opt_list: block.list
+#line 380 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockListIndex>() = yystack_[0].value.as<BlockListIndex>();
+          }
+#line 2811 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 51: // block.opt_list: block.list
-#line 382 "langutils/sc_parser/src/sc_grammar.y"
-                     { yylhs.value.as < BlockListIndex > () = yystack_[0].value.as < BlockListIndex > (); }
-#line 2806 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 52: // block.list: block
+#line 384 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockListIndex>() =
+                  cxt.create(BlockList {}, yylhs.location, yystack_[0].value.as<BlockIndex>());
+          }
+#line 2817 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 52: // block.list: block
-#line 386 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < BlockListIndex > () = cxt.create(BlockList{}, yylhs.location, yystack_[0].value.as < BlockIndex > ()); }
-#line 2812 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 53: // block.list: block.list block
+#line 385 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockListIndex>() = cxt.graph.append(yystack_[1].value.as<BlockListIndex>(),
+                                                                  yylhs.location, yystack_[0].value.as<BlockIndex>());
+          }
+#line 2823 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 53: // block.list: block.list block
-#line 387 "langutils/sc_parser/src/sc_grammar.y"
-                           { yylhs.value.as < BlockListIndex > () = cxt.graph.append(yystack_[1].value.as < BlockListIndex > (), yylhs.location, yystack_[0].value.as < BlockIndex > ()); }
-#line 2818 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 54: // block.contents.no_trailing_return: block.contents.item
+#line 389 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockContentsListIndex>() =
+                  cxt.create(BlockContentsList {}, yylhs.location, yystack_[0].value.as<BlockItemIndex>());
+          }
+#line 2829 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 54: // block.contents: block.contents.item
-#line 391 "langutils/sc_parser/src/sc_grammar.y"
-                              { yylhs.value.as < BlockContentsListIndex > () = cxt.create(BlockContentsList{}, yylhs.location, yystack_[0].value.as < BlockItemIndex > ()); }
-#line 2824 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 55: // block.contents.no_trailing_return: block.contents SEMICOLON block.contents.item
+#line 390 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockContentsListIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<BlockContentsListIndex>(), yylhs.location,
+                                   yystack_[0].value.as<BlockItemIndex>());
+          }
+#line 2835 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 55: // block.contents: block.contents SEMICOLON block.contents.item
-#line 392 "langutils/sc_parser/src/sc_grammar.y"
-                                                       { yylhs.value.as < BlockContentsListIndex > () = cxt.graph.append(yystack_[2].value.as < BlockContentsListIndex > (), yylhs.location, yystack_[0].value.as < BlockItemIndex > ()); }
-#line 2830 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 56: // block.contents: block.contents.no_trailing_return
+#line 394 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockContentsListIndex>() = yystack_[0].value.as<BlockContentsListIndex>();
+          }
+#line 2841 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 56: // block.contents.item: expr
-#line 396 "langutils/sc_parser/src/sc_grammar.y"
-               { yylhs.value.as < BlockItemIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 2836 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 57: // block.contents.item: variable_declarations
+          case 57: // block.contents: block.contents.no_trailing_return NONLOCALRETURN expr
 #line 397 "langutils/sc_parser/src/sc_grammar.y"
-                                { yylhs.value.as < BlockItemIndex > () = yystack_[0].value.as < DeclareVariableListIndex > (); }
-#line 2842 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              auto non_local =
+                  cxt.create(NonLocalReturnExpr {}, yystack_[1].location, yystack_[0].value.as<AnyExprIndex>());
+              yylhs.value.as<BlockContentsListIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<BlockContentsListIndex>(), yylhs.location, non_local);
+          }
+#line 2850 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 58: // block.contents.item: NONLOCALRETURN expr
-#line 398 "langutils/sc_parser/src/sc_grammar.y"
-                              { yylhs.value.as < BlockItemIndex > () = cxt.create(NonLocalReturnExpr{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 2848 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 58: // block.contents.item: expr
+#line 404 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockItemIndex>() = yystack_[0].value.as<AnyExprIndex>();
+          }
+#line 2856 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 59: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN OPENPAREN arguments CLOSEPAREN block.opt_list
-#line 403 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			if (yystack_[0].value.as < BlockListIndex > ()) {
-				cxt.graph.merge(yystack_[2].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ());
-				cxt.graph.location(*yystack_[2].value.as < ArgumentListIndex > ()) = {yystack_[2].location.begin, yystack_[0].location.end}; // spans arguments and block list
-			}
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[5].value.as < SelectorIndex > (), yystack_[2].value.as < ArgumentListIndex > ());
-		}
-#line 2860 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 59: // block.contents.item: variable_declarations
+#line 405 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockItemIndex>() = yystack_[0].value.as<DeclareVariableListIndex>();
+          }
+#line 2862 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 60: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN OPENPAREN CLOSEPAREN block.list
-#line 412 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[4].value.as < SelectorIndex > (), yystack_[0].value.as < BlockListIndex > ()); }
-#line 2866 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 60: // block.contents.item: NONLOCALRETURN expr
+#line 406 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BlockItemIndex>() =
+                  cxt.create(NonLocalReturnExpr {}, yylhs.location, yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 2868 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 61: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN block.list
-#line 415 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[2].value.as < SelectorIndex > (), cxt.create(ArgumentList{}, yylhs.location, yystack_[0].value.as < BlockListIndex > ())); }
-#line 2872 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 61: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN OPENPAREN arguments CLOSEPAREN block.opt_list
+#line 411 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              if (yystack_[0].value.as<BlockListIndex>()) {
+                  cxt.graph.merge(yystack_[2].value.as<ArgumentListIndex>(), yystack_[0].value.as<BlockListIndex>());
+                  cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                      yystack_[2].location.begin, yystack_[0].location.end
+                  }; // spans arguments and block list
+              }
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[5].value.as<SelectorIndex>(),
+                             yystack_[2].value.as<ArgumentListIndex>());
+          }
+#line 2880 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 62: // msgsend: name OPENPAREN arguments CLOSEPAREN block.opt_list
-#line 419 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			if(yystack_[0].value.as < BlockListIndex > ()){
-				cxt.graph.merge(yystack_[2].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ());
-				cxt.graph.location(*yystack_[2].value.as < ArgumentListIndex > ()) = {yystack_[2].location.begin, yystack_[0].location.end}; // spans arguments and block list
-			}
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[2].value.as < ArgumentListIndex > ()); 
-		}
-#line 2884 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 62: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN OPENPAREN CLOSEPAREN block.list
+#line 420 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[4].value.as<SelectorIndex>(),
+                             yystack_[0].value.as<BlockListIndex>());
+          }
+#line 2886 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 63: // msgsend: name OPENPAREN CLOSEPAREN block.list
-#line 428 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < BlockListIndex > ()); }
-#line 2890 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 63: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN block.list
+#line 423 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[2].value.as<SelectorIndex>(),
+                             cxt.create(ArgumentList {}, yylhs.location, yystack_[0].value.as<BlockListIndex>()));
+          }
+#line 2892 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 64: // msgsend: name block.list
-#line 431 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[1].value.as < NamedIdentifierIndex > (), cxt.create(ArgumentList{}, yystack_[0].location, yystack_[0].value.as < BlockListIndex > ())); }
-#line 2896 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 64: // msgsend: name OPENPAREN arguments CLOSEPAREN block.opt_list
+#line 427 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              if (yystack_[0].value.as<BlockListIndex>()) {
+                  cxt.graph.merge(yystack_[2].value.as<ArgumentListIndex>(), yystack_[0].value.as<BlockListIndex>());
+                  cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                      yystack_[2].location.begin, yystack_[0].location.end
+                  }; // spans arguments and block list
+              }
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[4].value.as<NamedIdentifierIndex>(),
+                             yystack_[2].value.as<ArgumentListIndex>());
+          }
+#line 2904 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 65: // msgsend: expr DOT name arguments.maybe_paren block.opt_list
-#line 434 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			if (yystack_[0].value.as < BlockListIndex > ()) {
-				cxt.graph.merge(yystack_[1].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ());
-				cxt.graph.location(*yystack_[1].value.as < ArgumentListIndex > ()) = {yystack_[1].location.begin, yystack_[0].location.end}; // spans arguments and block list
-			}
-			cxt.graph.prepend(yystack_[1].value.as < ArgumentListIndex > (), yystack_[4].value.as < AnyExprIndex > ()); // put the receiver in place
-			cxt.graph.location(*yystack_[1].value.as < ArgumentListIndex > ()) = {yystack_[4].location.begin, yystack_[1].location.end}; // spans arguments and block list
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < ArgumentListIndex > ());
-		}
+          case 65: // msgsend: name OPENPAREN CLOSEPAREN block.list
+#line 436 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[3].value.as<NamedIdentifierIndex>(),
+                             yystack_[0].value.as<BlockListIndex>());
+          }
 #line 2910 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 66: // msgsend: expr DOT arguments.paren block.opt_list
-#line 445 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			if (yystack_[0].value.as < BlockListIndex > ()) {
-				cxt.graph.merge(yystack_[1].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ());
-				cxt.graph.location(*yystack_[1].value.as < ArgumentListIndex > ()) = {yystack_[1].location.begin, yystack_[0].location.end}; // spans arguments and block list
-			}
-			cxt.graph.prepend(yystack_[1].value.as < ArgumentListIndex > (), yystack_[3].value.as < AnyExprIndex > ()); // put the receiver in place
-			cxt.graph.location(*yystack_[1].value.as < ArgumentListIndex > ()) = {yystack_[3].location.begin, yystack_[1].location.end}; // spans arguments and block list
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::Value}, yylhs.location, cxt.create(Missing{}, yystack_[2].location), yystack_[1].value.as < ArgumentListIndex > ());
-		}
-#line 2924 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 66: // msgsend: name block.list
+#line 439 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[1].value.as<NamedIdentifierIndex>(),
+                             cxt.create(ArgumentList {}, yystack_[0].location, yystack_[0].value.as<BlockListIndex>()));
+          }
+#line 2916 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 67: // msgsend: expr DOT OPENPAREN CLOSEPAREN block.opt_list
-#line 455 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			auto args = cxt.create(ArgumentList{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > ());
-			if (yystack_[0].value.as < BlockListIndex > ()) cxt.graph.merge(args, yystack_[0].value.as < BlockListIndex > ());
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::Value}, yylhs.location, cxt.create(Missing{}, yystack_[3].location), args);
-		}
-#line 2934 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 67: // msgsend: expr DOT name arguments.maybe_paren block.opt_list
+#line 442 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              if (yystack_[0].value.as<BlockListIndex>()) {
+                  cxt.graph.merge(yystack_[1].value.as<ArgumentListIndex>(), yystack_[0].value.as<BlockListIndex>());
+                  cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                      yystack_[1].location.begin, yystack_[0].location.end
+                  }; // spans arguments and block list
+              }
+              cxt.graph.prepend(yystack_[1].value.as<ArgumentListIndex>(),
+                                yystack_[4].value.as<AnyExprIndex>()); // put the receiver in place
+              cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                  yystack_[4].location.begin, yystack_[1].location.end
+              }; // spans arguments and block list
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[2].value.as<NamedIdentifierIndex>(),
+                             yystack_[1].value.as<ArgumentListIndex>());
+          }
+#line 2930 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 68: // msgsend: expr DOT error
-#line 463 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			auto unexpected = cxt.consume_error(); 
-			std::cout << "GOT AN ERROR WITH A DOT"<< std::endl;
-			yylhs.value.as < AnyExprIndex > () = yystack_[2].value.as < AnyExprIndex > ();
-		}
+          case 68: // msgsend: expr DOT arguments.paren block.opt_list
+#line 453 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              if (yystack_[0].value.as<BlockListIndex>()) {
+                  cxt.graph.merge(yystack_[1].value.as<ArgumentListIndex>(), yystack_[0].value.as<BlockListIndex>());
+                  cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                      yystack_[1].location.begin, yystack_[0].location.end
+                  }; // spans arguments and block list
+              }
+              cxt.graph.prepend(yystack_[1].value.as<ArgumentListIndex>(),
+                                yystack_[3].value.as<AnyExprIndex>()); // put the receiver in place
+              cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = {
+                  yystack_[3].location.begin, yystack_[1].location.end
+              }; // spans arguments and block list
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode { MessageNode::SelectorMode::Value }, yylhs.location,
+                             cxt.create(Missing {}, yystack_[2].location), yystack_[1].value.as<ArgumentListIndex>());
+          }
 #line 2944 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 69: // msgsend: CLASSNAME OPENSQUARE literal.array.contents CLOSESQUARE
-#line 470 "langutils/sc_parser/src/sc_grammar.y"
-                {  yylhs.value.as < AnyExprIndex > () = cxt.create(CollectionNode{}, yylhs.location, cxt.create(ClassNameIdentifier{}, yystack_[3].location), yystack_[1].value.as < ArrayIndex > ()); }
-#line 2950 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 69: // msgsend: expr DOT OPENPAREN CLOSEPAREN block.opt_list
+#line 463 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto args = cxt.create(ArgumentList {}, yylhs.location, yystack_[4].value.as<AnyExprIndex>());
+              if (yystack_[0].value.as<BlockListIndex>())
+                  cxt.graph.merge(args, yystack_[0].value.as<BlockListIndex>());
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode { MessageNode::SelectorMode::Value }, yylhs.location,
+                             cxt.create(Missing {}, yystack_[3].location), args);
+          }
+#line 2954 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 70: // msgsend: CLASSNAME block.list
-#line 473 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			auto args = cxt.create(ArgumentList{}, yylhs.location, cxt.create(NamedIdentifier{}, yystack_[1].location));
-			cxt.graph.merge(args, yystack_[0].value.as < BlockListIndex > ());
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, cxt.create(Missing{}, yystack_[1].location), args);
-		}
+          case 70: // msgsend: CLASSNAME OPENSQUARE literal.array.contents CLOSESQUARE
+#line 478 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() = cxt.create(CollectionNode {}, yylhs.location,
+                                                          cxt.create(ClassNameIdentifier {}, yystack_[3].location),
+                                                          yystack_[1].value.as<ArrayIndex>());
+          }
 #line 2960 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 71: // msgsend: CLASSNAME OPENPAREN arguments CLOSEPAREN block.opt_list
-#line 479 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			if (yystack_[0].value.as < BlockListIndex > ()) {
-				cxt.graph.merge(yystack_[2].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ());
-				cxt.graph.location(*yystack_[2].value.as < ArgumentListIndex > ()) = {yystack_[2].location.begin, yystack_[0].location.end}; // spans arguments and block list
-			}
-			cxt.graph.prepend(yystack_[2].value.as < ArgumentListIndex > (), cxt.create(ClassNameIdentifier{}, yystack_[4].location)); // put the receiver in place
-			cxt.graph.location(*yystack_[2].value.as < ArgumentListIndex > ()) = {yystack_[2].location.begin, yystack_[0].location.end}; // spans arguments and block list
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::New}, yylhs.location, cxt.create(Missing{}, yystack_[4].location), yystack_[2].value.as < ArgumentListIndex > ());
-		}
-#line 2974 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 71: // msgsend: CLASSNAME block.list
+#line 481 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto args =
+                  cxt.create(ArgumentList {}, yylhs.location, cxt.create(NamedIdentifier {}, yystack_[1].location));
+              cxt.graph.merge(args, yystack_[0].value.as<BlockListIndex>());
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, cxt.create(Missing {}, yystack_[1].location), args);
+          }
+#line 2970 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 72: // msgsend: CLASSNAME OPENPAREN CLOSEPAREN block.opt_list
-#line 490 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			auto args = cxt.create(ArgumentList{}, yylhs.location, yystack_[0].value.as < BlockListIndex > ());
-			cxt.graph.prepend(args, cxt.create(ClassNameIdentifier{}, yystack_[3].location)); // put the receiver in place
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::New}, yylhs.location, cxt.create(Missing{}, yystack_[3].location), args);
-		}
+          case 72: // msgsend: CLASSNAME OPENPAREN arguments CLOSEPAREN block.opt_list
+#line 487 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              if (yystack_[0].value.as<BlockListIndex>()) {
+                  cxt.graph.merge(yystack_[2].value.as<ArgumentListIndex>(), yystack_[0].value.as<BlockListIndex>());
+                  cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                      yystack_[2].location.begin, yystack_[0].location.end
+                  }; // spans arguments and block list
+              }
+              cxt.graph.prepend(yystack_[2].value.as<ArgumentListIndex>(),
+                                cxt.create(ClassNameIdentifier {}, yystack_[4].location)); // put the receiver in place
+              cxt.graph.location(*yystack_[2].value.as<ArgumentListIndex>()) = {
+                  yystack_[2].location.begin, yystack_[0].location.end
+              }; // spans arguments and block list
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode { MessageNode::SelectorMode::New }, yylhs.location,
+                             cxt.create(Missing {}, yystack_[4].location), yystack_[2].value.as<ArgumentListIndex>());
+          }
 #line 2984 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 73: // expr.base: literal
-#line 499 "langutils/sc_parser/src/sc_grammar.y"
-                  { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyPossiblyLiteralIndex > (); }
-#line 2990 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 73: // msgsend: CLASSNAME OPENPAREN CLOSEPAREN block.opt_list
+#line 498 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto args = cxt.create(ArgumentList {}, yylhs.location, yystack_[0].value.as<BlockListIndex>());
+              cxt.graph.prepend(args,
+                                cxt.create(ClassNameIdentifier {}, yystack_[3].location)); // put the receiver in place
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode { MessageNode::SelectorMode::New }, yylhs.location,
+                             cxt.create(Missing {}, yystack_[3].location), args);
+          }
+#line 2994 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 74: // expr.base: name
-#line 501 "langutils/sc_parser/src/sc_grammar.y"
-               { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 2996 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 74: // expr.base: literal
+#line 507 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() = yystack_[0].value.as<AnyPossiblyLiteralIndex>();
+          }
+#line 3000 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 75: // expr.base: msgsend
-#line 503 "langutils/sc_parser/src/sc_grammar.y"
-                  { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 3002 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 76: // expr.base: OPENPAREN block.contents semicolon.opt CLOSEPAREN
-#line 505 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto blk = cxt.create(BlockNode{}, yylhs.location, cxt.create(DeclareArgumentList{}, yylhs.location), yystack_[2].value.as < BlockContentsListIndex > ());
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::Value}, yylhs.location.flatten(), cxt.create(Missing{}, yylhs.location.flatten()), cxt.create(ArgumentList{}, yylhs.location, blk));
-		}
-#line 3011 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 77: // expr.base: TILDE name
+          case 75: // expr.base: name
 #line 509 "langutils/sc_parser/src/sc_grammar.y"
-                     { yylhs.value.as < AnyExprIndex > () = cxt.create(EnvIdentifierNode{}, yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3017 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyExprIndex>() = yystack_[0].value.as<NamedIdentifierIndex>();
+          }
+#line 3006 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 78: // expr.base: expr.base OPENSQUARE arguments CLOSESQUARE
-#line 515 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			cxt.graph.prepend(yystack_[1].value.as < ArgumentListIndex > (), yystack_[3].value.as < AnyExprIndex > ()); // put receiver in place.
-			cxt.graph.location(*yystack_[1].value.as < ArgumentListIndex > ()) = yylhs.location;
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::At}, yylhs.location, cxt.create(Missing{}, yystack_[2].location), yystack_[1].value.as < ArgumentListIndex > ()); 
-		}
+          case 76: // expr.base: msgsend
+#line 511 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() = yystack_[0].value.as<AnyExprIndex>();
+          }
+#line 3012 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 77: // expr.base: OPENPAREN block.contents semicolon.opt CLOSEPAREN
+#line 513 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto blk = cxt.create(BlockNode {}, yylhs.location, cxt.create(DeclareArgumentList {}, yylhs.location),
+                                    yystack_[2].value.as<BlockContentsListIndex>());
+              yylhs.value.as<AnyExprIndex>() = cxt.create(
+                  MessageNode { MessageNode::SelectorMode::Value }, yylhs.location.flatten(),
+                  cxt.create(Missing {}, yylhs.location.flatten()), cxt.create(ArgumentList {}, yylhs.location, blk));
+          }
+#line 3021 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 78: // expr.base: TILDE name
+#line 517 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(EnvIdentifierNode {}, yylhs.location, yystack_[0].value.as<NamedIdentifierIndex>());
+          }
 #line 3027 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 79: // expr.base: expr.base OPENSQUARE CLOSESQUARE
-#line 522 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto args = cxt.create(ArgumentList{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > ());
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::At}, yylhs.location, cxt.create(Missing{}, yystack_[1].location), args); 
-		}
-#line 3036 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 79: // expr.base: expr.base OPENSQUARE arguments CLOSESQUARE
+#line 523 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              cxt.graph.prepend(yystack_[1].value.as<ArgumentListIndex>(),
+                                yystack_[3].value.as<AnyExprIndex>()); // put receiver in place.
+              cxt.graph.location(*yystack_[1].value.as<ArgumentListIndex>()) = yylhs.location;
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode { MessageNode::SelectorMode::At }, yylhs.location,
+                             cxt.create(Missing {}, yystack_[2].location), yystack_[1].value.as<ArgumentListIndex>());
+          }
+#line 3037 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 80: // expr: expr.base
-#line 531 "langutils/sc_parser/src/sc_grammar.y"
-                    { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 3042 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 80: // expr.base: expr.base OPENSQUARE CLOSESQUARE
+#line 530 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto args = cxt.create(ArgumentList {}, yylhs.location, yystack_[2].value.as<AnyExprIndex>());
+              yylhs.value.as<AnyExprIndex>() = cxt.create(MessageNode { MessageNode::SelectorMode::At }, yylhs.location,
+                                                          cxt.create(Missing {}, yystack_[1].location), args);
+          }
+#line 3046 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 81: // expr: CLASSNAME
-#line 535 "langutils/sc_parser/src/sc_grammar.y"
-                    { yylhs.value.as < AnyExprIndex > () = cxt.create(ClassNameIdentifier{}, yylhs.location); }
-#line 3048 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 81: // expr: expr.base
+#line 539 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() = yystack_[0].value.as<AnyExprIndex>();
+          }
+#line 3052 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 82: // expr: expr DOT OPENSQUARE arguments CLOSESQUARE
-#line 538 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			cxt.graph.prepend(yystack_[1].value.as < ArgumentListIndex > (), yystack_[4].value.as < AnyExprIndex > ()); // put receiver in place
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::At}, yylhs.location, cxt.create(Missing{}, yylhs.location), yystack_[1].value.as < ArgumentListIndex > ());
-		}
-#line 3057 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 83: // expr: expr DOT OPENSQUARE CLOSESQUARE
+          case 82: // expr: CLASSNAME
 #line 543 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto args = cxt.create(ArgumentList{}, yylhs.location, yystack_[3].value.as < AnyExprIndex > ());
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{MessageNode::SelectorMode::At}, yylhs.location, cxt.create(Missing{}, yystack_[1].location), args);
-		}
-#line 3066 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyExprIndex>() = cxt.create(ClassNameIdentifier {}, yylhs.location);
+          }
+#line 3058 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 84: // expr: BACKTICK expr
-#line 548 "langutils/sc_parser/src/sc_grammar.y"
-                        { yylhs.value.as < AnyExprIndex > () = cxt.create(ReferenceNode{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3072 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 83: // expr: expr DOT OPENSQUARE arguments CLOSESQUARE
+#line 546 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              cxt.graph.prepend(yystack_[1].value.as<ArgumentListIndex>(),
+                                yystack_[4].value.as<AnyExprIndex>()); // put receiver in place
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode { MessageNode::SelectorMode::At }, yylhs.location,
+                             cxt.create(Missing {}, yylhs.location), yystack_[1].value.as<ArgumentListIndex>());
+          }
+#line 3067 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 85: // expr: expr binary_op expr
+          case 84: // expr: expr DOT OPENSQUARE CLOSESQUARE
 #line 551 "langutils/sc_parser/src/sc_grammar.y"
-                { 
-			auto args = cxt.create(ArgumentList{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ());
-			yylhs.value.as < AnyExprIndex > () = cxt.create(MessageNode{}, yylhs.location, yystack_[1].value.as < SelectorMaybeAdverbIndex > (), args);
-		}
-#line 3081 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              auto args = cxt.create(ArgumentList {}, yylhs.location, yystack_[3].value.as<AnyExprIndex>());
+              yylhs.value.as<AnyExprIndex>() = cxt.create(MessageNode { MessageNode::SelectorMode::At }, yylhs.location,
+                                                          cxt.create(Missing {}, yystack_[1].location), args);
+          }
+#line 3076 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 86: // expr: name EQUALSSIGN expr
-#line 557 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentNode{}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3087 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 85: // expr: BACKTICK expr
+#line 556 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(ReferenceNode {}, yylhs.location, yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3082 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 87: // expr: TILDE name EQUALSSIGN expr
-#line 560 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentNode{AssignmentNode::Target::Environment}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3093 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 86: // expr: expr binary_op expr
+#line 559 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto args = cxt.create(ArgumentList {}, yylhs.location, yystack_[2].value.as<AnyExprIndex>(),
+                                     yystack_[0].value.as<AnyExprIndex>());
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(MessageNode {}, yylhs.location, yystack_[1].value.as<SelectorMaybeAdverbIndex>(), args);
+          }
+#line 3091 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 88: // expr: expr DOT name EQUALSSIGN expr
-#line 563 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(SetterNode{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3099 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 87: // expr: name EQUALSSIGN expr
+#line 565 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(AssignmentNode {}, yylhs.location, yystack_[2].value.as<NamedIdentifierIndex>(),
+                             yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3097 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 89: // expr: name OPENPAREN arguments CLOSEPAREN EQUALSSIGN expr
-#line 566 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(SetterNode{}, yylhs.location, yystack_[3].value.as < ArgumentListIndex > (), yystack_[5].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3105 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 88: // expr: TILDE name EQUALSSIGN expr
+#line 568 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(AssignmentNode { AssignmentNode::Target::Environment }, yylhs.location,
+                             yystack_[2].value.as<NamedIdentifierIndex>(), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3103 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 90: // expr: expr.base OPENSQUARE arguments CLOSESQUARE EQUALSSIGN expr
+          case 89: // expr: expr DOT name EQUALSSIGN expr
+#line 571 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(SetterNode {}, yylhs.location, yystack_[4].value.as<AnyExprIndex>(),
+                             yystack_[2].value.as<NamedIdentifierIndex>(), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3109 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 90: // expr: name OPENPAREN arguments CLOSEPAREN EQUALSSIGN expr
 #line 574 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[5].value.as < AnyExprIndex > (), yystack_[3].value.as < ArgumentListIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3111 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(SetterNode {}, yylhs.location, yystack_[3].value.as<ArgumentListIndex>(),
+                             yystack_[5].value.as<NamedIdentifierIndex>(), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3115 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 91: // expr: expr.base OPENSQUARE CLOSESQUARE EQUALSSIGN expr
-#line 576 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), cxt.create(ArgumentList{}, yystack_[3].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3117 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 92: // expr: expr DOT OPENSQUARE arguments CLOSESQUARE EQUALSSIGN expr
-#line 579 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[6].value.as < AnyExprIndex > (), yystack_[3].value.as < ArgumentListIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3123 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 93: // expr: expr DOT OPENSQUARE CLOSESQUARE EQUALSSIGN expr
+          case 91: // expr: expr.base OPENSQUARE arguments CLOSESQUARE EQUALSSIGN expr
 #line 582 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[5].value.as < AnyExprIndex > (), cxt.create(ArgumentList{}, yystack_[3].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3129 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(AssignmentAtNode {}, yylhs.location, yystack_[5].value.as<AnyExprIndex>(),
+                             yystack_[3].value.as<ArgumentListIndex>(), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3121 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 94: // expr.seq.base: expr
-#line 586 "langutils/sc_parser/src/sc_grammar.y"
-               { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 3135 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 92: // expr: expr.base OPENSQUARE CLOSESQUARE EQUALSSIGN expr
+#line 584 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(AssignmentAtNode {}, yylhs.location, yystack_[4].value.as<AnyExprIndex>(),
+                             cxt.create(ArgumentList {}, yystack_[3].location), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3127 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 95: // expr.seq.base: expr.seq.base SEMICOLON expr
-#line 588 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			// This piece of logic is here because exprs can contain expr.seq, so we avoid creating the list node if we can.
-			if(auto expr_seq = cxt.graph.as_a<ExprSeqIndex>(*yystack_[2].value.as < AnyExprIndex > ())) {
-				cxt.graph.append(*expr_seq, yylhs.location, yystack_[0].value.as < AnyExprIndex > ());
-				yylhs.value.as < AnyExprIndex > () = yystack_[2].value.as < AnyExprIndex > ();
-			} else {
-				yylhs.value.as < AnyExprIndex > () = cxt.create(ExprSeq{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ());
-			}
-		}
-#line 3149 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 93: // expr: expr DOT OPENSQUARE arguments CLOSESQUARE EQUALSSIGN expr
+#line 587 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(AssignmentAtNode {}, yylhs.location, yystack_[6].value.as<AnyExprIndex>(),
+                             yystack_[3].value.as<ArgumentListIndex>(), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3133 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 96: // expr.seq: expr.seq.base semicolon.opt
-#line 599 "langutils/sc_parser/src/sc_grammar.y"
-                                       { yylhs.value.as < AnyExprIndex > () = yystack_[1].value.as < AnyExprIndex > (); }
-#line 3155 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 94: // expr: expr DOT OPENSQUARE CLOSESQUARE EQUALSSIGN expr
+#line 590 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() =
+                  cxt.create(AssignmentAtNode {}, yylhs.location, yystack_[5].value.as<AnyExprIndex>(),
+                             cxt.create(ArgumentList {}, yystack_[3].location), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3139 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 97: // adverb: DOT name
-#line 602 "langutils/sc_parser/src/sc_grammar.y"
-                   { yylhs.value.as < AdverbIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 3161 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 95: // expr.seq.base: expr
+#line 594 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() = yystack_[0].value.as<AnyExprIndex>();
+          }
+#line 3145 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 98: // adverb: DOT integer
-#line 603 "langutils/sc_parser/src/sc_grammar.y"
-                      { yylhs.value.as < AdverbIndex > () = yystack_[0].value.as < IntLitIndex > (); }
-#line 3167 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 96: // expr.seq.base: expr.seq.base SEMICOLON expr
+#line 596 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              // This piece of logic is here because exprs can contain expr.seq, so we avoid creating the list node if
+              // we can.
+              if (auto expr_seq = cxt.graph.as_a<ExprSeqIndex>(*yystack_[2].value.as<AnyExprIndex>())) {
+                  cxt.graph.append(*expr_seq, yylhs.location, yystack_[0].value.as<AnyExprIndex>());
+                  yylhs.value.as<AnyExprIndex>() = yystack_[2].value.as<AnyExprIndex>();
+              } else {
+                  yylhs.value.as<AnyExprIndex>() =
+                      cxt.create(ExprSeq {}, yylhs.location, yystack_[2].value.as<AnyExprIndex>(),
+                                 yystack_[0].value.as<AnyExprIndex>());
+              }
+          }
+#line 3159 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 99: // adverb: DOT OPENPAREN expr.seq CLOSEPAREN
-#line 604 "langutils/sc_parser/src/sc_grammar.y"
-                                            { yylhs.value.as < AdverbIndex > () = cxt.create(AdverbExprNode{}, yylhs.location, yystack_[1].value.as < AnyExprIndex > ());  }
-#line 3173 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 97: // expr.seq: expr.seq.base semicolon.opt
+#line 607 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyExprIndex>() = yystack_[1].value.as<AnyExprIndex>();
+          }
+#line 3165 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 100: // argument_declarations.list: name
+          case 98: // adverb: DOT name
 #line 610 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3179 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AdverbIndex>() = yystack_[0].value.as<NamedIdentifierIndex>();
+          }
+#line 3171 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 101: // argument_declarations.list: name EQUALSSIGN literal
+          case 99: // adverb: DOT integer
+#line 611 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AdverbIndex>() = yystack_[0].value.as<IntLitIndex>();
+          }
+#line 3177 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 100: // adverb: DOT OPENPAREN expr.seq CLOSEPAREN
 #line 612 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3185 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AdverbIndex>() =
+                  cxt.create(AdverbExprNode {}, yylhs.location, yystack_[1].value.as<AnyExprIndex>());
+          }
+#line 3183 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 102: // argument_declarations.list: name OPENPAREN expr.seq CLOSEPAREN
-#line 614 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3191 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 103: // argument_declarations.list: name EQUALSSIGN OPENPAREN expr.seq CLOSEPAREN
-#line 616 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3197 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 104: // argument_declarations.list: argument_declarations.list COMMA name
+          case 101: // argument_declarations.list: name
 #line 618 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[2].value.as < DeclareArgumentListIndex > (), yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3203 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.create(DeclareArgumentList {}, yylhs.location, yystack_[0].value.as<NamedIdentifierIndex>());
+          }
+#line 3189 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 105: // argument_declarations.list: argument_declarations.list COMMA name EQUALSSIGN literal
+          case 102: // argument_declarations.list: name EQUALSSIGN literal
 #line 620 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[4].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3209 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.create(DeclareArgumentList {}, yylhs.location,
+                             cxt.create(DeclareArgumentWithDefaultNode { true }, yylhs.location,
+                                        yystack_[2].value.as<NamedIdentifierIndex>(),
+                                        yystack_[0].value.as<AnyPossiblyLiteralIndex>()));
+          }
+#line 3195 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 106: // argument_declarations.list: argument_declarations.list COMMA name OPENPAREN expr.seq CLOSEPAREN
+          case 103: // argument_declarations.list: name OPENPAREN expr.seq CLOSEPAREN
 #line 622 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3215 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.create(
+                  DeclareArgumentList {}, yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[3].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3201 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 107: // argument_declarations.list: argument_declarations.list COMMA name EQUALSSIGN OPENPAREN expr.seq CLOSEPAREN
+          case 104: // argument_declarations.list: name EQUALSSIGN OPENPAREN expr.seq CLOSEPAREN
 #line 624 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[6].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3221 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.create(
+                  DeclareArgumentList {}, yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[4].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3207 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 108: // argument_declarations.pipelist: name literal
-#line 629 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[1].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3227 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 105: // argument_declarations.list: argument_declarations.list COMMA name
+#line 626 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   yystack_[0].value.as<NamedIdentifierIndex>());
+          }
+#line 3213 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 109: // argument_declarations.pipelist: name
-#line 631 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3233 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 106: // argument_declarations.list: argument_declarations.list COMMA name EQUALSSIGN literal
+#line 628 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[4].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   cxt.create(DeclareArgumentWithDefaultNode { true }, yylhs.location,
+                                              yystack_[2].value.as<NamedIdentifierIndex>(),
+                                              yystack_[0].value.as<AnyPossiblyLiteralIndex>()));
+          }
+#line 3219 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 110: // argument_declarations.pipelist: name EQUALSSIGN literal
-#line 633 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3239 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 107: // argument_declarations.list: argument_declarations.list COMMA name OPENPAREN expr.seq CLOSEPAREN
+#line 630 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.graph.append(
+                  yystack_[5].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[3].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3225 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 111: // argument_declarations.pipelist: name OPENPAREN expr.seq CLOSEPAREN
-#line 635 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3245 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 108: // argument_declarations.list: argument_declarations.list COMMA name EQUALSSIGN OPENPAREN expr.seq
+                    // CLOSEPAREN
+#line 632 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.graph.append(
+                  yystack_[6].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[4].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3231 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 112: // argument_declarations.pipelist: name EQUALSSIGN OPENPAREN expr.seq CLOSEPAREN
+          case 109: // argument_declarations.pipelist: name literal
 #line 637 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3251 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.create(DeclareArgumentList {}, yylhs.location,
+                             cxt.create(DeclareArgumentWithDefaultNode { true }, yylhs.location,
+                                        yystack_[1].value.as<NamedIdentifierIndex>(),
+                                        yystack_[0].value.as<AnyPossiblyLiteralIndex>()));
+          }
+#line 3237 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 113: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name literal
+          case 110: // argument_declarations.pipelist: name
 #line 639 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[3].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[1].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3257 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.create(DeclareArgumentList {}, yylhs.location, yystack_[0].value.as<NamedIdentifierIndex>());
+          }
+#line 3243 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 114: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name
+          case 111: // argument_declarations.pipelist: name EQUALSSIGN literal
 #line 641 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[2].value.as < DeclareArgumentListIndex > (), yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3263 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.create(DeclareArgumentList {}, yylhs.location,
+                             cxt.create(DeclareArgumentWithDefaultNode { true }, yylhs.location,
+                                        yystack_[2].value.as<NamedIdentifierIndex>(),
+                                        yystack_[0].value.as<AnyPossiblyLiteralIndex>()));
+          }
+#line 3249 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 115: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name EQUALSSIGN literal
+          case 112: // argument_declarations.pipelist: name OPENPAREN expr.seq CLOSEPAREN
 #line 643 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[4].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3269 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.create(
+                  DeclareArgumentList {}, yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[3].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3255 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 116: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name OPENPAREN expr.seq CLOSEPAREN
+          case 113: // argument_declarations.pipelist: name EQUALSSIGN OPENPAREN expr.seq CLOSEPAREN
 #line 645 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3275 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.create(
+                  DeclareArgumentList {}, yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[4].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3261 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 117: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name EQUALSSIGN OPENPAREN expr.seq CLOSEPAREN
+          case 114: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name literal
 #line 647 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[6].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3281 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[3].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   cxt.create(DeclareArgumentWithDefaultNode { true }, yylhs.location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>(),
+                                              yystack_[0].value.as<AnyPossiblyLiteralIndex>()));
+          }
+#line 3267 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 118: // argument_declarations: ARG SEMICOLON
+          case 115: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name
+#line 649 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   yystack_[0].value.as<NamedIdentifierIndex>());
+          }
+#line 3273 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 116: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name EQUALSSIGN literal
 #line 651 "langutils/sc_parser/src/sc_grammar.y"
-                        { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location); }
-#line 3287 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[4].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   cxt.create(DeclareArgumentWithDefaultNode { true }, yylhs.location,
+                                              yystack_[2].value.as<NamedIdentifierIndex>(),
+                                              yystack_[0].value.as<AnyPossiblyLiteralIndex>()));
+          }
+#line 3279 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 119: // argument_declarations: ARG argument_declarations.list comma.opt SEMICOLON
-#line 652 "langutils/sc_parser/src/sc_grammar.y"
-                                                             { yylhs.value.as < DeclareArgumentListIndex > () = yystack_[2].value.as < DeclareArgumentListIndex > (); }
-#line 3293 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 117: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name OPENPAREN expr.seq
+                    // CLOSEPAREN
+#line 653 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.graph.append(
+                  yystack_[5].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[3].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3285 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 120: // argument_declarations: ARG argument_declarations.list ELLIPSIS name SEMICOLON
-#line 654 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[3].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3299 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 118: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name EQUALSSIGN
+                    // OPENPAREN expr.seq CLOSEPAREN
+#line 655 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.graph.append(
+                  yystack_[6].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                  cxt.create(DeclareArgumentWithDefaultNode { false }, yylhs.location,
+                             yystack_[4].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>()));
+          }
+#line 3291 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 121: // argument_declarations: ARG argument_declarations.list ELLIPSIS name COMMA name SEMICOLON
-#line 656 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append( yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[3].location, yystack_[3].value.as < NamedIdentifierIndex > ()), cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3305 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 119: // argument_declarations: ARG SEMICOLON
+#line 659 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.create(DeclareArgumentList {}, yylhs.location);
+          }
+#line 3297 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 122: // argument_declarations: PIPE PIPE
-#line 658 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location); }
-#line 3311 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 123: // argument_declarations: PIPE argument_declarations.pipelist comma.opt PIPE
+          case 120: // argument_declarations: ARG argument_declarations.list comma.opt SEMICOLON
 #line 660 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = yystack_[2].value.as < DeclareArgumentListIndex > (); }
-#line 3317 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = yystack_[2].value.as<DeclareArgumentListIndex>();
+          }
+#line 3303 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 124: // argument_declarations: PIPE argument_declarations.pipelist ELLIPSIS name PIPE
+          case 121: // argument_declarations: ARG argument_declarations.list ELLIPSIS name SEMICOLON
 #line 662 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append(yystack_[3].value.as < DeclareArgumentListIndex > (), yystack_[3].location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3323 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[3].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
+#line 3309 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 125: // argument_declarations: PIPE argument_declarations.pipelist ELLIPSIS name COMMA name PIPE
+          case 122: // argument_declarations: ARG argument_declarations.list ELLIPSIS name COMMA name SEMICOLON
 #line 664 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph.append(yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[3].location, yystack_[3].value.as < NamedIdentifierIndex > ()), cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3329 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[5].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[3].location,
+                                              yystack_[3].value.as<NamedIdentifierIndex>()),
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
+#line 3315 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 126: // argument_declarations.opt: %empty
-#line 669 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location); }
-#line 3335 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 123: // argument_declarations: ARG ELLIPSIS name SEMICOLON
+#line 666 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto arg_list = cxt.create(DeclareArgumentList {}, yylhs.location);
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(arg_list, yylhs.location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
+#line 3324 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 127: // argument_declarations.opt: argument_declarations
-#line 670 "langutils/sc_parser/src/sc_grammar.y"
-                                { yylhs.value.as < DeclareArgumentListIndex > () = yystack_[0].value.as < DeclareArgumentListIndex > (); }
-#line 3341 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 124: // argument_declarations: ARG ELLIPSIS name COMMA name SEMICOLON
+#line 671 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              auto arg_list = cxt.create(DeclareArgumentList {}, yylhs.location);
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(arg_list, yylhs.location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[3].location,
+                                              yystack_[3].value.as<NamedIdentifierIndex>()),
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
+#line 3337 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 128: // variable_declarations.list.item: name
-#line 675 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareAnyVariableIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 3347 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 125: // argument_declarations: PIPE PIPE
+#line 680 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.create(DeclareArgumentList {}, yylhs.location);
+          }
+#line 3343 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 129: // variable_declarations.list.item: name EQUALSSIGN expr
-#line 677 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareAnyVariableIndex > () = cxt.create(DeclareVariableWithDefaultNode{}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3353 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 126: // argument_declarations: PIPE argument_declarations.pipelist comma.opt PIPE
+#line 682 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = yystack_[2].value.as<DeclareArgumentListIndex>();
+          }
+#line 3349 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 130: // variable_declarations.list.item: name OPENPAREN expr.seq CLOSEPAREN
-#line 679 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareAnyVariableIndex > () = cxt.create(DeclareVariableWithDefaultNode{}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ()); }
-#line 3359 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 127: // argument_declarations: PIPE argument_declarations.pipelist ELLIPSIS name PIPE
+#line 684 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[3].value.as<DeclareArgumentListIndex>(), yystack_[3].location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
+#line 3355 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 131: // variable_declarations.list: variable_declarations.list.item
+          case 128: // argument_declarations: PIPE argument_declarations.pipelist ELLIPSIS name COMMA name PIPE
+#line 686 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(yystack_[5].value.as<DeclareArgumentListIndex>(), yylhs.location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[3].location,
+                                              yystack_[3].value.as<NamedIdentifierIndex>()),
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
+#line 3361 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 129: // argument_declarations: PIPE ELLIPSIS name PIPE
 #line 688 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DeclareVariableListIndex > () = cxt.create(DeclareVariableList{}, yylhs.location, yystack_[0].value.as < DeclareAnyVariableIndex > ()); }
-#line 3365 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              auto arg_list = cxt.create(DeclareArgumentList {}, yylhs.location);
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(arg_list, yylhs.location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
+#line 3370 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 132: // variable_declarations.list: variable_declarations.list COMMA variable_declarations.list.item
-#line 690 "langutils/sc_parser/src/sc_grammar.y"
-                {yylhs.value.as < DeclareVariableListIndex > () = cxt.graph.append(yystack_[2].value.as < DeclareVariableListIndex > (), yystack_[0].value.as < DeclareAnyVariableIndex > ()); }
-#line 3371 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 133: // variable_declarations: VAR variable_declarations.list
+          case 130: // argument_declarations: PIPE ELLIPSIS name COMMA name PIPE
 #line 693 "langutils/sc_parser/src/sc_grammar.y"
-                                                       { yylhs.value.as < DeclareVariableListIndex > () = yystack_[0].value.as < DeclareVariableListIndex > (); }
-#line 3377 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 134: // arguments.entries: KEYBINOP expr.seq
-#line 697 "langutils/sc_parser/src/sc_grammar.y"
-                            { yylhs.value.as < ArgumentEntryIndex > () = cxt.create(KwArgNode{}, yylhs.location, cxt.create(SymbolNode{SymbolNode::Kind::KeyBinOp}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
+          {
+              auto arg_list = cxt.create(DeclareArgumentList {}, yylhs.location);
+              yylhs.value.as<DeclareArgumentListIndex>() =
+                  cxt.graph.append(arg_list, yylhs.location,
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[3].location,
+                                              yystack_[3].value.as<NamedIdentifierIndex>()),
+                                   cxt.create(DeclareArgumentVariadicNode {}, yystack_[1].location,
+                                              yystack_[1].value.as<NamedIdentifierIndex>()));
+          }
 #line 3383 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 135: // arguments.entries: MULTIPLY expr.seq
-#line 698 "langutils/sc_parser/src/sc_grammar.y"
-                            { yylhs.value.as < ArgumentEntryIndex > () = cxt.create(VariadicArgNode{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
+          case 131: // argument_declarations.opt: %empty
+#line 705 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = cxt.create(DeclareArgumentList {}, yylhs.location);
+          }
 #line 3389 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 136: // arguments.entries: expr.seq
-#line 699 "langutils/sc_parser/src/sc_grammar.y"
-                   { yylhs.value.as < ArgumentEntryIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
+          case 132: // argument_declarations.opt: argument_declarations
+#line 706 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareArgumentListIndex>() = yystack_[0].value.as<DeclareArgumentListIndex>();
+          }
 #line 3395 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 137: // arguments.no_trailing: arguments.entries
-#line 703 "langutils/sc_parser/src/sc_grammar.y"
-                            {  yylhs.value.as < ArgumentListIndex > () = cxt.create(ArgumentList{}, yylhs.location, yystack_[0].value.as < ArgumentEntryIndex > ()); }
+          case 133: // variable_declarations.list.item: name
+#line 711 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareAnyVariableIndex>() = yystack_[0].value.as<NamedIdentifierIndex>();
+          }
 #line 3401 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 138: // arguments.no_trailing: arguments.no_trailing COMMA arguments.entries
-#line 704 "langutils/sc_parser/src/sc_grammar.y"
-                                                        { yylhs.value.as < ArgumentListIndex > () = cxt.graph.append(yystack_[2].value.as < ArgumentListIndex > (), yylhs.location, yystack_[0].value.as < ArgumentEntryIndex > ()); }
-#line 3407 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 139: // arguments: arguments.no_trailing comma.opt
-#line 707 "langutils/sc_parser/src/sc_grammar.y"
-                                            {yylhs.value.as < ArgumentListIndex > () = yystack_[1].value.as < ArgumentListIndex > (); }
-#line 3413 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 140: // arguments.paren: OPENPAREN arguments CLOSEPAREN
-#line 710 "langutils/sc_parser/src/sc_grammar.y"
-                                                 { yylhs.value.as < ArgumentListIndex > () = yystack_[1].value.as < ArgumentListIndex > (); }
-#line 3419 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 141: // arguments.maybe_paren: %empty
+          case 134: // variable_declarations.list.item: name EQUALSSIGN expr
 #line 713 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < ArgumentListIndex > () = cxt.create(ArgumentList{}, yylhs.location); }
-#line 3425 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareAnyVariableIndex>() =
+                  cxt.create(DeclareVariableWithDefaultNode {}, yylhs.location,
+                             yystack_[2].value.as<NamedIdentifierIndex>(), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3407 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 142: // arguments.maybe_paren: arguments.paren
-#line 714 "langutils/sc_parser/src/sc_grammar.y"
-                          { yylhs.value.as < ArgumentListIndex > () = yystack_[0].value.as < ArgumentListIndex > (); }
-#line 3431 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 135: // variable_declarations.list.item: name OPENPAREN expr.seq CLOSEPAREN
+#line 715 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareAnyVariableIndex>() =
+                  cxt.create(DeclareVariableWithDefaultNode {}, yylhs.location,
+                             yystack_[3].value.as<NamedIdentifierIndex>(), yystack_[1].value.as<AnyExprIndex>());
+          }
+#line 3413 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 143: // literal.terminal: symbol
-#line 718 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < SymbolLitIndex > (); }
-#line 3437 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 144: // literal.terminal: string
-#line 719 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < StringLitIndex > (); }
-#line 3443 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 145: // literal.terminal: integer
-#line 720 "langutils/sc_parser/src/sc_grammar.y"
-                  { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < IntLitIndex > (); }
-#line 3449 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 146: // literal.terminal: float
-#line 721 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < FloatProducingIndex > (); }
-#line 3455 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 147: // literal.terminal: boolean
-#line 722 "langutils/sc_parser/src/sc_grammar.y"
-                  { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < BooleanLitIndex > (); }
-#line 3461 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 148: // literal.terminal: nil
-#line 723 "langutils/sc_parser/src/sc_grammar.y"
-              { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < NilLitIndex > (); }
-#line 3467 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 149: // literal.terminal: ascii
+          case 136: // variable_declarations.list: variable_declarations.list.item
 #line 724 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < ASCIIIndex > (); }
-#line 3473 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DeclareVariableListIndex>() =
+                  cxt.create(DeclareVariableList {}, yylhs.location, yystack_[0].value.as<DeclareAnyVariableIndex>());
+          }
+#line 3419 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 150: // literal.terminal: block
-#line 725 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < BlockIndex > (); }
-#line 3479 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 137: // variable_declarations.list: variable_declarations.list COMMA variable_declarations.list.item
+#line 726 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareVariableListIndex>() = cxt.graph.append(
+                  yystack_[2].value.as<DeclareVariableListIndex>(), yystack_[0].value.as<DeclareAnyVariableIndex>());
+          }
+#line 3425 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 151: // literal.array.contents: %empty
-#line 730 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location); }
-#line 3485 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 138: // variable_declarations: VAR variable_declarations.list
+#line 729 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DeclareVariableListIndex>() = yystack_[0].value.as<DeclareVariableListIndex>();
+          }
+#line 3431 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 152: // literal.array.contents: expr.seq
-#line 732 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3491 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 139: // arguments.entries: KEYBINOP expr.seq
+#line 733 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArgumentEntryIndex>() =
+                  cxt.create(KwArgNode {}, yylhs.location,
+                             cxt.create(SymbolNode { SymbolNode::Kind::KeyBinOp }, yystack_[1].location),
+                             yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3437 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 153: // literal.array.contents: expr.seq COLON expr.seq
+          case 140: // arguments.entries: MULTIPLY expr.seq
 #line 734 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3497 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<ArgumentEntryIndex>() =
+                  cxt.create(VariadicArgNode {}, yylhs.location, yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3443 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 154: // literal.array.contents: KEYBINOP expr.seq
-#line 736 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location, cxt.create(SymbolNode{SymbolNode::Kind::KeyBinOp}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3503 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 141: // arguments.entries: expr.seq
+#line 735 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArgumentEntryIndex>() = yystack_[0].value.as<AnyExprIndex>();
+          }
+#line 3449 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 155: // literal.array.contents: literal.array.contents COMMA expr.seq
-#line 738 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ArrayIndex > () = cxt.graph.append(yystack_[2].value.as < ArrayIndex > (), yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3509 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 142: // arguments.no_trailing: arguments.entries
+#line 739 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArgumentListIndex>() =
+                  cxt.create(ArgumentList {}, yylhs.location, yystack_[0].value.as<ArgumentEntryIndex>());
+          }
+#line 3455 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 156: // literal.array.contents: literal.array.contents COMMA expr.seq COLON expr.seq
+          case 143: // arguments.no_trailing: arguments.no_trailing COMMA arguments.entries
 #line 740 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ArrayIndex > () = cxt.graph.append(yystack_[4].value.as < ArrayIndex > (), yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3515 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<ArgumentListIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<ArgumentListIndex>(), yylhs.location,
+                                   yystack_[0].value.as<ArgumentEntryIndex>());
+          }
+#line 3461 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 157: // literal.array.contents: literal.array.contents COMMA KEYBINOP expr.seq
-#line 742 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < ArrayIndex > () = cxt.graph.append(yystack_[3].value.as < ArrayIndex > (), yylhs.location, cxt.create(SymbolNode{SymbolNode::Kind::KeyBinOp}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3521 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 144: // arguments: arguments.no_trailing comma.opt
+#line 743 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArgumentListIndex>() = yystack_[1].value.as<ArgumentListIndex>();
+          }
+#line 3467 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 158: // literal.dictionary.entry: expr COLON expr.seq
+          case 145: // arguments.paren: OPENPAREN arguments CLOSEPAREN
+#line 746 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArgumentListIndex>() = yystack_[1].value.as<ArgumentListIndex>();
+          }
+#line 3473 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 146: // arguments.maybe_paren: %empty
+#line 749 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArgumentListIndex>() = cxt.create(ArgumentList {}, yylhs.location);
+          }
+#line 3479 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 147: // arguments.maybe_paren: arguments.paren
 #line 750 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DictionaryEntryIndex > () = cxt.create(DictionaryEntryNode{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3527 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<ArgumentListIndex>() = yystack_[0].value.as<ArgumentListIndex>();
+          }
+#line 3485 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 159: // literal.dictionary.entry: KEYBINOP expr.seq
-#line 752 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DictionaryEntryIndex > () = cxt.create(DictionaryEntryNode{}, yylhs.location, cxt.create(SymbolNode{SymbolNode::Kind::KeyBinOp}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3533 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 148: // literal.terminal: symbol
+#line 754 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<SymbolLitIndex>();
+          }
+#line 3491 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 160: // literal.dictionary.entries: %empty
+          case 149: // literal.terminal: string
+#line 755 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<StringLitIndex>();
+          }
+#line 3497 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 150: // literal.terminal: integer
+#line 756 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<IntLitIndex>();
+          }
+#line 3503 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 151: // literal.terminal: float
 #line 757 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DictionaryIndex > () = cxt.create(DictionaryNode{}, yylhs.location); }
-#line 3539 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<FloatProducingIndex>();
+          }
+#line 3509 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 161: // literal.dictionary.entries: literal.dictionary.entry
+          case 152: // literal.terminal: boolean
+#line 758 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<BooleanLitIndex>();
+          }
+#line 3515 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 153: // literal.terminal: nil
 #line 759 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DictionaryIndex > () = cxt.create(DictionaryNode{}, yylhs.location, yystack_[0].value.as < DictionaryEntryIndex > ()); }
-#line 3545 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<NilLitIndex>();
+          }
+#line 3521 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 162: // literal.dictionary.entries: literal.dictionary.entries COMMA literal.dictionary.entry
+          case 154: // literal.terminal: ascii
+#line 760 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<ASCIIIndex>();
+          }
+#line 3527 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 155: // literal.terminal: block
 #line 761 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < DictionaryIndex > () = cxt.graph.append(yystack_[2].value.as < DictionaryIndex > (), yylhs.location,  yystack_[0].value.as < DictionaryEntryIndex > ()); }
-#line 3551 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<BlockIndex>();
+          }
+#line 3533 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 163: // literal.dictionary: OPENPAREN literal.dictionary.entries comma.opt CLOSEPAREN
+          case 156: // literal.array.contents: %empty
 #line 766 "langutils/sc_parser/src/sc_grammar.y"
-                { cxt.graph.location(*yystack_[2].value.as < DictionaryIndex > ()) = yylhs.location; yylhs.value.as < DictionaryIndex > () = yystack_[2].value.as < DictionaryIndex > (); }
+          {
+              yylhs.value.as<ArrayIndex>() = cxt.create(ArrayNode {}, yylhs.location);
+          }
+#line 3539 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 157: // literal.array.contents: expr.seq
+#line 768 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArrayIndex>() =
+                  cxt.create(ArrayNode {}, yylhs.location, yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3545 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 158: // literal.array.contents: expr.seq COLON expr.seq
+#line 770 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArrayIndex>() =
+                  cxt.create(ArrayNode {}, yylhs.location, yystack_[2].value.as<AnyExprIndex>(),
+                             yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3551 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 159: // literal.array.contents: KEYBINOP expr.seq
+#line 772 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArrayIndex>() =
+                  cxt.create(ArrayNode {}, yylhs.location,
+                             cxt.create(SymbolNode { SymbolNode::Kind::KeyBinOp }, yystack_[1].location),
+                             yystack_[0].value.as<AnyExprIndex>());
+          }
 #line 3557 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 164: // literal.array: OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
-#line 771 "langutils/sc_parser/src/sc_grammar.y"
-                {  cxt.graph.location(*yystack_[2].value.as < ArrayIndex > ()) = yylhs.location; yylhs.value.as < ArrayIndex > () = yystack_[2].value.as < ArrayIndex > (); }
+          case 160: // literal.array.contents: literal.array.contents COMMA expr.seq
+#line 774 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArrayIndex>() = cxt.graph.append(yystack_[2].value.as<ArrayIndex>(), yylhs.location,
+                                                              yystack_[0].value.as<AnyExprIndex>());
+          }
 #line 3563 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 165: // literal.array: HASH OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
-#line 773 "langutils/sc_parser/src/sc_grammar.y"
-                {  
-			cxt.graph.payload(yystack_[2].value.as < ArrayIndex > ()).is_immutable = true;
-			cxt.graph.location(*yystack_[2].value.as < ArrayIndex > ()) = yylhs.location;
-			yylhs.value.as < ArrayIndex > () = yystack_[2].value.as < ArrayIndex > ();
-		}
-#line 3573 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 161: // literal.array.contents: literal.array.contents COMMA expr.seq COLON expr.seq
+#line 776 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArrayIndex>() =
+                  cxt.graph.append(yystack_[4].value.as<ArrayIndex>(), yylhs.location,
+                                   yystack_[2].value.as<AnyExprIndex>(), yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3569 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 166: // literal: literal.terminal
-#line 781 "langutils/sc_parser/src/sc_grammar.y"
-                           { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < AnyPossiblyLiteralIndex > (); }
-#line 3579 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 162: // literal.array.contents: literal.array.contents COMMA KEYBINOP expr.seq
+#line 778 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ArrayIndex>() =
+                  cxt.graph.append(yystack_[3].value.as<ArrayIndex>(), yylhs.location,
+                                   cxt.create(SymbolNode { SymbolNode::Kind::KeyBinOp }, yystack_[1].location),
+                                   yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3575 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 167: // literal: literal.array
-#line 782 "langutils/sc_parser/src/sc_grammar.y"
-                        { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < ArrayIndex > (); }
-#line 3585 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 168: // literal: literal.dictionary
-#line 783 "langutils/sc_parser/src/sc_grammar.y"
-                             { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < DictionaryIndex > (); }
-#line 3591 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 169: // name: NAME
+          case 163: // literal.dictionary.entry: expr COLON expr.seq
 #line 786 "langutils/sc_parser/src/sc_grammar.y"
-            { yylhs.value.as < NamedIdentifierIndex > () = cxt.create(NamedIdentifier{}, yylhs.location); }
-#line 3597 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DictionaryEntryIndex>() =
+                  cxt.create(DictionaryEntryNode {}, yylhs.location, yystack_[2].value.as<AnyExprIndex>(),
+                             yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3581 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 170: // binary_op.raw: BINOP
+          case 164: // literal.dictionary.entry: KEYBINOP expr.seq
+#line 788 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DictionaryEntryIndex>() =
+                  cxt.create(DictionaryEntryNode {}, yylhs.location,
+                             cxt.create(SymbolNode { SymbolNode::Kind::KeyBinOp }, yystack_[1].location),
+                             yystack_[0].value.as<AnyExprIndex>());
+          }
+#line 3587 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 165: // literal.dictionary.entries: %empty
+#line 793 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<DictionaryIndex>() = cxt.create(DictionaryNode {}, yylhs.location);
+          }
+#line 3593 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 166: // literal.dictionary.entries: literal.dictionary.entry
 #line 795 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3603 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DictionaryIndex>() =
+                  cxt.create(DictionaryNode {}, yylhs.location, yystack_[0].value.as<DictionaryEntryIndex>());
+          }
+#line 3599 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 171: // binary_op.raw: READWRITEVAR
-#line 796 "langutils/sc_parser/src/sc_grammar.y"
-                       { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3609 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 172: // binary_op.raw: LESSTHAN
+          case 167: // literal.dictionary.entries: literal.dictionary.entries COMMA literal.dictionary.entry
 #line 797 "langutils/sc_parser/src/sc_grammar.y"
-                   { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3615 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<DictionaryIndex>() =
+                  cxt.graph.append(yystack_[2].value.as<DictionaryIndex>(), yylhs.location,
+                                   yystack_[0].value.as<DictionaryEntryIndex>());
+          }
+#line 3605 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 173: // binary_op.raw: GREATERTHAN
-#line 798 "langutils/sc_parser/src/sc_grammar.y"
-                      { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3621 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 174: // binary_op.raw: MINUS
-#line 799 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3627 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 175: // binary_op.raw: MULTIPLY
-#line 800 "langutils/sc_parser/src/sc_grammar.y"
-                   { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3633 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 176: // binary_op.raw: ADD
-#line 801 "langutils/sc_parser/src/sc_grammar.y"
-              { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3639 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 177: // binary_op.raw: PIPE
+          case 168: // literal.dictionary: OPENPAREN literal.dictionary.entries comma.opt CLOSEPAREN
 #line 802 "langutils/sc_parser/src/sc_grammar.y"
-               { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3645 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              cxt.graph.location(*yystack_[2].value.as<DictionaryIndex>()) = yylhs.location;
+              yylhs.value.as<DictionaryIndex>() = yystack_[2].value.as<DictionaryIndex>();
+          }
+#line 3611 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 178: // binary_op.no_adverb: binary_op.raw
-#line 806 "langutils/sc_parser/src/sc_grammar.y"
-                          { yylhs.value.as < SelectorIndex > () = yystack_[0].value.as < SelectorIndex > (); }
-#line 3651 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 179: // binary_op.no_adverb: KEYBINOP
+          case 169: // literal.array: OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
 #line 807 "langutils/sc_parser/src/sc_grammar.y"
-                   { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ true }, yylhs.location); }
-#line 3657 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              cxt.graph.location(*yystack_[2].value.as<ArrayIndex>()) = yylhs.location;
+              yylhs.value.as<ArrayIndex>() = yystack_[2].value.as<ArrayIndex>();
+          }
+#line 3617 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 180: // binary_op: binary_op.no_adverb adverb
-#line 812 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < SelectorMaybeAdverbIndex > () = cxt.create(SelectorWAdverb{}, yylhs.location, yystack_[1].value.as < SelectorIndex > (), yystack_[0].value.as < AdverbIndex > ()); }
-#line 3663 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 170: // literal.array: HASH OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
+#line 809 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              cxt.graph.payload(yystack_[2].value.as<ArrayIndex>()).is_immutable = true;
+              cxt.graph.location(*yystack_[2].value.as<ArrayIndex>()) = yylhs.location;
+              yylhs.value.as<ArrayIndex>() = yystack_[2].value.as<ArrayIndex>();
+          }
+#line 3627 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 181: // binary_op: binary_op.no_adverb
-#line 814 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < SelectorMaybeAdverbIndex > () = yystack_[0].value.as < SelectorIndex > (); }
-#line 3669 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 171: // literal: literal.terminal
+#line 817 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<AnyPossiblyLiteralIndex>();
+          }
+#line 3633 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 186: // ascii: ASCII
-#line 820 "langutils/sc_parser/src/sc_grammar.y"
-              { yylhs.value.as < ASCIIIndex > () = cxt.create(ASCIINode{}, yylhs.location); }
-#line 3675 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 172: // literal: literal.array
+#line 818 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<ArrayIndex>();
+          }
+#line 3639 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 187: // nil: NIL
+          case 173: // literal: literal.dictionary
+#line 819 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AnyPossiblyLiteralIndex>() = yystack_[0].value.as<DictionaryIndex>();
+          }
+#line 3645 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 174: // name: NAME
 #line 822 "langutils/sc_parser/src/sc_grammar.y"
-          { yylhs.value.as < NilLitIndex > () = cxt.create(NilNode{}, yylhs.location); }
-#line 3681 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<NamedIdentifierIndex>() = cxt.create(NamedIdentifier {}, yylhs.location);
+          }
+#line 3651 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 188: // boolean: TRUE
-#line 825 "langutils/sc_parser/src/sc_grammar.y"
-               { yylhs.value.as < BooleanLitIndex > () = cxt.create(BooleanNode{true}, yylhs.location); }
-#line 3687 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 189: // boolean: FALSE
-#line 826 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < BooleanLitIndex > () = cxt.create(BooleanNode{false}, yylhs.location); }
-#line 3693 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 190: // symbol: SYMBOL_QUOTE
-#line 830 "langutils/sc_parser/src/sc_grammar.y"
-                       { yylhs.value.as < SymbolLitIndex > () = cxt.create(SymbolNode{SymbolNode::Kind::Quote}, yylhs.location); }
-#line 3699 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 191: // symbol: SYMBOL_SLASH
+          case 175: // binary_op.raw: BINOP
 #line 831 "langutils/sc_parser/src/sc_grammar.y"
-                       { yylhs.value.as < SymbolLitIndex > () = cxt.create(SymbolNode{SymbolNode::Kind::Slash}, yylhs.location); }
-#line 3705 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3657 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 192: // string: STRINGLINE
+          case 176: // binary_op.raw: READWRITEVAR
+#line 832 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3663 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 177: // binary_op.raw: LESSTHAN
+#line 833 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3669 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 178: // binary_op.raw: GREATERTHAN
+#line 834 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3675 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 179: // binary_op.raw: MINUS
 #line 835 "langutils/sc_parser/src/sc_grammar.y"
-                     { yylhs.value.as < StringLitIndex > () = cxt.create(StringLineList{}, yylhs.location, cxt.create(StringLineNode{}, yylhs.location)); }
-#line 3711 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3681 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 193: // string: string STRINGLINE
+          case 180: // binary_op.raw: MULTIPLY
 #line 836 "langutils/sc_parser/src/sc_grammar.y"
-                            { yylhs.value.as < StringLitIndex > () = cxt.graph.append(yystack_[1].value.as < StringLitIndex > (), cxt.create(StringLineNode{}, yystack_[0].location)); }
-#line 3717 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3687 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 194: // integer: INTEGER
-#line 840 "langutils/sc_parser/src/sc_grammar.y"
-                  { yylhs.value.as < IntLitIndex > () = cxt.create(IntNode{}, yylhs.location); }
-#line 3723 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 181: // binary_op.raw: ADD
+#line 837 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3693 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 195: // integer: INTEGER_RADIX
-#line 841 "langutils/sc_parser/src/sc_grammar.y"
-                        { yylhs.value.as < IntLitIndex > () = cxt.create(IntNode{IntNode::Kind::Radix}, yylhs.location); }
-#line 3729 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 182: // binary_op.raw: PIPE
+#line 838 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { false }, yylhs.location);
+          }
+#line 3699 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 196: // integer: HEXADECIMAL
+          case 183: // binary_op.no_adverb: binary_op.raw
 #line 842 "langutils/sc_parser/src/sc_grammar.y"
-                      { yylhs.value.as < IntLitIndex > () = cxt.create(IntNode{IntNode::Kind::Hexadecimal}, yylhs.location); }
+          {
+              yylhs.value.as<SelectorIndex>() = yystack_[0].value.as<SelectorIndex>();
+          }
+#line 3705 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 184: // binary_op.no_adverb: KEYBINOP
+#line 843 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorIndex>() = cxt.create(SelectorNode { true }, yylhs.location);
+          }
+#line 3711 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 185: // binary_op: binary_op.no_adverb adverb
+#line 848 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorMaybeAdverbIndex>() =
+                  cxt.create(SelectorWAdverb {}, yylhs.location, yystack_[1].value.as<SelectorIndex>(),
+                             yystack_[0].value.as<AdverbIndex>());
+          }
+#line 3717 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 186: // binary_op: binary_op.no_adverb
+#line 850 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SelectorMaybeAdverbIndex>() = yystack_[0].value.as<SelectorIndex>();
+          }
+#line 3723 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 191: // ascii: ASCII
+#line 856 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ASCIIIndex>() = cxt.create(ASCIINode {}, yylhs.location);
+          }
+#line 3729 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 192: // nil: NIL
+#line 858 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<NilLitIndex>() = cxt.create(NilNode {}, yylhs.location);
+          }
 #line 3735 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 197: // integer: MINUS integer
-#line 844 "langutils/sc_parser/src/sc_grammar.y"
-                {
-			// Reaches into the previous integer and changes its sign.
-			cxt.graph.payload(yystack_[0].value.as < IntLitIndex > ()).sign = IntNode::Sign::Negative;
-			yylhs.value.as < IntLitIndex > () = yystack_[0].value.as < IntLitIndex > ();
-		}
-#line 3745 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 193: // boolean: TRUE
+#line 861 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<BooleanLitIndex>() = cxt.create(BooleanNode { true }, yylhs.location);
+          }
+#line 3741 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 198: // float.raw_unsigned: FLOAT
-#line 852 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{}, yylhs.location); }
-#line 3751 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 199: // float.raw_unsigned: FLOAT_RADIX
-#line 853 "langutils/sc_parser/src/sc_grammar.y"
-                      { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{FloatNode::Kind::Radix}, yylhs.location); }
-#line 3757 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 200: // float.raw_unsigned: FLOAT_EXPONENT
-#line 854 "langutils/sc_parser/src/sc_grammar.y"
-                         { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{FloatNode::Kind::Exponent}, yylhs.location); }
-#line 3763 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 201: // float.raw_unsigned: FLOAT_INF
-#line 855 "langutils/sc_parser/src/sc_grammar.y"
-                    { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{FloatNode::Kind::Inf}, yylhs.location); }
-#line 3769 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 202: // float.raw: float.raw_unsigned
-#line 860 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < FloatLitIndex > () = yystack_[0].value.as < FloatLitIndex > (); }
-#line 3775 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 203: // float.raw: MINUS float.raw_unsigned
+          case 194: // boolean: FALSE
 #line 862 "langutils/sc_parser/src/sc_grammar.y"
-                { cxt.graph.payload(yystack_[0].value.as < FloatLitIndex > ()).sign = FloatNode::Sign::Negative; yylhs.value.as < FloatLitIndex > () = yystack_[0].value.as < FloatLitIndex > (); }
-#line 3781 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<BooleanLitIndex>() = cxt.create(BooleanNode { false }, yylhs.location);
+          }
+#line 3747 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 204: // accidental.unsigned: ACCIDENTAL_STEPS
+          case 195: // symbol: SYMBOL_QUOTE
+#line 866 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<SymbolLitIndex>() = cxt.create(SymbolNode { SymbolNode::Kind::Quote }, yylhs.location);
+          }
+#line 3753 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 196: // symbol: SYMBOL_SLASH
 #line 867 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AccidentalIndex > () = cxt.create(AccidentalNode{AccidentalNode::Kind::Steps}, yylhs.location); }
-#line 3787 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<SymbolLitIndex>() = cxt.create(SymbolNode { SymbolNode::Kind::Slash }, yylhs.location);
+          }
+#line 3759 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 205: // accidental.unsigned: ACCIDENTAL_CENTS
-#line 869 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AccidentalIndex > () = cxt.create(AccidentalNode{AccidentalNode::Kind::Cents}, yylhs.location); }
-#line 3793 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 197: // string: STRINGLINE
+#line 871 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<StringLitIndex>() =
+                  cxt.create(StringLineList {}, yylhs.location, cxt.create(StringLineNode {}, yylhs.location));
+          }
+#line 3765 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 206: // accidental: accidental.unsigned
-#line 874 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < AccidentalIndex > () = yystack_[0].value.as < AccidentalIndex > (); }
-#line 3799 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 198: // string: string STRINGLINE
+#line 872 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<StringLitIndex>() = cxt.graph.append(yystack_[1].value.as<StringLitIndex>(),
+                                                                  cxt.create(StringLineNode {}, yystack_[0].location));
+          }
+#line 3771 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 207: // accidental: MINUS accidental.unsigned
+          case 199: // integer: INTEGER
 #line 876 "langutils/sc_parser/src/sc_grammar.y"
-                { cxt.graph.payload(yystack_[0].value.as < AccidentalIndex > ()).sign = AccidentalNode::Sign::Negative; yylhs.value.as < AccidentalIndex > () = yystack_[0].value.as < AccidentalIndex > (); }
-#line 3805 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<IntLitIndex>() = cxt.create(IntNode {}, yylhs.location);
+          }
+#line 3777 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 208: // float: float.raw
+          case 200: // integer: INTEGER_RADIX
+#line 877 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<IntLitIndex>() = cxt.create(IntNode { IntNode::Kind::Radix }, yylhs.location);
+          }
+#line 3783 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 201: // integer: HEXADECIMAL
+#line 878 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<IntLitIndex>() = cxt.create(IntNode { IntNode::Kind::Hexadecimal }, yylhs.location);
+          }
+#line 3789 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 202: // integer: MINUS integer
 #line 880 "langutils/sc_parser/src/sc_grammar.y"
-                    { yylhs.value.as < FloatProducingIndex > () = yystack_[0].value.as < FloatLitIndex > (); }
-#line 3811 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              // Reaches into the previous integer and changes its sign.
+              cxt.graph.payload(yystack_[0].value.as<IntLitIndex>()).sign = IntNode::Sign::Negative;
+              yylhs.value.as<IntLitIndex>() = yystack_[0].value.as<IntLitIndex>();
+          }
+#line 3799 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 209: // float: accidental
-#line 881 "langutils/sc_parser/src/sc_grammar.y"
-                     { yylhs.value.as < FloatProducingIndex > () = yystack_[0].value.as < AccidentalIndex > (); }
-#line 3817 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          case 203: // float.raw_unsigned: FLOAT
+#line 888 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatLitIndex>() = cxt.create(FloatNode {}, yylhs.location);
+          }
+#line 3805 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 210: // float: float.raw PI
-#line 882 "langutils/sc_parser/src/sc_grammar.y"
-                       { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{}, yylhs.location, yystack_[1].value.as < FloatLitIndex > ()); }
-#line 3823 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 211: // float: integer PI
-#line 883 "langutils/sc_parser/src/sc_grammar.y"
-                     { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{}, yylhs.location, yystack_[1].value.as < IntLitIndex > ()); }
-#line 3829 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 212: // float: PI
-#line 884 "langutils/sc_parser/src/sc_grammar.y"
-              { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{}, yylhs.location, cxt.create(Missing{}, yylhs.location)); }
-#line 3835 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 213: // float: MINUS PI
-#line 885 "langutils/sc_parser/src/sc_grammar.y"
-                   { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{PiNode::Sign::Negative}, yylhs.location, cxt.create(Missing{}, yylhs.location)); }
-#line 3841 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
-
-  case 214: // accessor: %empty
+          case 204: // float.raw_unsigned: FLOAT_RADIX
 #line 889 "langutils/sc_parser/src/sc_grammar.y"
-                 { yylhs.value.as < ReadWriteAccessor > () = ReadWriteAccessor::Private; }
-#line 3847 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<FloatLitIndex>() = cxt.create(FloatNode { FloatNode::Kind::Radix }, yylhs.location);
+          }
+#line 3811 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 215: // accessor: LESSTHAN
+          case 205: // float.raw_unsigned: FLOAT_EXPONENT
 #line 890 "langutils/sc_parser/src/sc_grammar.y"
-                   { yylhs.value.as < ReadWriteAccessor > () = ReadWriteAccessor::PublicRead; }
-#line 3853 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          {
+              yylhs.value.as<FloatLitIndex>() = cxt.create(FloatNode { FloatNode::Kind::Exponent }, yylhs.location);
+          }
+#line 3817 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
-  case 216: // accessor: READWRITEVAR
+          case 206: // float.raw_unsigned: FLOAT_INF
 #line 891 "langutils/sc_parser/src/sc_grammar.y"
-                       { yylhs.value.as < ReadWriteAccessor > () = ReadWriteAccessor::PublicReadAndWrite; }
+          {
+              yylhs.value.as<FloatLitIndex>() = cxt.create(FloatNode { FloatNode::Kind::Inf }, yylhs.location);
+          }
+#line 3823 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 207: // float.raw: float.raw_unsigned
+#line 896 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatLitIndex>() = yystack_[0].value.as<FloatLitIndex>();
+          }
+#line 3829 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 208: // float.raw: MINUS float.raw_unsigned
+#line 898 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              cxt.graph.payload(yystack_[0].value.as<FloatLitIndex>()).sign = FloatNode::Sign::Negative;
+              yylhs.value.as<FloatLitIndex>() = yystack_[0].value.as<FloatLitIndex>();
+          }
+#line 3835 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 209: // accidental.unsigned: ACCIDENTAL_STEPS
+#line 903 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AccidentalIndex>() =
+                  cxt.create(AccidentalNode { AccidentalNode::Kind::Steps }, yylhs.location);
+          }
+#line 3841 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 210: // accidental.unsigned: ACCIDENTAL_CENTS
+#line 905 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AccidentalIndex>() =
+                  cxt.create(AccidentalNode { AccidentalNode::Kind::Cents }, yylhs.location);
+          }
+#line 3847 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 211: // accidental: accidental.unsigned
+#line 910 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<AccidentalIndex>() = yystack_[0].value.as<AccidentalIndex>();
+          }
+#line 3853 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 212: // accidental: MINUS accidental.unsigned
+#line 912 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              cxt.graph.payload(yystack_[0].value.as<AccidentalIndex>()).sign = AccidentalNode::Sign::Negative;
+              yylhs.value.as<AccidentalIndex>() = yystack_[0].value.as<AccidentalIndex>();
+          }
 #line 3859 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
 
-  case 217: // accessor: GREATERTHAN
-#line 892 "langutils/sc_parser/src/sc_grammar.y"
-                      { yylhs.value.as < ReadWriteAccessor > () = ReadWriteAccessor::PublicWrite; }
+          case 213: // float: float.raw
+#line 916 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatProducingIndex>() = yystack_[0].value.as<FloatLitIndex>();
+          }
 #line 3865 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+          break;
+
+          case 214: // float: accidental
+#line 917 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatProducingIndex>() = yystack_[0].value.as<AccidentalIndex>();
+          }
+#line 3871 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 215: // float: float.raw PI
+#line 918 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatProducingIndex>() =
+                  cxt.create(PiNode {}, yylhs.location, yystack_[1].value.as<FloatLitIndex>());
+          }
+#line 3877 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 216: // float: integer PI
+#line 919 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatProducingIndex>() =
+                  cxt.create(PiNode {}, yylhs.location, yystack_[1].value.as<IntLitIndex>());
+          }
+#line 3883 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 217: // float: PI
+#line 920 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatProducingIndex>() =
+                  cxt.create(PiNode {}, yylhs.location, cxt.create(Missing {}, yylhs.location));
+          }
+#line 3889 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 218: // float: MINUS PI
+#line 921 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<FloatProducingIndex>() =
+                  cxt.create(PiNode { PiNode::Sign::Negative }, yylhs.location, cxt.create(Missing {}, yylhs.location));
+          }
+#line 3895 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 219: // accessor: %empty
+#line 925 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ReadWriteAccessor>() = ReadWriteAccessor::Private;
+          }
+#line 3901 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 220: // accessor: LESSTHAN
+#line 926 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ReadWriteAccessor>() = ReadWriteAccessor::PublicRead;
+          }
+#line 3907 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 221: // accessor: READWRITEVAR
+#line 927 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ReadWriteAccessor>() = ReadWriteAccessor::PublicReadAndWrite;
+          }
+#line 3913 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
+
+          case 222: // accessor: GREATERTHAN
+#line 928 "langutils/sc_parser/src/sc_grammar.y"
+          {
+              yylhs.value.as<ReadWriteAccessor>() = ReadWriteAccessor::PublicWrite;
+          }
+#line 3919 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+          break;
 
 
-#line 3869 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3923 "langutils/sc_parser/src/sc_grammar_parser.cpp"
 
-            default:
+          default:
               break;
             }
         }
@@ -4045,40 +4732,139 @@ namespace sc { namespace ast { namespace parser {
   const char *
   parser::symbol_name (symbol_kind_type yysymbol)
   {
-    static const char *const yy_sname[] =
-    {
-    "end of file", "error", "invalid token", "REGION_SEPARATOR",
-  "OPENCURLY", "CLOSECURLY", "OPENSQUARE", "CLOSESQUARE", "OPENPAREN",
-  "CLOSEPAREN", "SEMICOLON", "NONLOCALRETURN", "COMMA", "HASH", "TILDE",
-  "NAME", "INTEGER", "INTEGER_RADIX", "HEXADECIMAL", "FLOAT",
-  "FLOAT_RADIX", "FLOAT_EXPONENT", "FLOAT_INF", "ACCIDENTAL_STEPS",
-  "ACCIDENTAL_CENTS", "SYMBOL_QUOTE", "SYMBOL_SLASH", "STRINGLINE",
-  "ASCII", "PRIMITIVENAME", "CLASSNAME", "CURRYARG", "VAR", "ARG",
-  "CLASSVAR", "CONST", "NIL", "TRUE", "FALSE", "PI", "ELLIPSIS", "DOTDOT",
-  "BEGINCLOSEDFUNC", "BADTOKEN", "INTERPRET", "LEFTARROW", "LEXER_ERROR",
-  "COLON", "EQUALSSIGN", "BINOP", "KEYBINOP", "MINUS", "LESSTHAN",
-  "GREATERTHAN", "MULTIPLY", "ADD", "PIPE", "READWRITEVAR", "DOT",
-  "BACKTICK", "UMINUS", "$accept", "go", "region.item", "region",
-  "classOrExtList.list", "classOrExtList.item", "class", "class.super.opt",
-  "class.slot.opt", "class.extension", "class.vars.entry.item",
-  "class.vars.entry.list", "class.vars.entry", "class.vars",
-  "class.vars.opt", "method.name", "method.base", "method", "method.list",
-  "method.list.opt", "block.open", "block", "block.opt_list", "block.list",
-  "block.contents", "block.contents.item", "msgsend", "expr.base", "expr",
-  "expr.seq.base", "expr.seq", "adverb", "argument_declarations.list",
-  "argument_declarations.pipelist", "argument_declarations",
-  "argument_declarations.opt", "variable_declarations.list.item",
-  "variable_declarations.list", "variable_declarations",
-  "arguments.entries", "arguments.no_trailing", "arguments",
-  "arguments.paren", "arguments.maybe_paren", "literal.terminal",
-  "literal.array.contents", "literal.dictionary.entry",
-  "literal.dictionary.entries", "literal.dictionary", "literal.array",
-  "literal", "name", "binary_op.raw", "binary_op.no_adverb", "binary_op",
-  "semicolon.opt", "comma.opt", "ascii", "nil", "boolean", "symbol",
-  "string", "integer", "float.raw_unsigned", "float.raw",
-  "accidental.unsigned", "accidental", "float", "accessor", YY_NULLPTR
-    };
-    return yy_sname[yysymbol];
+      static const char* const yy_sname[] = { "end of file",
+                                              "error",
+                                              "invalid token",
+                                              "REGION_SEPARATOR",
+                                              "OPENCURLY",
+                                              "CLOSECURLY",
+                                              "OPENSQUARE",
+                                              "CLOSESQUARE",
+                                              "OPENPAREN",
+                                              "CLOSEPAREN",
+                                              "SEMICOLON",
+                                              "NONLOCALRETURN",
+                                              "COMMA",
+                                              "HASH",
+                                              "TILDE",
+                                              "NAME",
+                                              "INTEGER",
+                                              "INTEGER_RADIX",
+                                              "HEXADECIMAL",
+                                              "FLOAT",
+                                              "FLOAT_RADIX",
+                                              "FLOAT_EXPONENT",
+                                              "FLOAT_INF",
+                                              "ACCIDENTAL_STEPS",
+                                              "ACCIDENTAL_CENTS",
+                                              "SYMBOL_QUOTE",
+                                              "SYMBOL_SLASH",
+                                              "STRINGLINE",
+                                              "ASCII",
+                                              "PRIMITIVENAME",
+                                              "CLASSNAME",
+                                              "CURRYARG",
+                                              "VAR",
+                                              "ARG",
+                                              "CLASSVAR",
+                                              "CONST",
+                                              "NIL",
+                                              "TRUE",
+                                              "FALSE",
+                                              "PI",
+                                              "ELLIPSIS",
+                                              "DOTDOT",
+                                              "BEGINCLOSEDFUNC",
+                                              "BADTOKEN",
+                                              "INTERPRET",
+                                              "LEFTARROW",
+                                              "LEXER_ERROR",
+                                              "COLON",
+                                              "EQUALSSIGN",
+                                              "BINOP",
+                                              "KEYBINOP",
+                                              "MINUS",
+                                              "LESSTHAN",
+                                              "GREATERTHAN",
+                                              "MULTIPLY",
+                                              "ADD",
+                                              "PIPE",
+                                              "READWRITEVAR",
+                                              "DOT",
+                                              "BACKTICK",
+                                              "UMINUS",
+                                              "$accept",
+                                              "go",
+                                              "region.item",
+                                              "region",
+                                              "classOrExtList.list",
+                                              "classOrExtList.item",
+                                              "class",
+                                              "class.super.opt",
+                                              "class.slot.opt",
+                                              "class.extension",
+                                              "class.vars.entry.item",
+                                              "class.vars.entry.list",
+                                              "class.vars.entry",
+                                              "class.vars",
+                                              "class.vars.opt",
+                                              "method.name",
+                                              "method.base",
+                                              "method",
+                                              "method.list",
+                                              "method.list.opt",
+                                              "block.open",
+                                              "block",
+                                              "block.opt_list",
+                                              "block.list",
+                                              "block.contents.no_trailing_return",
+                                              "block.contents",
+                                              "block.contents.item",
+                                              "msgsend",
+                                              "expr.base",
+                                              "expr",
+                                              "expr.seq.base",
+                                              "expr.seq",
+                                              "adverb",
+                                              "argument_declarations.list",
+                                              "argument_declarations.pipelist",
+                                              "argument_declarations",
+                                              "argument_declarations.opt",
+                                              "variable_declarations.list.item",
+                                              "variable_declarations.list",
+                                              "variable_declarations",
+                                              "arguments.entries",
+                                              "arguments.no_trailing",
+                                              "arguments",
+                                              "arguments.paren",
+                                              "arguments.maybe_paren",
+                                              "literal.terminal",
+                                              "literal.array.contents",
+                                              "literal.dictionary.entry",
+                                              "literal.dictionary.entries",
+                                              "literal.dictionary",
+                                              "literal.array",
+                                              "literal",
+                                              "name",
+                                              "binary_op.raw",
+                                              "binary_op.no_adverb",
+                                              "binary_op",
+                                              "semicolon.opt",
+                                              "comma.opt",
+                                              "ascii",
+                                              "nil",
+                                              "boolean",
+                                              "symbol",
+                                              "string",
+                                              "integer",
+                                              "float.raw_unsigned",
+                                              "float.raw",
+                                              "accidental.unsigned",
+                                              "accidental",
+                                              "float",
+                                              "accessor",
+                                              YY_NULLPTR };
+      return yy_sname[yysymbol];
   }
 
 
@@ -4124,594 +4910,274 @@ namespace sc { namespace ast { namespace parser {
   }
 
 
-
-
-
-
-
-
-  const short parser::yypact_ninf_ = -193;
+  const short parser::yypact_ninf_ = -194;
 
   const signed char parser::yytable_ninf_ = -1;
 
-  const short
-  parser::yypact_[] =
-  {
-     122,    20,   351,     6,    38,   181,    19,  -193,  -193,  -193,
-      27,    43,  -193,  -193,  1149,   400,    93,    27,  -193,  -193,
-    -193,  -193,  -193,  -193,  -193,  -193,  -193,  -193,  -193,  -193,
-    -193,  -193,    99,  -193,  -193,  -193,  -193,  -193,  1606,  1293,
-       1,  -193,  -193,   100,  1597,  -193,  -193,  -193,  -193,    12,
-    -193,  -193,  -193,  -193,    82,    80,  -193,    83,  -193,  -193,
-    -193,   121,  -193,  -193,  -193,  1341,  1341,  -193,  -193,   123,
-      97,   142,   454,  1293,  1597,   141,   107,   145,  1293,    27,
-      37,  -193,  1293,  1606,  -193,  -193,  -193,  -193,    26,  -193,
-     164,  -193,  1584,   559,  -193,  -193,   167,  -193,   171,  1149,
-     139,  1149,   607,  -193,    58,  -193,   127,  -193,  -193,  -193,
-    -193,    26,  -193,   659,   707,  -193,  -193,  -193,   161,   130,
-    1293,   756,  1293,    58,  -193,  -193,  -193,   502,   400,  -193,
-    1597,  -193,  -193,  -193,   129,  -193,  1293,  -193,  1293,  1197,
-     185,  1597,  -193,   182,    17,  -193,    11,    32,  -193,  -193,
-      18,  1385,  1052,   186,  1293,  -193,   164,  1597,  1245,   187,
-     113,   145,  1293,    21,    58,  1293,  1293,  -193,  -193,   188,
-     189,  -193,  -193,   164,   151,   195,  -193,   805,   854,    58,
-      36,   120,  -193,   146,    58,   196,  1597,   551,   204,  -193,
-    -193,   502,   205,  -193,  -193,   903,   133,   133,   133,  -193,
-     202,   502,  1597,  -193,  1293,   168,  -193,    27,  1293,  1293,
-      27,    27,   207,  1293,  1459,  -193,    27,    33,  1245,  1496,
-    -193,  -193,  -193,  -193,   210,  1293,  1584,  -193,  -193,   951,
-      58,   213,  1597,  -193,  1197,  -193,    58,  -193,  -193,  1100,
-    -193,    58,   209,  1293,   174,   176,   218,    58,   219,  -193,
-    1100,  1293,  -193,    58,  1293,  -193,  -193,    58,    13,  -193,
-       1,  -193,  -193,  -193,   163,  -193,  -193,  -193,  -193,   222,
-      27,   222,   222,   129,  -193,   226,  -193,  1293,  -193,   227,
-    1597,    48,   102,  -193,   228,  1245,  -193,    23,  -193,  1422,
-    1584,   231,  1245,  -193,  -193,    58,   233,  -193,  -193,  -193,
-    -193,  1597,  1293,  1293,   198,  -193,  -193,  1597,  -193,   234,
-    1293,  -193,   510,  -193,  1052,   133,  -193,  -193,  -193,  -193,
-    -193,  1293,  1533,  -193,    27,  -193,   235,    27,  -193,  1245,
-    1570,  -193,  -193,   239,    58,    58,  1597,  1597,  1293,  -193,
-    1597,  -193,  1003,   164,  -193,   243,  1245,  -193,   225,  -193,
-     197,   245,  1245,  -193,  -193,  -193,  1597,  -193,   164,   250,
-    -193,   248,  -193,  -193,  -193,   249,   254,  -193,  -193,  -193,
-    -193
+  const short parser::yypact_[] = {
+      143,  17,   359,  -4,   103,  174,  5,    -194, -194, -194, 92,   61,   -194, -194, 1157, 408,  107,  92,   -194,
+      -194, -194, -194, -194, -194, -194, -194, -194, -194, -194, -194, -194, -194, 126,  -194, -194, -194, -194, -194,
+      1614, 1301, 100,  -194, -194, 110,  1605, -194, -194, -194, -194, 49,   -194, -194, -194, -194, 130,  122,  -194,
+      133,  -194, -194, -194, 161,  -194, -194, -194, 1349, 1349, -194, -194, 173,  152,  185,  462,  1301, 1605, 183,
+      147,  194,  1301, 92,   96,   -194, 1301, 1614, -194, -194, -194, -194, 75,   -194, 197,  199,  -194, 1592, 567,
+      -194, -194, 200,  -194, 204,  1157, 167,  1157, 615,  -194, 30,   -194, 108,  -194, -194, -194, -194, 75,   -194,
+      667,  715,  -194, -194, -194, 170,  162,  1301, 764,  1301, 30,   -194, -194, -194, 148,  408,  -194, 1605, -194,
+      -194, -194, 156,  -194, 1301, -194, 1301, 1205, 212,  1605, -194, 213,  41,   -194, 92,   15,   46,   -194, 92,
+      -194, 105,  1393, 1301, 1060, 215,  1301, -194, 199,  1605, 1253, 217,  16,   194,  1301, 35,   30,   1301, 1301,
+      -194, -194, 216,  221,  -194, -194, 199,  184,  227,  813,  862,  30,   93,   28,   -194, 177,  30,   228,  1605,
+      252,  232,  -194, -194, 148,  233,  -194, -194, 911,  85,   85,   85,   -194, 231,  148,  1605, -194, 1301, 195,
+      -194, 92,   1301, 1301, 20,   92,   92,   235,  1301, 1467, 3,    -194, 92,   24,   1253, 1504, -194, 1605, -194,
+      -194, -194, 237,  1301, 1592, -194, -194, 959,  30,   241,  1605, -194, 1205, -194, 30,   -194, -194, 1108, -194,
+      30,   244,  1301, 202,  205,  245,  30,   247,  -194, 1108, 1301, -194, 30,   1301, -194, -194, 30,   14,   -194,
+      100,  -194, -194, -194, 31,   -194, -194, -194, -194, 242,  92,   242,  242,  156,  -194, 253,  -194, 1301, -194,
+      250,  1605, -194, 92,   102,  38,   -194, 254,  1253, -194, 92,   -194, 13,   -194, 1430, 1592, 255,  1253, -194,
+      -194, 30,   259,  -194, -194, -194, -194, 1605, 1301, 1301, 214,  -194, -194, 1605, -194, 260,  1301, -194, 518,
+      -194, 1060, 85,   -194, -194, -194, -194, -194, 262,  1301, 1541, -194, 92,   -194, 261,  218,  92,   -194, 1253,
+      1578, -194, -194, 264,  30,   30,   1605, 1605, 1301, -194, 1605, -194, 265,  199,  -194, -194, 267,  1253, -194,
+      268,  -194, -194, 224,  277,  1253, -194, -194, -194, 1605, -194, 1011, 282,  -194, 281,  -194, -194, -194, 285,
+      -194, 199,  -194, -194, -194, 290,  -194
   };
 
-  const unsigned char
-  parser::yydefact_[] =
-  {
-       0,    21,     0,     0,     0,     0,     0,    14,    16,    17,
-       0,    19,     8,    46,   151,   160,     0,     0,   169,   194,
-     195,   196,   198,   199,   200,   201,   204,   205,   190,   191,
-     192,   186,    81,   187,   188,   189,   212,    47,     0,     0,
-     126,   150,    75,    80,     7,   166,   168,   167,    73,    74,
-     149,   148,   147,   143,   144,   145,   202,   208,   206,   209,
-     146,     0,     1,     2,    13,     0,     0,     3,    15,     0,
-       0,     0,   160,     0,    94,   182,   152,   184,     0,     0,
-       0,   170,   179,   174,   172,   173,   175,   176,   177,   171,
-     182,    54,    56,     0,    57,   161,   184,   178,     0,   151,
-      77,   151,     0,    52,    70,   213,     0,   197,   203,   207,
-      84,     0,   127,     0,     0,   179,   174,   177,     0,   181,
-       0,     0,     0,    64,   193,   211,   210,    44,   160,    12,
-       4,    11,    22,    20,    32,   154,   183,    96,     0,   185,
-       0,    58,   131,   133,   128,   118,   184,   100,   159,   122,
-     184,   109,   183,     0,     0,    10,   182,    56,   185,     0,
-       0,   184,     0,     0,    50,     0,     0,   136,   137,   184,
-       0,    53,    49,   182,    79,     0,    68,     0,     0,    50,
-     141,     0,   180,    85,     0,     0,    86,   175,     0,    40,
-      42,    45,     0,    34,    35,     0,   214,   214,   214,    30,
-     182,    44,    95,   153,     0,   155,   164,     0,     0,     0,
-     185,     0,     0,     0,     0,   185,     0,     0,   160,     0,
-     108,    55,    76,   158,     0,     0,     0,   162,   163,     0,
-      61,     0,    87,    69,     0,    72,    51,   134,   135,   185,
-     139,    50,     0,     0,    78,    83,     0,    50,     0,    66,
-       0,     0,   142,    50,     0,    97,    98,    63,    50,    41,
-     126,    43,    23,     6,     0,   215,   217,   216,    25,    28,
-       0,    27,    29,   183,    33,     0,   157,     0,   132,     0,
-     129,   104,     0,   119,     0,   160,   101,     0,   123,   114,
-      94,     0,   160,   110,     9,     0,     0,   165,   138,    71,
-      48,    91,     0,     0,    82,    67,   140,    88,    65,     0,
-       0,    62,     0,     5,     0,   214,    24,    31,    18,   156,
-     130,     0,     0,   120,     0,   102,     0,     0,   124,   160,
-       0,   113,   111,     0,    60,    50,    90,    93,     0,    99,
-      89,    37,     0,   182,    26,     0,   160,   105,     0,   103,
-       0,     0,   160,   115,   112,    59,    92,    39,   182,     0,
-     106,     0,   121,   125,   116,     0,     0,    36,   107,   117,
-      38
+  const unsigned char parser::yydefact_[] = {
+      0,   21,  0,   0,   0,   0,   0,   14,  16,  17,  0,   19,  8,   46,  156, 165, 0,   0,   174, 199, 200, 201, 203,
+      204, 205, 206, 209, 210, 195, 196, 197, 191, 82,  192, 193, 194, 217, 47,  0,   0,   131, 155, 76,  81,  7,   171,
+      173, 172, 74,  75,  154, 153, 152, 148, 149, 150, 207, 213, 211, 214, 151, 0,   1,   2,   13,  0,   0,   3,   15,
+      0,   0,   0,   165, 0,   95,  187, 157, 189, 0,   0,   0,   175, 184, 179, 177, 178, 180, 181, 182, 176, 56,  187,
+      54,  58,  0,   59,  166, 189, 183, 0,   156, 78,  156, 0,   52,  71,  218, 0,   202, 208, 212, 85,  0,   132, 0,
+      0,   184, 179, 182, 0,   186, 0,   0,   0,   66,  198, 216, 215, 44,  165, 12,  4,   11,  22,  20,  32,  159, 188,
+      97,  0,   190, 0,   60,  136, 138, 133, 119, 0,   189, 101, 164, 0,   125, 189, 110, 0,   188, 0,   0,   10,  187,
+      58,  190, 0,   0,   189, 0,   0,   50,  0,   0,   141, 142, 189, 0,   53,  49,  187, 80,  0,   0,   0,   50,  146,
+      0,   185, 86,  0,   0,   87,  180, 0,   40,  42,  45,  0,   34,  35,  0,   219, 219, 219, 30,  187, 44,  96,  158,
+      0,   160, 169, 0,   0,   0,   0,   190, 0,   0,   0,   0,   0,   190, 0,   0,   165, 0,   109, 57,  55,  77,  163,
+      0,   0,   0,   167, 168, 0,   63,  0,   88,  70,  0,   73,  51,  139, 140, 190, 144, 50,  0,   0,   79,  84,  0,
+      50,  0,   68,  0,   0,   147, 50,  0,   98,  99,  65,  50,  41,  131, 43,  23,  6,   0,   220, 222, 221, 25,  28,
+      0,   27,  29,  188, 33,  0,   162, 0,   137, 0,   134, 123, 0,   105, 0,   120, 0,   165, 102, 0,   129, 0,   126,
+      115, 95,  0,   165, 111, 9,   0,   0,   170, 143, 72,  48,  92,  0,   0,   83,  69,  145, 89,  67,  0,   0,   64,
+      0,   5,   0,   219, 24,  31,  18,  161, 135, 0,   0,   0,   121, 0,   103, 0,   0,   0,   127, 165, 0,   114, 112,
+      0,   62,  50,  91,  94,  0,   100, 90,  37,  187, 187, 26,  124, 0,   165, 106, 0,   104, 130, 0,   0,   165, 116,
+      113, 61,  93,  188, 0,   0,   107, 0,   122, 128, 117, 0,   39,  187, 36,  108, 118, 0,   38
   };
 
-  const short
-  parser::yypgoto_[] =
-  {
-    -193,  -193,   194,  -193,  -193,   255,  -193,  -193,  -193,  -193,
-     -52,  -152,   -11,  -193,  -193,  -193,    78,    75,  -193,    67,
-    -193,    66,  -170,   -31,   -91,  -146,  -193,  -193,    -2,  -193,
-      -7,  -193,  -193,  -193,    -5,     7,  -192,  -193,  -193,    30,
-    -193,   -90,    92,  -193,  -193,   -72,   115,  -193,  -193,  -193,
-    -147,    22,  -106,    -4,  -193,   -87,   -53,  -193,  -193,  -193,
-    -193,  -193,   -33,   -30,  -193,   -24,  -193,  -193,  -193
+  const short parser::yypgoto_[] = {
+      -194, -194, 230,  -194, -194, 291,  -194, -194, -194, -194, -27,  -72,  33,   -194, -194, -194, 109,  119,
+      -194, 111,  -194, -20,  -166, -21,  -194, -93,  -153, -194, -194, -2,   -194, 0,    -194, -194, -194, -6,
+      48,   -193, -194, -194, 71,   -194, -84,  134,  -194, -194, 18,   157,  -194, -194, -194, -150, 67,   -95,
+      -7,   -194, -89,  -87,  -194, -194, -194, -194, -194, -32,  -31,  -194, -16,  -194, -194, -194
   };
 
-  const short
-  parser::yydefgoto_[] =
-  {
-       0,     4,   129,     5,     6,     7,     8,    71,    11,     9,
-     268,   269,   199,   200,   201,   188,   189,   190,   191,   192,
-      40,    41,   235,   236,    90,    91,    42,    43,    74,    75,
-     167,   182,   146,   150,   112,   113,   142,   143,    94,   168,
-     169,   248,   179,   253,    45,    77,    95,    96,    46,    47,
-      48,    49,    97,   119,   120,   137,   140,    50,    51,    52,
-      53,    54,    55,    56,    57,    58,    59,    60,   270
+  const short parser::yydefgoto_[] = { 0,   4,   130, 5,   6,   7,   8,   71,  11,  9,   274, 275, 202, 203,
+                                       204, 191, 192, 193, 194, 195, 40,  41,  241, 242, 90,  91,  92,  42,
+                                       43,  74,  75,  171, 185, 148, 153, 113, 114, 143, 144, 95,  172, 173,
+                                       254, 182, 259, 45,  77,  96,  97,  46,  47,  48,  49,  98,  120, 121,
+                                       138, 141, 50,  51,  52,  53,  54,  55,  56,  57,  58,  59,  60,  276 };
+
+  const short parser::yytable_[] = {
+      44,  160, 157, 227, 225, 67,  108, 109, 99,  94,  163, 105, 104, 93,  76,  295, 255, 284, 13,  174, 13,  177, 110,
+      10,  235, 339, 61,  214, 124, 104, 287, 179, 288, 197, 13,  1,   260, 111, 188, 18,  323, 324, 239, 18,  19,  20,
+      21,  240, 334, 211, 335, 108, 109, 13,  217, 215, 37,  122, 37,  296, 3,   216, 320, 131, 131, 99,  222, 110, 294,
+      340, 93,  230, 37,  136, 303, 108, 142, 69,  237, 107, 298, 309, 150, 326, 101, 175, 246, 315, 248, 212, 18,  37,
+      161, 318, 218, 197, 252, 123, 321, 197, 76,  256, 76,  62,  175, 270, 146, 18,  70,  197, 332, 18,  161, 100, 280,
+      151, 115, 220, 165, 186, 167, 189, 99,  198, 19,  20,  21,  93,  277, 278, 13,  152, 102, 80,  103, 205, 147, 271,
+      272, 206, 208, 257, 273, 236, 104, 221, 145, 149, 104, 343, 333, 306, 262, 226, 161, 154, 112, 125, 229, 107, 232,
+      126, 104, 18,  238, 128, 263, 104, 37,  243, 244, 227, 127, 1,   63,  64,  180, 65,  181, 154, 133, 369, 134, 360,
+      66,  18,  183, 2,   199, 135, 200, 201, 367, 137, 139, 196, 161, 81,  3,   117, 84,  85,  190, 87,  118, 89,  140,
+      282, 155, 156, 286, 285, 162, 164, 213, 166, 175, 292, 219, 209, 184, 300, 175, 301, 228, 210, 234, 104, 245, 355,
+      247, 150, 249, 104, 250, 119, 266, 264, 268, 104, 208, 279, 283, 175, 104, 291, 304, 311, 307, 310, 312, 261, 314,
+      313, 325, 317, 316, 196, 328, 330, 319, 196, 350, 336, 344, 372, 373, 18,  347, 351, 362, 196, 357, 368, 363, 371,
+      374, 145, 376, 381, 377, 289, 290, 329, 346, 104, 378, 382, 297, 299, 383, 300, 385, 337, 384, 386, 132, 68,  356,
+      265, 300, 81,  345, 117, 84,  85,  86,  87,  118, 89,  348, 349, 327, 267, 322, 281, 308, 258, 352, 233, 161, 0,
+      161, 0,   0,   0,   175, 104, 0,   0,   0,   0,   358, 0,   0,   0,   0,   0,   0,   300, 0,   365, 0,   145, 0,
+      0,   0,   0,   370, 0,   0,   0,   0,   0,   0,   331, 0,   300, 0,   375, 12,  0,   338, 13,  300, 14,  379, 15,
+      0,   0,   161, 0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,
+      0,   0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  361, 0,   0,   0,   364, 0,   0,   0,   38,  0,   13,  0,
+      14,  0,   72,  0,   39,  78,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,
+      0,   32,  0,   79,  80,  0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   81,  82,  83,
+      84,  85,  86,  87,  88,  89,  13,  39,  14,  0,   72,  0,   0,   78,  0,   16,  17,  18,  19,  20,  21,  22,  23,
+      24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   79,  0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,
+      0,   0,   0,   0,   0,   81,  82,  83,  84,  85,  86,  87,  118, 89,  0,   39,  13,  353, 14,  0,   72,  0,   0,
+      78,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  354, 32,  0,   79,  0,
+      0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   0,   38,  0,   13,  0,   14,  0,
+      72,  159, 39,  78,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,
+      0,   79,  0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   0,   38,  13,  0,
+      14,  0,   72,  168, 0,   39,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,
+      0,   32,  0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   169, 38,
+      0,   0,   170, 0,   13,  176, 14,  39,  72,  0,   0,   78,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,
+      26,  27,  28,  29,  30,  31,  0,   32,  0,   79,  0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,
+      0,   0,   0,   0,   0,   38,  13,  0,   14,  178, 72,  0,   0,   39,  0,   16,  17,  18,  19,  20,  21,  22,  23,
+      24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,
+      0,   0,   0,   0,   0,   0,   169, 38,  0,   13,  170, 14,  0,   72,  187, 39,  0,   0,   16,  17,  18,  19,  20,
+      21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,   0,   33,  34,  35,  36,  0,
+      0,   37,  0,   0,   0,   0,   0,   0,   0,   169, 38,  0,   13,  170, 14,  251, 72,  0,   39,  0,   0,   16,  17,
+      18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,   0,   33,  34,
+      35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   169, 38,  0,   13,  170, 14,  0,   72,  253, 39,  0,
+      0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,
+      0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   169, 38,  0,   13,  170, 14,  0,   72,
+      269, 39,  78,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,
+      79,  0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   0,   38,  13,  0,   14,
+      0,   72,  305, 0,   39,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,
+      32,  0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   169, 38,  0,
+      0,   170, 0,   13,  380, 14,  39,  72,  0,   0,   78,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,
+      27,  28,  29,  30,  31,  0,   32,  0,   79,  0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,
+      0,   0,   0,   0,   38,  0,   13,  0,   14,  0,   72,  0,   39,  78,  0,   16,  17,  18,  19,  20,  21,  22,  23,
+      24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   79,  0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,
+      0,   0,   0,   0,   0,   0,   0,   38,  13,  0,   14,  0,   72,  0,   0,   39,  0,   16,  17,  18,  19,  20,  21,
+      22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   0,
+      37,  0,   0,   0,   0,   0,   0,   0,   169, 38,  0,   13,  170, 14,  0,   72,  0,   39,  0,   0,   16,  17,  18,
+      19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,   0,   33,  34,  35,
+      36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   73,  38,  13,  0,   14,  0,   72,  0,   0,   39,  0,   16,
+      17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,   0,   33,
+      34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   207, 38,  13,  0,   14,  0,   72,  0,   0,   39,
+      0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,   0,   0,
+      0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   231, 38,  13,  0,   14,  0,   72,  0,
+      0,   39,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,  0,   0,
+      0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   0,   38,  13,  0,   14,  0,
+      129, 0,   0,   39,  0,   16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   32,
+      0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   13,  0,   14,  38,  223, 0,
+      0,   0,   0,   16,  0,   39,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   0,   0,   0,
+      0,   0,   0,   33,  34,  35,  36,  0,   13,  37,  14,  0,   341, 0,   0,   224, 0,   16,  38,  0,   19,  20,  21,
+      22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   0,   0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   13,
+      37,  14,  0,   293, 0,   0,   342, 0,   16,  38,  0,   19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,
+      31,  0,   0,   0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   13,  37,  14,  0,   302, 0,   0,   0,   0,   16,
+      38,  0,   19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   0,   0,   0,   0,   0,   0,   33,
+      34,  35,  36,  0,   13,  37,  14,  0,   359, 0,   0,   0,   0,   16,  38,  0,   19,  20,  21,  22,  23,  24,  25,
+      26,  27,  28,  29,  30,  31,  0,   0,   0,   0,   0,   0,   0,   33,  34,  35,  36,  0,   13,  37,  14,  0,   366,
+      0,   0,   0,   0,   16,  38,  0,   19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  0,   0,   0,
+      0,   0,   0,   0,   33,  34,  35,  36,  0,   0,   37,  0,   0,   0,   0,   0,   0,   0,   0,   38,  19,  20,  21,
+      22,  23,  24,  25,  26,  27,  158, 0,   81,  116, 117, 84,  85,  86,  87,  118, 89,  119, 0,   0,   106, 81,  116,
+      117, 84,  85,  86,  87,  118, 89,  119, 0,   107
   };
 
-  const short
-  parser::yytable_[] =
-  {
-      44,   104,   156,   153,   220,   107,   221,    76,   108,   249,
-      93,    98,   170,    92,   109,   278,    13,    13,   123,    67,
-     121,   194,   173,   210,   175,   208,    10,   161,   233,   163,
-     215,   185,    69,   234,    80,   327,    61,   110,    62,   100,
-     213,    18,    18,   159,   250,   271,   272,   145,    18,     1,
-     107,   211,    18,   108,    37,    37,   321,   111,   216,   109,
-     122,   310,    13,   130,   130,   209,   135,   286,    98,   224,
-      92,   299,   293,   107,     3,   148,   141,   305,   316,   328,
-     214,   194,   149,   308,   251,   194,   242,   246,   311,   288,
-      70,   157,    76,   212,    76,   194,   322,   217,   103,    99,
-      37,   144,   147,    13,   264,   101,   114,   102,   231,   124,
-     151,   157,   323,   274,   324,   103,   240,    13,   183,   125,
-     186,   229,   126,   195,    98,   127,    92,   133,   254,   230,
-     132,   203,   205,   151,   202,    18,    19,    20,    21,   296,
-     180,    37,   331,    19,    20,    21,   134,   223,   256,   193,
-     157,   136,     1,   257,   138,    37,   226,   139,   237,   238,
-     232,   196,   176,   197,   198,   355,     2,   177,   221,   178,
-     171,   106,   313,   314,   152,   347,    18,     3,   106,   158,
-     160,    63,    64,   353,    65,   265,   266,   162,   181,   171,
-     267,    66,   206,   157,   207,   222,   228,   276,   241,   243,
-     239,   279,   244,   255,   118,   258,   284,   280,   260,   193,
-     262,   291,   273,   193,   300,   277,   290,   283,   148,   294,
-     297,   343,   302,   193,   303,   304,   103,   205,   306,   144,
-     103,   318,   281,   282,   315,   362,   320,   325,   287,   289,
-     332,   301,   335,   339,   349,   103,   338,   309,   354,   307,
-     103,   358,   360,   363,   364,   367,   359,   368,   369,   370,
-     131,    68,   317,   344,   334,   259,   261,   312,   275,   298,
-     319,   366,   252,   227,     0,     0,     0,     0,   326,     0,
-       0,     0,     0,   290,     0,   333,     0,     0,     0,     0,
-     290,     0,   144,     0,     0,     0,   171,     0,     0,     0,
-     336,   337,   171,     0,     0,     0,     0,   103,   340,     0,
-     157,     0,   157,   103,   345,     0,     0,     0,     0,   103,
-       0,     0,   351,   171,   103,     0,     0,   290,     0,     0,
-       0,     0,     0,     0,     0,     0,   356,     0,     0,   361,
-     157,     0,     0,     0,   290,   365,   348,     0,     0,   350,
-     290,     0,    12,     0,     0,    13,     0,    14,     0,    15,
-       0,   103,     0,     0,    16,    17,    18,    19,    20,    21,
-      22,    23,    24,    25,    26,    27,    28,    29,    30,    31,
-       0,    32,     0,     0,     0,     0,     0,    33,    34,    35,
-      36,     0,     0,    37,     0,     0,     0,     0,     0,     0,
-     171,   103,    38,     0,    13,     0,    14,     0,    72,     0,
-      39,    78,     0,    16,    17,    18,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    29,    30,    31,     0,
-      32,     0,    79,    80,     0,     0,    33,    34,    35,    36,
-       0,     0,    37,     0,     0,     0,     0,     0,     0,    81,
-      82,    83,    84,    85,    86,    87,    88,    89,    13,    39,
-      14,     0,    72,     0,     0,    78,     0,    16,    17,    18,
-      19,    20,    21,    22,    23,    24,    25,    26,    27,    28,
-      29,    30,    31,     0,    32,     0,    79,     0,     0,     0,
-      33,    34,    35,    36,     0,     0,    37,     0,     0,     0,
-       0,     0,     0,    81,    82,    83,    84,    85,    86,    87,
-     117,    89,     0,    39,    13,   341,    14,    18,    72,     0,
-       0,    78,     0,    16,    17,    18,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    29,    30,    31,   342,
-      32,     0,    79,     0,     0,     0,    33,    34,    35,    36,
-       0,    81,    37,   116,    84,    85,   187,    87,   117,    89,
-       0,    38,     0,    13,     0,    14,    18,    72,   155,    39,
-      78,     0,    16,    17,    18,    19,    20,    21,    22,    23,
-      24,    25,    26,    27,    28,    29,    30,    31,     0,    32,
-       0,    79,     0,     0,     0,    33,    34,    35,    36,     0,
-      81,    37,   116,    84,    85,    86,    87,   117,    89,     0,
-      38,    13,     0,    14,     0,    72,   164,     0,    39,     0,
-      16,    17,    18,    19,    20,    21,    22,    23,    24,    25,
-      26,    27,    28,    29,    30,    31,     0,    32,     0,     0,
-       0,     0,     0,    33,    34,    35,    36,     0,     0,    37,
-       0,     0,     0,     0,     0,     0,     0,   165,    38,     0,
-       0,   166,     0,    13,   172,    14,    39,    72,     0,     0,
-      78,     0,    16,    17,    18,    19,    20,    21,    22,    23,
-      24,    25,    26,    27,    28,    29,    30,    31,     0,    32,
-       0,    79,     0,     0,     0,    33,    34,    35,    36,     0,
-       0,    37,     0,     0,     0,     0,     0,     0,     0,     0,
-      38,    13,     0,    14,   174,    72,     0,     0,    39,     0,
-      16,    17,    18,    19,    20,    21,    22,    23,    24,    25,
-      26,    27,    28,    29,    30,    31,     0,    32,     0,     0,
-       0,     0,     0,    33,    34,    35,    36,     0,     0,    37,
-       0,     0,     0,     0,     0,     0,     0,   165,    38,     0,
-      13,   166,    14,     0,    72,   184,    39,     0,     0,    16,
-      17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    29,    30,    31,     0,    32,     0,     0,     0,
-       0,     0,    33,    34,    35,    36,     0,     0,    37,     0,
-       0,     0,     0,     0,     0,     0,   165,    38,     0,    13,
-     166,    14,   245,    72,     0,    39,     0,     0,    16,    17,
-      18,    19,    20,    21,    22,    23,    24,    25,    26,    27,
-      28,    29,    30,    31,     0,    32,     0,     0,     0,     0,
-       0,    33,    34,    35,    36,     0,     0,    37,     0,     0,
-       0,     0,     0,     0,     0,   165,    38,     0,    13,   166,
-      14,     0,    72,   247,    39,     0,     0,    16,    17,    18,
-      19,    20,    21,    22,    23,    24,    25,    26,    27,    28,
-      29,    30,    31,     0,    32,     0,     0,     0,     0,     0,
-      33,    34,    35,    36,     0,     0,    37,     0,     0,     0,
-       0,     0,     0,     0,   165,    38,     0,    13,   166,    14,
-       0,    72,   263,    39,    78,     0,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    29,
-      30,    31,     0,    32,     0,    79,     0,     0,     0,    33,
-      34,    35,    36,     0,     0,    37,     0,     0,     0,     0,
-       0,     0,     0,     0,    38,    13,     0,    14,     0,    72,
-     295,     0,    39,     0,    16,    17,    18,    19,    20,    21,
-      22,    23,    24,    25,    26,    27,    28,    29,    30,    31,
-       0,    32,     0,     0,     0,     0,     0,    33,    34,    35,
-      36,     0,     0,    37,     0,     0,     0,     0,     0,     0,
-       0,   165,    38,     0,     0,   166,     0,    13,   357,    14,
-      39,    72,     0,     0,    78,     0,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    29,
-      30,    31,     0,    32,     0,    79,     0,     0,     0,    33,
-      34,    35,    36,     0,     0,    37,     0,     0,     0,     0,
-       0,     0,     0,     0,    38,     0,    13,     0,    14,     0,
-      72,     0,    39,    78,     0,    16,    17,    18,    19,    20,
-      21,    22,    23,    24,    25,    26,    27,    28,    29,    30,
-      31,     0,    32,     0,    79,     0,     0,     0,    33,    34,
-      35,    36,     0,     0,    37,     0,     0,     0,     0,     0,
-       0,     0,     0,    38,    13,     0,    14,     0,    72,     0,
-       0,    39,     0,    16,    17,    18,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    29,    30,    31,     0,
-      32,     0,     0,     0,     0,     0,    33,    34,    35,    36,
-       0,     0,    37,     0,     0,     0,     0,     0,     0,     0,
-     165,    38,     0,    13,   166,    14,     0,    72,     0,    39,
-       0,     0,    16,    17,    18,    19,    20,    21,    22,    23,
-      24,    25,    26,    27,    28,    29,    30,    31,     0,    32,
-       0,     0,     0,     0,     0,    33,    34,    35,    36,     0,
-       0,    37,     0,     0,     0,     0,     0,     0,     0,    73,
-      38,    13,     0,    14,     0,    72,     0,     0,    39,     0,
-      16,    17,    18,    19,    20,    21,    22,    23,    24,    25,
-      26,    27,    28,    29,    30,    31,     0,    32,     0,     0,
-       0,     0,     0,    33,    34,    35,    36,     0,     0,    37,
-       0,     0,     0,     0,     0,     0,     0,   204,    38,    13,
-       0,    14,     0,    72,     0,     0,    39,     0,    16,    17,
-      18,    19,    20,    21,    22,    23,    24,    25,    26,    27,
-      28,    29,    30,    31,     0,    32,     0,     0,     0,     0,
-       0,    33,    34,    35,    36,     0,     0,    37,     0,     0,
-       0,     0,     0,     0,     0,   225,    38,    13,     0,    14,
-       0,    72,     0,     0,    39,     0,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    29,
-      30,    31,     0,    32,     0,     0,     0,     0,     0,    33,
-      34,    35,    36,     0,     0,    37,     0,     0,     0,     0,
-       0,     0,     0,     0,    38,    13,     0,    14,     0,   128,
-       0,     0,    39,     0,    16,    17,    18,    19,    20,    21,
-      22,    23,    24,    25,    26,    27,    28,    29,    30,    31,
-       0,    32,     0,     0,     0,     0,     0,    33,    34,    35,
-      36,     0,     0,    37,     0,     0,     0,     0,     0,    13,
-       0,    14,    38,   218,     0,     0,     0,     0,    16,     0,
-      39,    19,    20,    21,    22,    23,    24,    25,    26,    27,
-      28,    29,    30,    31,     0,     0,     0,     0,     0,     0,
-       0,    33,    34,    35,    36,     0,    13,    37,    14,     0,
-     329,     0,     0,   219,     0,    16,    38,     0,    19,    20,
-      21,    22,    23,    24,    25,    26,    27,    28,    29,    30,
-      31,     0,     0,     0,     0,     0,     0,     0,    33,    34,
-      35,    36,     0,    13,    37,    14,     0,   285,     0,     0,
-     330,     0,    16,    38,     0,    19,    20,    21,    22,    23,
-      24,    25,    26,    27,    28,    29,    30,    31,     0,     0,
-       0,     0,     0,     0,     0,    33,    34,    35,    36,     0,
-      13,    37,    14,     0,   292,     0,     0,     0,     0,    16,
-      38,     0,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    29,    30,    31,     0,     0,     0,     0,     0,
-       0,     0,    33,    34,    35,    36,     0,    13,    37,    14,
-       0,   346,     0,     0,     0,     0,    16,    38,     0,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    29,
-      30,    31,     0,     0,     0,     0,     0,     0,     0,    33,
-      34,    35,    36,     0,    13,    37,    14,     0,   352,     0,
-       0,     0,     0,    16,    38,     0,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    29,    30,    31,     0,
-       0,     0,     0,     0,     0,     0,    33,    34,    35,    36,
-       0,     0,    37,     0,     0,     0,     0,     0,     0,     0,
-       0,    38,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,   154,     0,    81,   115,   116,    84,    85,    86,    87,
-     117,    89,   118,     0,     0,   105,    81,   115,   116,    84,
-      85,    86,    87,   117,    89,   118,     0,   106
+  const short parser::yycheck_[] = {
+      2,   94,  91,  156, 154, 0,   38,  38,  15,  15,  97,  32,  32,  15,  14,  12,  182, 210, 4,   103, 4,   114, 38,
+      6,   8,   12,  30,  12,  49,  49,  10,  115, 12,  128, 4,   30,  8,   39,  122, 15,  9,   10,  7,   15,  16,  17,
+      18,  12,  10,  8,   12,  83,  83,  4,   8,   40,  42,  8,   42,  56,  55,  148, 48,  65,  66,  72,  153, 83,  218,
+      56,  72,  160, 42,  73,  224, 107, 78,  10,  165, 51,  56,  247, 82,  276, 17,  105, 173, 253, 177, 48,  15,  42,
+      94,  259, 48,  190, 180, 48,  264, 194, 100, 8,   102, 0,   124, 198, 10,  15,  47,  204, 8,   15,  114, 6,   203,
+      40,  6,   12,  100, 121, 102, 123, 129, 129, 16,  17,  18,  129, 200, 201, 4,   56,  6,   33,  8,   137, 40,  52,
+      53,  139, 140, 48,  57,  164, 164, 40,  79,  80,  168, 299, 48,  235, 184, 155, 156, 88,  56,  27,  158, 51,  162,
+      39,  182, 15,  166, 4,   187, 187, 42,  169, 170, 324, 39,  30,  0,   1,   6,   3,   8,   112, 7,   347, 30,  333,
+      10,  15,  119, 44,  32,  4,   34,  35,  342, 10,  47,  128, 198, 49,  55,  51,  52,  53,  54,  55,  56,  57,  12,
+      207, 11,  10,  212, 211, 12,  9,   147, 48,  236, 217, 151, 7,   58,  223, 242, 223, 9,   12,  9,   247, 12,  322,
+      9,   231, 48,  253, 7,   58,  4,   9,   5,   259, 240, 10,  47,  263, 264, 10,  9,   249, 7,   5,   48,  184, 7,
+      48,  12,  257, 9,   190, 5,   9,   260, 194, 48,  9,   9,   354, 355, 15,  9,   9,   9,   204, 10,  9,   56,  10,
+      9,   210, 10,  372, 56,  214, 215, 283, 305, 305, 9,   5,   221, 222, 9,   293, 381, 293, 9,   5,   66,  6,   325,
+      190, 302, 49,  302, 51,  52,  53,  54,  55,  56,  57,  312, 313, 279, 194, 266, 204, 245, 183, 320, 162, 322, -1,
+      324, -1,  -1,  -1,  346, 347, -1,  -1,  -1,  -1,  332, -1,  -1,  -1,  -1,  -1,  -1,  341, -1,  341, -1,  276, -1,
+      -1,  -1,  -1,  350, -1,  -1,  -1,  -1,  -1,  -1,  288, -1,  359, -1,  359, 1,   -1,  295, 4,   366, 6,   366, 8,
+      -1,  -1,  372, -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,
+      -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  335, -1,  -1,  -1,  339, -1,  -1,  -1,  51,  -1,  4,   -1,
+      6,   -1,  8,   -1,  59,  11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,
+      -1,  30,  -1,  32,  33,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  49,  50,  51,
+      52,  53,  54,  55,  56,  57,  4,   59,  6,   -1,  8,   -1,  -1,  11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,
+      21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  32,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,
+      -1,  -1,  -1,  -1,  -1,  49,  50,  51,  52,  53,  54,  55,  56,  57,  -1,  59,  4,   5,   6,   -1,  8,   -1,  -1,
+      11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  -1,  32,  -1,
+      -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  51,  -1,  4,   -1,  6,   -1,
+      8,   9,   59,  11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,
+      -1,  32,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  51,  4,   -1,
+      6,   -1,  8,   9,   -1,  59,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,
+      -1,  30,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,
+      -1,  -1,  54,  -1,  4,   5,   6,   59,  8,   -1,  -1,  11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,
+      23,  24,  25,  26,  27,  28,  -1,  30,  -1,  32,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,
+      -1,  -1,  -1,  -1,  -1,  51,  4,   -1,  6,   7,   8,   -1,  -1,  59,  -1,  13,  14,  15,  16,  17,  18,  19,  20,
+      21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,
+      -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  -1,  4,   54,  6,   -1,  8,   9,   59,  -1,  -1,  13,  14,  15,  16,  17,
+      18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,
+      -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  -1,  4,   54,  6,   7,   8,   -1,  59,  -1,  -1,  13,  14,
+      15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,  -1,  36,  37,
+      38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  -1,  4,   54,  6,   -1,  8,   9,   59,  -1,
+      -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,
+      -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  -1,  4,   54,  6,   -1,  8,
+      9,   59,  11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,
+      32,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  51,  4,   -1,  6,
+      -1,  8,   9,   -1,  59,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,
+      30,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  -1,
+      -1,  54,  -1,  4,   5,   6,   59,  8,   -1,  -1,  11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,
+      24,  25,  26,  27,  28,  -1,  30,  -1,  32,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,
+      -1,  -1,  -1,  -1,  51,  -1,  4,   -1,  6,   -1,  8,   -1,  59,  11,  -1,  13,  14,  15,  16,  17,  18,  19,  20,
+      21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  32,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,
+      -1,  -1,  -1,  -1,  -1,  -1,  -1,  51,  4,   -1,  6,   -1,  8,   -1,  -1,  59,  -1,  13,  14,  15,  16,  17,  18,
+      19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,
+      42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  -1,  4,   54,  6,   -1,  8,   -1,  59,  -1,  -1,  13,  14,  15,
+      16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,
+      39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  4,   -1,  6,   -1,  8,   -1,  -1,  59,  -1,  13,
+      14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,  -1,  36,
+      37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  4,   -1,  6,   -1,  8,   -1,  -1,  59,
+      -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,  -1,  -1,
+      -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  50,  51,  4,   -1,  6,   -1,  8,   -1,
+      -1,  59,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,  -1,  -1,
+      -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  51,  4,   -1,  6,   -1,
+      8,   -1,  -1,  59,  -1,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  30,
+      -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  4,   -1,  6,   51,  8,   -1,
+      -1,  -1,  -1,  13,  -1,  59,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  -1,  -1,  -1,
+      -1,  -1,  -1,  36,  37,  38,  39,  -1,  4,   42,  6,   -1,  8,   -1,  -1,  48,  -1,  13,  51,  -1,  16,  17,  18,
+      19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  4,
+      42,  6,   -1,  8,   -1,  -1,  48,  -1,  13,  51,  -1,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
+      28,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  4,   42,  6,   -1,  8,   -1,  -1,  -1,  -1,  13,
+      51,  -1,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  36,
+      37,  38,  39,  -1,  4,   42,  6,   -1,  8,   -1,  -1,  -1,  -1,  13,  51,  -1,  16,  17,  18,  19,  20,  21,  22,
+      23,  24,  25,  26,  27,  28,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  4,   42,  6,   -1,  8,
+      -1,  -1,  -1,  -1,  13,  51,  -1,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  -1,  -1,  -1,
+      -1,  -1,  -1,  -1,  36,  37,  38,  39,  -1,  -1,  42,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  51,  16,  17,  18,
+      19,  20,  21,  22,  23,  24,  47,  -1,  49,  50,  51,  52,  53,  54,  55,  56,  57,  58,  -1,  -1,  39,  49,  50,
+      51,  52,  53,  54,  55,  56,  57,  58,  -1,  51
   };
 
-  const short
-  parser::yycheck_[] =
-  {
-       2,    32,    93,    90,   151,    38,   152,    14,    38,   179,
-      15,    15,   102,    15,    38,   207,     4,     4,    49,     0,
-       8,   127,   113,    12,   114,     8,     6,    99,     7,   101,
-      12,   121,    10,    12,    33,    12,    30,    39,     0,    17,
-       8,    15,    15,    96,     8,   197,   198,    10,    15,    30,
-      83,    40,    15,    83,    42,    42,     8,    56,    40,    83,
-      48,    48,     4,    65,    66,    48,    73,   214,    72,   156,
-      72,   241,   219,   106,    55,    82,    78,   247,   270,    56,
-      48,   187,    56,   253,    48,   191,   173,   177,   258,    56,
-      47,    93,    99,   146,   101,   201,    48,   150,    32,     6,
-      42,    79,    80,     4,   195,     6,     6,     8,   161,    27,
-      88,   113,    10,   200,    12,    49,   169,     4,   120,    39,
-     122,     8,    39,   128,   128,     4,   128,    30,     8,   160,
-       7,   138,   139,   111,   136,    15,    16,    17,    18,   229,
-     118,    42,   289,    16,    17,    18,     4,   154,   181,   127,
-     152,    10,    30,   184,    47,    42,   158,    12,   165,   166,
-     162,    32,     1,    34,    35,   335,    44,     6,   314,     8,
-     104,    51,     9,    10,    10,   322,    15,    55,    51,    12,
-       9,     0,     1,   330,     3,    52,    53,    48,    58,   123,
-      57,    10,     7,   195,    12,     9,     9,   204,     9,    48,
-      12,   208,     7,   181,    58,     9,   213,   209,     4,   187,
-       5,   218,    10,   191,     5,    47,   218,    10,   225,     9,
-       7,   312,    48,   201,    48,     7,   160,   234,     9,   207,
-     164,     5,   210,   211,    12,    10,     9,     9,   216,   217,
-       9,   243,     9,     9,     9,   179,    48,   254,     9,   251,
-     184,   342,     9,    56,     9,     5,   343,     9,     9,     5,
-      66,     6,   273,   315,   295,   187,   191,   260,   201,   239,
-     277,   358,   180,   158,    -1,    -1,    -1,    -1,   285,    -1,
-      -1,    -1,    -1,   285,    -1,   292,    -1,    -1,    -1,    -1,
-     292,    -1,   270,    -1,    -1,    -1,   230,    -1,    -1,    -1,
-     302,   303,   236,    -1,    -1,    -1,    -1,   241,   310,    -1,
-     312,    -1,   314,   247,   321,    -1,    -1,    -1,    -1,   253,
-      -1,    -1,   329,   257,   258,    -1,    -1,   329,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,   338,    -1,    -1,   346,
-     342,    -1,    -1,    -1,   346,   352,   324,    -1,    -1,   327,
-     352,    -1,     1,    -1,    -1,     4,    -1,     6,    -1,     8,
-      -1,   295,    -1,    -1,    13,    14,    15,    16,    17,    18,
-      19,    20,    21,    22,    23,    24,    25,    26,    27,    28,
-      -1,    30,    -1,    -1,    -1,    -1,    -1,    36,    37,    38,
-      39,    -1,    -1,    42,    -1,    -1,    -1,    -1,    -1,    -1,
-     334,   335,    51,    -1,     4,    -1,     6,    -1,     8,    -1,
-      59,    11,    -1,    13,    14,    15,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    -1,
-      30,    -1,    32,    33,    -1,    -1,    36,    37,    38,    39,
-      -1,    -1,    42,    -1,    -1,    -1,    -1,    -1,    -1,    49,
-      50,    51,    52,    53,    54,    55,    56,    57,     4,    59,
-       6,    -1,     8,    -1,    -1,    11,    -1,    13,    14,    15,
-      16,    17,    18,    19,    20,    21,    22,    23,    24,    25,
-      26,    27,    28,    -1,    30,    -1,    32,    -1,    -1,    -1,
-      36,    37,    38,    39,    -1,    -1,    42,    -1,    -1,    -1,
-      -1,    -1,    -1,    49,    50,    51,    52,    53,    54,    55,
-      56,    57,    -1,    59,     4,     5,     6,    15,     8,    -1,
-      -1,    11,    -1,    13,    14,    15,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    29,
-      30,    -1,    32,    -1,    -1,    -1,    36,    37,    38,    39,
-      -1,    49,    42,    51,    52,    53,    54,    55,    56,    57,
-      -1,    51,    -1,     4,    -1,     6,    15,     8,     9,    59,
-      11,    -1,    13,    14,    15,    16,    17,    18,    19,    20,
-      21,    22,    23,    24,    25,    26,    27,    28,    -1,    30,
-      -1,    32,    -1,    -1,    -1,    36,    37,    38,    39,    -1,
-      49,    42,    51,    52,    53,    54,    55,    56,    57,    -1,
-      51,     4,    -1,     6,    -1,     8,     9,    -1,    59,    -1,
-      13,    14,    15,    16,    17,    18,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    -1,    30,    -1,    -1,
-      -1,    -1,    -1,    36,    37,    38,    39,    -1,    -1,    42,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,
-      -1,    54,    -1,     4,     5,     6,    59,     8,    -1,    -1,
-      11,    -1,    13,    14,    15,    16,    17,    18,    19,    20,
-      21,    22,    23,    24,    25,    26,    27,    28,    -1,    30,
-      -1,    32,    -1,    -1,    -1,    36,    37,    38,    39,    -1,
-      -1,    42,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      51,     4,    -1,     6,     7,     8,    -1,    -1,    59,    -1,
-      13,    14,    15,    16,    17,    18,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    -1,    30,    -1,    -1,
-      -1,    -1,    -1,    36,    37,    38,    39,    -1,    -1,    42,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,
-       4,    54,     6,    -1,     8,     9,    59,    -1,    -1,    13,
-      14,    15,    16,    17,    18,    19,    20,    21,    22,    23,
-      24,    25,    26,    27,    28,    -1,    30,    -1,    -1,    -1,
-      -1,    -1,    36,    37,    38,    39,    -1,    -1,    42,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,     4,
-      54,     6,     7,     8,    -1,    59,    -1,    -1,    13,    14,
-      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
-      25,    26,    27,    28,    -1,    30,    -1,    -1,    -1,    -1,
-      -1,    36,    37,    38,    39,    -1,    -1,    42,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    50,    51,    -1,     4,    54,
-       6,    -1,     8,     9,    59,    -1,    -1,    13,    14,    15,
-      16,    17,    18,    19,    20,    21,    22,    23,    24,    25,
-      26,    27,    28,    -1,    30,    -1,    -1,    -1,    -1,    -1,
-      36,    37,    38,    39,    -1,    -1,    42,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    50,    51,    -1,     4,    54,     6,
-      -1,     8,     9,    59,    11,    -1,    13,    14,    15,    16,
-      17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    -1,    30,    -1,    32,    -1,    -1,    -1,    36,
-      37,    38,    39,    -1,    -1,    42,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    51,     4,    -1,     6,    -1,     8,
-       9,    -1,    59,    -1,    13,    14,    15,    16,    17,    18,
-      19,    20,    21,    22,    23,    24,    25,    26,    27,    28,
-      -1,    30,    -1,    -1,    -1,    -1,    -1,    36,    37,    38,
-      39,    -1,    -1,    42,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    50,    51,    -1,    -1,    54,    -1,     4,     5,     6,
-      59,     8,    -1,    -1,    11,    -1,    13,    14,    15,    16,
-      17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    -1,    30,    -1,    32,    -1,    -1,    -1,    36,
-      37,    38,    39,    -1,    -1,    42,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    51,    -1,     4,    -1,     6,    -1,
-       8,    -1,    59,    11,    -1,    13,    14,    15,    16,    17,
-      18,    19,    20,    21,    22,    23,    24,    25,    26,    27,
-      28,    -1,    30,    -1,    32,    -1,    -1,    -1,    36,    37,
-      38,    39,    -1,    -1,    42,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    51,     4,    -1,     6,    -1,     8,    -1,
-      -1,    59,    -1,    13,    14,    15,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    -1,
-      30,    -1,    -1,    -1,    -1,    -1,    36,    37,    38,    39,
-      -1,    -1,    42,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,     4,    54,     6,    -1,     8,    -1,    59,
-      -1,    -1,    13,    14,    15,    16,    17,    18,    19,    20,
-      21,    22,    23,    24,    25,    26,    27,    28,    -1,    30,
-      -1,    -1,    -1,    -1,    -1,    36,    37,    38,    39,    -1,
-      -1,    42,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,
-      51,     4,    -1,     6,    -1,     8,    -1,    -1,    59,    -1,
-      13,    14,    15,    16,    17,    18,    19,    20,    21,    22,
-      23,    24,    25,    26,    27,    28,    -1,    30,    -1,    -1,
-      -1,    -1,    -1,    36,    37,    38,    39,    -1,    -1,    42,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,     4,
-      -1,     6,    -1,     8,    -1,    -1,    59,    -1,    13,    14,
-      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
-      25,    26,    27,    28,    -1,    30,    -1,    -1,    -1,    -1,
-      -1,    36,    37,    38,    39,    -1,    -1,    42,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    50,    51,     4,    -1,     6,
-      -1,     8,    -1,    -1,    59,    -1,    13,    14,    15,    16,
-      17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    -1,    30,    -1,    -1,    -1,    -1,    -1,    36,
-      37,    38,    39,    -1,    -1,    42,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    51,     4,    -1,     6,    -1,     8,
-      -1,    -1,    59,    -1,    13,    14,    15,    16,    17,    18,
-      19,    20,    21,    22,    23,    24,    25,    26,    27,    28,
-      -1,    30,    -1,    -1,    -1,    -1,    -1,    36,    37,    38,
-      39,    -1,    -1,    42,    -1,    -1,    -1,    -1,    -1,     4,
-      -1,     6,    51,     8,    -1,    -1,    -1,    -1,    13,    -1,
-      59,    16,    17,    18,    19,    20,    21,    22,    23,    24,
-      25,    26,    27,    28,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    36,    37,    38,    39,    -1,     4,    42,     6,    -1,
-       8,    -1,    -1,    48,    -1,    13,    51,    -1,    16,    17,
-      18,    19,    20,    21,    22,    23,    24,    25,    26,    27,
-      28,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    36,    37,
-      38,    39,    -1,     4,    42,     6,    -1,     8,    -1,    -1,
-      48,    -1,    13,    51,    -1,    16,    17,    18,    19,    20,
-      21,    22,    23,    24,    25,    26,    27,    28,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    36,    37,    38,    39,    -1,
-       4,    42,     6,    -1,     8,    -1,    -1,    -1,    -1,    13,
-      51,    -1,    16,    17,    18,    19,    20,    21,    22,    23,
-      24,    25,    26,    27,    28,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    36,    37,    38,    39,    -1,     4,    42,     6,
-      -1,     8,    -1,    -1,    -1,    -1,    13,    51,    -1,    16,
-      17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    36,
-      37,    38,    39,    -1,     4,    42,     6,    -1,     8,    -1,
-      -1,    -1,    -1,    13,    51,    -1,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    26,    27,    28,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    36,    37,    38,    39,
-      -1,    -1,    42,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    51,    16,    17,    18,    19,    20,    21,    22,    23,
-      24,    47,    -1,    49,    50,    51,    52,    53,    54,    55,
-      56,    57,    58,    -1,    -1,    39,    49,    50,    51,    52,
-      53,    54,    55,    56,    57,    58,    -1,    51
+  const unsigned char parser::yystos_[] = {
+      0,   30,  44,  55,  62,  64,  65,  66,  67,  70,  6,   69,  1,   4,   6,   8,   13,  14,  15,  16,  17, 18,  19,
+      20,  21,  22,  23,  24,  25,  26,  27,  28,  30,  36,  37,  38,  39,  42,  51,  59,  81,  82,  88,  89, 90,  106,
+      110, 111, 112, 113, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 30,  0,   0,   1,   3,   10, 0,   66,
+      113, 47,  68,  8,   50,  90,  91,  92,  107, 11,  32,  33,  49,  50,  51,  52,  53,  54,  55,  56,  57, 85,  86,
+      87,  90,  96,  100, 108, 109, 114, 115, 6,   113, 6,   8,   82,  84,  39,  51,  124, 125, 127, 90,  56, 96,  97,
+      6,   50,  51,  56,  58,  115, 116, 8,   48,  84,  27,  39,  39,  4,   8,   63,  90,  63,  7,   30,  4,  92,  10,
+      117, 47,  12,  118, 90,  98,  99,  113, 10,  40,  94,  113, 92,  40,  56,  95,  113, 11,  10,  117, 47, 9,   86,
+      90,  12,  118, 9,   107, 48,  107, 9,   50,  54,  92,  101, 102, 103, 82,  5,   86,  7,   103, 6,   8,  104, 113,
+      58,  93,  90,  9,   103, 90,  54,  76,  77,  78,  79,  80,  113, 114, 96,  32,  34,  35,  73,  74,  75, 90,  92,
+      50,  92,  7,   12,  8,   48,  113, 12,  40,  118, 8,   48,  113, 12,  40,  118, 8,   48,  112, 90,  87, 9,   92,
+      117, 50,  90,  108, 9,   8,   84,  118, 90,  7,   12,  83,  84,  92,  92,  12,  118, 9,   117, 48,  7,  7,   103,
+      9,   103, 83,  8,   48,  104, 105, 8,   113, 124, 84,  9,   77,  4,   78,  5,   9,   86,  52,  53,  57, 71,  72,
+      130, 72,  72,  10,  117, 80,  92,  47,  98,  92,  90,  10,  12,  113, 113, 10,  92,  8,   112, 12,  56, 113, 56,
+      113, 90,  92,  8,   112, 9,   9,   103, 7,   101, 83,  5,   90,  48,  48,  7,   83,  9,   90,  83,  92, 48,  83,
+      97,  9,   10,  12,  98,  73,  5,   92,  9,   113, 8,   48,  10,  12,  9,   92,  113, 12,  56,  8,   48, 112, 9,
+      92,  84,  9,   90,  90,  48,  9,   90,  5,   29,  86,  71,  10,  92,  8,   112, 113, 9,   56,  113, 92, 8,   112,
+      9,   83,  90,  10,  117, 117, 9,   92,  10,  56,  9,   92,  5,   86,  5,   9,   9,   117, 5
   };
 
-  const unsigned char
-  parser::yystos_[] =
-  {
-       0,    30,    44,    55,    62,    64,    65,    66,    67,    70,
-       6,    69,     1,     4,     6,     8,    13,    14,    15,    16,
-      17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
-      27,    28,    30,    36,    37,    38,    39,    42,    51,    59,
-      81,    82,    87,    88,    89,   105,   109,   110,   111,   112,
-     118,   119,   120,   121,   122,   123,   124,   125,   126,   127,
-     128,    30,     0,     0,     1,     3,    10,     0,    66,   112,
-      47,    68,     8,    50,    89,    90,    91,   106,    11,    32,
-      33,    49,    50,    51,    52,    53,    54,    55,    56,    57,
-      85,    86,    89,    95,    99,   107,   108,   113,   114,     6,
-     112,     6,     8,    82,    84,    39,    51,   123,   124,   126,
-      89,    56,    95,    96,     6,    50,    51,    56,    58,   114,
-     115,     8,    48,    84,    27,    39,    39,     4,     8,    63,
-      89,    63,     7,    30,     4,    91,    10,   116,    47,    12,
-     117,    89,    97,    98,   112,    10,    93,   112,    91,    56,
-      94,   112,    10,   116,    47,     9,    85,    89,    12,   117,
-       9,   106,    48,   106,     9,    50,    54,    91,   100,   101,
-     102,    82,     5,    85,     7,   102,     1,     6,     8,   103,
-     112,    58,    92,    89,     9,   102,    89,    54,    76,    77,
-      78,    79,    80,   112,   113,    95,    32,    34,    35,    73,
-      74,    75,    89,    91,    50,    91,     7,    12,     8,    48,
-      12,    40,   117,     8,    48,    12,    40,   117,     8,    48,
-     111,    86,     9,    91,   116,    50,    89,   107,     9,     8,
-      84,   117,    89,     7,    12,    83,    84,    91,    91,    12,
-     117,     9,   116,    48,     7,     7,   102,     9,   102,    83,
-       8,    48,   103,   104,     8,   112,   123,    84,     9,    77,
-       4,    78,     5,     9,    85,    52,    53,    57,    71,    72,
-     129,    72,    72,    10,   116,    80,    91,    47,    97,    91,
-      89,   112,   112,    10,    91,     8,   111,   112,    56,   112,
-      89,    91,     8,   111,     9,     9,   102,     7,   100,    83,
-       5,    89,    48,    48,     7,    83,     9,    89,    83,    91,
-      48,    83,    96,     9,    10,    12,    97,    73,     5,    91,
-       9,     8,    48,    10,    12,     9,    91,    12,    56,     8,
-      48,   111,     9,    91,    84,     9,    89,    89,    48,     9,
-      89,     5,    29,    85,    71,    91,     8,   111,   112,     9,
-     112,    91,     8,   111,     9,    83,    89,     5,    85,   116,
-       9,    91,    10,    56,     9,    91,   116,     5,     9,     9,
-       5
+  const unsigned char parser::yyr1_[] = {
+      0,   61,  62,  62,  63,  63,  63,  64,  64,  64,  64,  64,  64,  64,  65,  65,  66,  66,  67,  68,  68,  69,  69,
+      70,  71,  72,  72,  73,  73,  73,  74,  74,  75,  75,  76,  76,  77,  77,  77,  77,  78,  78,  79,  79,  80,  80,
+      81,  81,  82,  82,  83,  83,  84,  84,  85,  85,  86,  86,  87,  87,  87,  88,  88,  88,  88,  88,  88,  88,  88,
+      88,  88,  88,  88,  88,  89,  89,  89,  89,  89,  89,  89,  90,  90,  90,  90,  90,  90,  90,  90,  90,  90,  90,
+      90,  90,  90,  91,  91,  92,  93,  93,  93,  94,  94,  94,  94,  94,  94,  94,  94,  95,  95,  95,  95,  95,  95,
+      95,  95,  95,  95,  96,  96,  96,  96,  96,  96,  96,  96,  96,  96,  96,  96,  97,  97,  98,  98,  98,  99,  99,
+      100, 101, 101, 101, 102, 102, 103, 104, 105, 105, 106, 106, 106, 106, 106, 106, 106, 106, 107, 107, 107, 107, 107,
+      107, 107, 108, 108, 109, 109, 109, 110, 111, 111, 112, 112, 112, 113, 114, 114, 114, 114, 114, 114, 114, 114, 115,
+      115, 116, 116, 117, 117, 118, 118, 119, 120, 121, 121, 122, 122, 123, 123, 124, 124, 124, 124, 125, 125, 125, 125,
+      126, 126, 127, 127, 128, 128, 129, 129, 129, 129, 129, 129, 130, 130, 130, 130
   };
 
-  const unsigned char
-  parser::yyr1_[] =
-  {
-       0,    61,    62,    62,    63,    63,    63,    64,    64,    64,
-      64,    64,    64,    64,    65,    65,    66,    66,    67,    68,
-      68,    69,    69,    70,    71,    72,    72,    73,    73,    73,
-      74,    74,    75,    75,    76,    76,    77,    77,    77,    77,
-      78,    78,    79,    79,    80,    80,    81,    81,    82,    82,
-      83,    83,    84,    84,    85,    85,    86,    86,    86,    87,
-      87,    87,    87,    87,    87,    87,    87,    87,    87,    87,
-      87,    87,    87,    88,    88,    88,    88,    88,    88,    88,
-      89,    89,    89,    89,    89,    89,    89,    89,    89,    89,
-      89,    89,    89,    89,    90,    90,    91,    92,    92,    92,
-      93,    93,    93,    93,    93,    93,    93,    93,    94,    94,
-      94,    94,    94,    94,    94,    94,    94,    94,    95,    95,
-      95,    95,    95,    95,    95,    95,    96,    96,    97,    97,
-      97,    98,    98,    99,   100,   100,   100,   101,   101,   102,
-     103,   104,   104,   105,   105,   105,   105,   105,   105,   105,
-     105,   106,   106,   106,   106,   106,   106,   106,   107,   107,
-     108,   108,   108,   109,   110,   110,   111,   111,   111,   112,
-     113,   113,   113,   113,   113,   113,   113,   113,   114,   114,
-     115,   115,   116,   116,   117,   117,   118,   119,   120,   120,
-     121,   121,   122,   122,   123,   123,   123,   123,   124,   124,
-     124,   124,   125,   125,   126,   126,   127,   127,   128,   128,
-     128,   128,   128,   128,   129,   129,   129,   129
+  const signed char parser::yyr2_[] = {
+      0, 2, 2, 2, 1, 4, 3, 2, 2, 6, 4, 3, 3, 2, 1, 2, 1, 1, 7, 0, 2, 0, 3, 5, 2, 1, 3, 2, 2, 2, 1, 3, 0, 2, 1, 1, 6, 4,
+      8, 6, 1, 2, 1, 2, 0, 1, 1, 1, 5, 3, 0, 1, 1, 2, 1, 3, 1, 3, 1, 1, 2, 7, 6, 4, 5, 4, 2, 5, 4, 5, 4, 2, 5, 4, 1, 1,
+      1, 4, 2, 4, 3, 1, 1, 5, 4, 2, 3, 3, 4, 5, 6, 6, 5, 7, 6, 1, 3, 2, 2, 2, 4, 1, 3, 4, 5, 3, 5, 6, 7, 2, 1, 3, 4, 5,
+      4, 3, 5, 6, 7, 2, 4, 5, 7, 4, 6, 2, 4, 5, 7, 4, 6, 0, 1, 1, 3, 4, 1, 3, 2, 2, 2, 1, 1, 3, 2, 3, 0, 1, 1, 1, 1, 1,
+      1, 1, 1, 1, 0, 1, 3, 2, 3, 5, 4, 3, 2, 0, 1, 3, 4, 4, 5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0, 1, 0,
+      1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 2, 1, 2, 0, 1, 1, 1
   };
-
-  const signed char
-  parser::yyr2_[] =
-  {
-       0,     2,     2,     2,     1,     4,     3,     2,     2,     6,
-       4,     3,     3,     2,     1,     2,     1,     1,     7,     0,
-       2,     0,     3,     5,     2,     1,     3,     2,     2,     2,
-       1,     3,     0,     2,     1,     1,     6,     4,     7,     5,
-       1,     2,     1,     2,     0,     1,     1,     1,     5,     3,
-       0,     1,     1,     2,     1,     3,     1,     1,     2,     7,
-       6,     4,     5,     4,     2,     5,     4,     5,     3,     4,
-       2,     5,     4,     1,     1,     1,     4,     2,     4,     3,
-       1,     1,     5,     4,     2,     3,     3,     4,     5,     6,
-       6,     5,     7,     6,     1,     3,     2,     2,     2,     4,
-       1,     3,     4,     5,     3,     5,     6,     7,     2,     1,
-       3,     4,     5,     4,     3,     5,     6,     7,     2,     4,
-       5,     7,     2,     4,     5,     7,     0,     1,     1,     3,
-       4,     1,     3,     2,     2,     2,     1,     1,     3,     2,
-       3,     0,     1,     1,     1,     1,     1,     1,     1,     1,
-       1,     0,     1,     3,     2,     3,     5,     4,     3,     2,
-       0,     1,     3,     4,     4,     5,     1,     1,     1,     1,
-       1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
-       2,     1,     0,     1,     0,     1,     1,     1,     1,     1,
-       1,     1,     1,     2,     1,     1,     1,     2,     1,     1,
-       1,     1,     1,     2,     1,     1,     1,     2,     1,     1,
-       2,     2,     1,     2,     0,     1,     1,     1
-  };
-
-
 
 
 #if YYDEBUG
-  const short
-  parser::yyrline_[] =
-  {
-       0,   174,   174,   175,   180,   182,   193,   207,   211,   217,
-     229,   243,   246,   249,   275,   277,   282,   283,   287,   292,
-     293,   297,   298,   302,   307,   312,   314,   319,   321,   323,
-     328,   330,   335,   336,   340,   341,   345,   347,   349,   351,
-     356,   357,   362,   363,   367,   368,   371,   371,   374,   376,
-     381,   382,   386,   387,   391,   392,   396,   397,   398,   402,
-     411,   414,   418,   427,   430,   433,   444,   454,   462,   469,
-     472,   478,   489,   499,   501,   503,   504,   509,   514,   521,
-     531,   535,   537,   542,   548,   550,   556,   559,   562,   565,
-     573,   575,   578,   581,   586,   587,   599,   602,   603,   604,
-     609,   611,   613,   615,   617,   619,   621,   623,   628,   630,
-     632,   634,   636,   638,   640,   642,   644,   646,   651,   652,
-     653,   655,   657,   659,   661,   663,   669,   670,   674,   676,
-     678,   687,   689,   693,   697,   698,   699,   703,   704,   707,
-     710,   713,   714,   718,   719,   720,   721,   722,   723,   724,
-     725,   729,   731,   733,   735,   737,   739,   741,   749,   751,
-     756,   758,   760,   765,   770,   772,   781,   782,   783,   786,
-     795,   796,   797,   798,   799,   800,   801,   802,   806,   807,
-     811,   813,   817,   817,   818,   818,   820,   822,   825,   826,
-     830,   831,   835,   836,   840,   841,   842,   843,   852,   853,
-     854,   855,   859,   861,   866,   868,   873,   875,   880,   881,
-     882,   883,   884,   885,   889,   890,   891,   892
+  const short parser::yyrline_[] = {
+      0,   172, 172, 173, 178, 180, 191, 205, 209, 215, 227, 241, 244, 247, 273, 275, 280, 281, 285, 290, 291, 295, 296,
+      300, 305, 310, 312, 317, 319, 321, 326, 328, 333, 334, 338, 339, 343, 345, 347, 349, 354, 355, 360, 361, 365, 366,
+      369, 369, 372, 374, 379, 380, 384, 385, 389, 390, 394, 396, 404, 405, 406, 410, 419, 422, 426, 435, 438, 441, 452,
+      462, 477, 480, 486, 497, 507, 509, 511, 512, 517, 522, 529, 539, 543, 545, 550, 556, 558, 564, 567, 570, 573, 581,
+      583, 586, 589, 594, 595, 607, 610, 611, 612, 617, 619, 621, 623, 625, 627, 629, 631, 636, 638, 640, 642, 644, 646,
+      648, 650, 652, 654, 659, 660, 661, 663, 665, 670, 679, 681, 683, 685, 687, 692, 705, 706, 710, 712, 714, 723, 725,
+      729, 733, 734, 735, 739, 740, 743, 746, 749, 750, 754, 755, 756, 757, 758, 759, 760, 761, 765, 767, 769, 771, 773,
+      775, 777, 785, 787, 792, 794, 796, 801, 806, 808, 817, 818, 819, 822, 831, 832, 833, 834, 835, 836, 837, 838, 842,
+      843, 847, 849, 853, 853, 854, 854, 856, 858, 861, 862, 866, 867, 871, 872, 876, 877, 878, 879, 888, 889, 890, 891,
+      895, 897, 902, 904, 909, 911, 916, 917, 918, 919, 920, 921, 925, 926, 927, 928
   };
 
   void
@@ -4796,7 +5262,6 @@ namespace sc { namespace ast { namespace parser {
 
 #line 7 "langutils/sc_parser/src/sc_grammar.y"
 } } } // sc::ast::parser
-#line 4800 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4863 "langutils/sc_parser/src/sc_grammar_parser.cpp"
 
-#line 895 "langutils/sc_parser/src/sc_grammar.y"
-
+#line 931 "langutils/sc_parser/src/sc_grammar.y"

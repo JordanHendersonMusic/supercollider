@@ -40,8 +40,6 @@
 
 namespace sc::ast::parser{ class parser; } // forward declare the parser
 
-//static int yylex(sc::ast::parser::parser::value_type* v, sc::lex::SourceCodeRange* loc, sc::ast::ParserContext& cxt);
-
 using namespace sc::ast;
 
 template<typename... REJECTS>
@@ -134,14 +132,14 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 %type <AdverbIndex> adverb
 
 // literals
-%type <AnyLiteralIndex> literal literal.terminal 
+%type <AnyPossiblyLiteralIndex> literal literal.terminal 
 
 %type <ArrayIndex> literal.array literal.array.contents
 %type <DictionaryIndex> literal.dictionary literal.dictionary.entries
 %type <DictionaryEntryIndex> literal.dictionary.entry
 
 %type <BlockItemIndex> block.contents.item
-%type <BlockContentsListIndex> block.contents 
+%type <BlockContentsListIndex> block.contents block.contents.no_trailing_return
 %type <BlockIndex> block 
 %type <NilLitIndex> nil
 %type <BooleanLitIndex> boolean
@@ -346,9 +344,9 @@ method.base
 		{ $$ = cxt.create(Method{}, @$, $name, $args, cxt.create(Missing{},@2), $block); }
 	| method.name[name] OPENCURLY argument_declarations.opt[args] CLOSECURLY
 		{ $$ = cxt.create(Method{}, @$, $name, $args, cxt.create(Missing{},@2), cxt.create(BlockList{}, @4)); }
-	| method.name[name] OPENCURLY argument_declarations.opt[args] PRIMITIVENAME[prim] block.contents[block] semicolon.opt CLOSECURLY
+	| method.name[name] OPENCURLY argument_declarations.opt[args] PRIMITIVENAME[prim] semicolon.opt block.contents[block] semicolon.opt CLOSECURLY
 		{ $$ = cxt.create(Method{}, @$, $name, $args, cxt.create(PrimitiveIdentifier{}, @prim), $block); }
-	| method.name[name] OPENCURLY argument_declarations.opt[args] PRIMITIVENAME[prim] CLOSECURLY
+	| method.name[name] OPENCURLY argument_declarations.opt[args] PRIMITIVENAME[prim] semicolon.opt CLOSECURLY
 		{ $$ = cxt.create(Method{}, @$, $name, $args, cxt.create(PrimitiveIdentifier{}, @prim), cxt.create(BlockList{}, @5)); }
 	;
 
@@ -387,9 +385,19 @@ block.list
 	| block.list block { $$ = cxt.graph.append($1, @$, $2); }
 	;
 
-block.contents	
+block.contents.no_trailing_return	
 	: block.contents.item { $$ = cxt.create(BlockContentsList{}, @$, $1); }
 	| block.contents SEMICOLON block.contents.item { $$ = cxt.graph.append($1, @$, $3); }
+	;
+
+block.contents
+	: block.contents.no_trailing_return { $$ = $1; }
+	// You do not need a semicolon before the final expression, if is a non local return.
+	| block.contents.no_trailing_return[block] NONLOCALRETURN expr
+		{
+			auto non_local = cxt.create(NonLocalReturnExpr{}, @2, $expr);
+			$$ = cxt.graph.append($block, @$, non_local);
+		}
 	;
 
 block.contents.item
@@ -459,12 +467,12 @@ msgsend
 		}
 		
 
-	| expr DOT error 
-		{
-			auto unexpected = cxt.consume_error(); 
-			std::cout << "GOT AN ERROR WITH A DOT"<< std::endl;
-			$$ = $1;
-		}
+//	| expr DOT error 
+//		{
+//			auto unexpected = cxt.consume_error(); 
+//			std::cout << "GOT AN ERROR WITH A DOT"<< std::endl;
+//			$$ = $1;
+//		}
 
 	| CLASSNAME OPENSQUARE literal.array.contents CLOSESQUARE
 		{  $$ = cxt.create(CollectionNode{}, @$, cxt.create(ClassNameIdentifier{}, @1), $3); }
@@ -654,6 +662,20 @@ argument_declarations
 		{ $$ = cxt.graph.append( $2, @$, cxt.create(DeclareArgumentVariadicNode{}, @4, $4)); }
 	| ARG argument_declarations.list ELLIPSIS name COMMA name SEMICOLON 
 		{ $$ = cxt.graph.append( $2, @$, cxt.create(DeclareArgumentVariadicNode{}, @4, $4), cxt.create(DeclareArgumentVariadicNode{}, @6, $6)); }
+	| ARG ELLIPSIS name[args] SEMICOLON 
+		{ 
+			auto arg_list = cxt.create(DeclareArgumentList{}, @$);
+			$$ = cxt.graph.append(arg_list, @$, cxt.create(DeclareArgumentVariadicNode{}, @args, $args)); 
+		}
+	| ARG ELLIPSIS name[args] COMMA name[vars] SEMICOLON 
+		{
+			auto arg_list = cxt.create(DeclareArgumentList{}, @$);
+			$$ = cxt.graph.append(
+				arg_list, @$,
+				cxt.create(DeclareArgumentVariadicNode{}, @args, $args),
+				cxt.create(DeclareArgumentVariadicNode{}, @vars, $vars)
+			); 
+		}
 	| PIPE PIPE 
 		{ $$ = cxt.create(DeclareArgumentList{}, @$); }
 	| PIPE argument_declarations.pipelist comma.opt PIPE 
@@ -662,6 +684,20 @@ argument_declarations
 		{ $$ = cxt.graph.append($2, @2, cxt.create(DeclareArgumentVariadicNode{}, @4, $4)); }
 	| PIPE argument_declarations.pipelist ELLIPSIS name COMMA name PIPE 
 		{ $$ = cxt.graph.append($2, @$, cxt.create(DeclareArgumentVariadicNode{}, @4, $4), cxt.create(DeclareArgumentVariadicNode{}, @6, $6)); }
+	| PIPE ELLIPSIS name[args] PIPE 
+		{ 
+			auto arg_list = cxt.create(DeclareArgumentList{}, @$);
+			$$ = cxt.graph.append(arg_list, @$, cxt.create(DeclareArgumentVariadicNode{}, @args, $args)); 
+		}
+	| PIPE ELLIPSIS name[args] COMMA name[vars] PIPE 
+		{
+			auto arg_list = cxt.create(DeclareArgumentList{}, @$);
+			$$ = cxt.graph.append(
+				arg_list, @$,
+				cxt.create(DeclareArgumentVariadicNode{}, @args, $args),
+				cxt.create(DeclareArgumentVariadicNode{}, @vars, $vars)
+			); 
+		}
 	;
 
 
