@@ -1,7 +1,6 @@
 // Copyright Jordan Henderson 2026
 #pragma once
 
-#include "index.hpp"
 #include "indexes_typed.hpp"
 #include "sc_lexer/text_info.hpp"
 #include "sc_lexer/text_location.hpp"
@@ -13,8 +12,8 @@
 
 #include <functional>
 #include <memory>
-#include <string>
 #include <type_traits>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -80,10 +79,7 @@ public:
     /// Turns as missing<NODEINDEX> into a std::optional<NODEINDEX>
     template <typename TypedIndex, typename = std::enable_if<sc::util::typed_index::is_type_set_index<TypedIndex>()>>
     [[nodiscard]] constexpr auto present(TypedIndex i) const
-        -> std::optional<typename decltype(TypedIndex::template remove_from_set<NodeFlag::Missing>())::type> //
-    {
-        return is_a<MissingIndex>(i) ? std::nullopt : std::optional { *i };
-    }
+        -> std::optional<typename decltype(TypedIndex::template remove_from_set<NodeFlag::Missing>())::type>;
 
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -100,7 +96,7 @@ public:
 
     [[nodiscard]] std::shared_ptr<const lex::TextInfo> text_info() const { return m_text_info; }
 
-    [[nodiscard]] std::string_view string(UntypedNodeIndex i) const { return m_text_info->read(location(i)); }
+    [[nodiscard]] std::string_view string_view(UntypedNodeIndex i) const { return m_text_info->read(location(i)); }
 
     ////////////////////////////////////////////////////////////////////////////////
     // Children. This is the type safe way to walk the graph.
@@ -138,7 +134,7 @@ public:
 
 
     template <typename F, typename = std::enable_if<signature_check<F>()>> //
-    void flat_walk(F f);
+    void flat_walk(F f) const;
 
     template <typename F, typename = std::enable_if<signature_check<F>()>> //
     void traverse_only_children(F& f, Index i);
@@ -159,8 +155,12 @@ public:
               typename = std::enable_if<signature_check<AfterChildren>()>, //
               typename = std::enable_if<signature_check<ExitNode>()>>
 
-    void depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children = { },
-                              AfterChildren after_children = { }, ExitNode exit_node = { });
+    void depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children = {},
+                              AfterChildren after_children = {}, ExitNode exit_node = {}) const;
+
+    void debug_df_print(std::ostream&) const;
+    void debug_flat_print(std::ostream&) const;
+    using Base::debug_find_loop;
 
 
 private:
@@ -177,7 +177,15 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename F, typename> inline void ASTGraph::flat_walk(F f) {
+
+template <typename TypedIndex, typename>
+[[nodiscard]] constexpr auto ASTGraph::present(TypedIndex i) const
+    -> std::optional<typename decltype(TypedIndex::template remove_from_set<NodeFlag::Missing>())::type> //
+{
+    return is_a<MissingIndex>(i) ? std::nullopt : std::optional { *i };
+}
+
+template <typename F, typename> inline void ASTGraph::flat_walk(F f) const {
     Base::flat_walk([&](const Edges& e, const Variant& v, size_t i) { std::invoke(f, e, v, m_node_locations[i], i); });
 }
 
@@ -198,7 +206,7 @@ inline auto ASTGraph::append(I p, lex::SourceCodeRange range, Children... childr
 template <typename EnterNode, typename BeforeChildren, typename AfterChildren, typename ExitNode, typename, typename,
           typename, typename>
 inline void ASTGraph::depth_first_traverse(Index i, EnterNode enter_node, BeforeChildren before_children,
-                                           AfterChildren after_children, ExitNode exit_node) {
+                                           AfterChildren after_children, ExitNode exit_node) const {
     const auto wrap = [&](auto& f) {
         return [&](const Edges& e, const Variant& v, Index index, size_t d) {
             f(e, v, m_node_locations[*index], index, d);

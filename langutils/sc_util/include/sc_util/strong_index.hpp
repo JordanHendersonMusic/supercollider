@@ -31,6 +31,8 @@ template <typename UNDERLYING, typename TAG>//
         return m_value == other.m_value;
     }
 
+    [[nodiscard]] constexpr bool operator!=(StrongIndex<UNDERLYING, TAG> other) const { return !(*this == other); }
+
 private:
     Underlying m_value {};
 };
@@ -66,6 +68,9 @@ template <typename UNDERLYING, typename TAG, UNDERLYING INVALID_VALUE = default_
 
     [[nodiscard]] constexpr bool operator==(StrongOptionalIndex<UNDERLYING, TAG, INVALID_VALUE> other) const {
         return m_value == other.m_value;
+    }
+    [[nodiscard]] constexpr bool operator!=(StrongOptionalIndex<UNDERLYING, TAG, INVALID_VALUE> other) const {
+        return !(*this == other);
     }
 
 private:

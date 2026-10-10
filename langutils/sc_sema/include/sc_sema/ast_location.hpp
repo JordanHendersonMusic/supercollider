@@ -1,5 +1,5 @@
 #pragma once
-#include "sc_parser/index.hpp"
+#include "sc_parser/indexes_typed.hpp"
 #include "sc_util/strong_index.hpp"
 #include <cstdint>
 

@@ -1,7 +1,6 @@
 // Copyright Jordan Henderson 2026
 #pragma once
 
-#include "index.hpp"
 #include "indexes_typed.hpp"
 #include "sc_grammar_shared.hpp"
 

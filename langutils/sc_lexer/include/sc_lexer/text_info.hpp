@@ -16,6 +16,7 @@ struct TextInfo {
 
     [[nodiscard]] std::string_view read(SourceCodeRange r) const noexcept {
         const char* str = source.as_string().c_str();
+        assert(r.begin.absolute <= r.end.absolute);
         return { str + r.begin.absolute, r.size() };
     }
 

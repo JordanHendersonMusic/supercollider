@@ -41,15 +41,14 @@ private:
 public:
     // Returned by sc::lex::lexer(...);
     struct Output {
-        constexpr Output(ExtendedTokenType t, SourceCodeRange r,
-                         std::optional<SourceCodeRange> e = std::nullopt) noexcept:
+        Output(ExtendedTokenType t, SourceCodeRange r, std::optional<SourceCodeRange> e = std::nullopt) noexcept:
             token(static_cast<TokenType>(t)),
             range(r),
-            extra(e) { }
-        constexpr Output(TokenType t, SourceCodeRange r, std::optional<SourceCodeRange> e = std::nullopt) noexcept:
+            extra(e) {}
+        Output(TokenType t, SourceCodeRange r, std::optional<SourceCodeRange> e = std::nullopt) noexcept:
             token(t),
             range(r),
-            extra(e) { }
+            extra(e) {}
 
         TokenType token;
         SourceCodeRange range;

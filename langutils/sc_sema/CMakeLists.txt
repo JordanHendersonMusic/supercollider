@@ -1,9 +1,10 @@
 include(${CMAKE_SOURCE_DIR}/cmake_modules/CompilerWarnings.cmake)
 
 add_library(sc_sema STATIC 
-	src/create_graph.cpp
 	#
+	src/compiler.cpp
 	src/ast2ir/expr.cpp
+	src/ast2ir/declare_classes.cpp
 	src/ast2ir/region.cpp
 )
 
