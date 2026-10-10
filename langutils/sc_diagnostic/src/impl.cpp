@@ -1,5 +1,6 @@
 #include "sc_diagnostic/sc_diagnostic.hpp"
 #include "sc_lexer/source_utils.hpp"
+#include <filesystem>
 
 
 namespace sc::diag {
@@ -38,9 +39,10 @@ std::string diagnosticToString(Severity type, const char* generalDescription,
         const auto starting_line = source_line + range.begin.line_number;
         const auto start_column = source_column + range.end.column;
 
-        if (filepath)
-            ss << "file://" << *filepath << ':' << starting_line + 1 << ':' << start_column + 1 << '\n';
-        else
+        if (filepath) {
+            const auto abs = std::filesystem::absolute(*filepath);
+            ss << "file://" << abs.string() << ':' << starting_line + 1 << ':' << start_column << '\n';
+        } else
             ss << "unknown file:" << starting_line + 1 << ':' << start_column + 1 << '\n';
 
         if (!txt || txt_len == 0) {

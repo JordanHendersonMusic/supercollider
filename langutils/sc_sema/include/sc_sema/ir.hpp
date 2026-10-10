@@ -128,7 +128,7 @@ struct SCLiteral : priv::Terminal<SCLiteral_I> {
 
 struct SCKwArg : priv::Node<SCKwArg_I(SCExprList_I value)> {
     static constexpr auto type_name { "SCKwArg" };
-    Locatable<SymSCNamedIdentifier> name;
+    Locatable<SymSCIdentifier> name;
 };
 
 struct SCPositionalArgs : priv::List<SCPosArgList_I, SCExprList_I> {
@@ -139,7 +139,7 @@ struct SCPositionalArgs : priv::List<SCPosArgList_I, SCExprList_I> {
 // This is a variable or a member assignment, it does not do `x.foo = 10`, which is the message `foo_(x, 10)`.
 struct SCAssign : priv::Node<SCAssign_I(SCExprList_I value)> {
     static constexpr auto type_name { "SCAssign" };
-    Locatable<SymSCNamedIdentifier> name;
+    Locatable<SymSCIdentifier> name;
 };
 
 // clang-format off
@@ -159,7 +159,7 @@ struct SCMessage : priv::Node<
 
 struct SCVariableDeclare : priv::Node<SCVariableDeclare_I(SCExprList_I value)> {
     static constexpr auto type_name { "SCVariableDeclare" };
-    Locatable<SymSCNamedIdentifier> name;
+    Locatable<SymSCIdentifier> name;
 };
 
 struct SCExplicitReturn : priv::Node<SCExplicitReturn_I(SCExprList_I value)> {
@@ -175,7 +175,7 @@ struct SCCollection : priv::List<SCCollection_I, SCExprList_I> {
 
 struct SCArgumentDeclare : priv::Node<SCArgumentDeclare_I(maybe<SCExprList_I>)> {
     static constexpr auto type_name { "SCArgumentDeclare" };
-    SymSCNamedIdentifier name;
+    SymSCIdentifier name;
     bool preserve_nil;
 };
 
@@ -189,7 +189,7 @@ struct SCFunction : priv::Node<
 > {
     // clang-format on
     static constexpr auto type_name { "SCFunction" };
-    std::optional<Locatable<SymSCNamedIdentifier>> function_name;
+    std::optional<Locatable<SymSCIdentifier>> function_name;
 };
 
 
@@ -214,7 +214,7 @@ struct SCMethodList : priv::List<SCMethodList_I, SCMethod_I> {
 
 struct SCMember : priv::Node<SCMember_I(maybe<SCExprList_I> default_value)> {
     static constexpr auto type_name { "SCMember" };
-    Locatable<SymSCNamedIdentifier> name;
+    Locatable<SymSCIdentifier> name;
     bool read;
     bool write;
     bool constant;

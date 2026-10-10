@@ -156,9 +156,9 @@ public:
     using UnderlyingEnum = std::underlying_type_t<EnumType>;
     using EnumSequence = std::integer_sequence<UnderlyingEnum, static_cast<UnderlyingEnum>(ThisSet)...>;
 
-    template <typename T> [[nodiscard]] static constexpr TypedIndexHelper from(T t) {
-        return TypedIndexHelper { static_cast<typename UnderlyingIndex::Underlying>(t) };
-    }
+    using Variant = std::variant<TypedIndexHelper<SPEC, INDEX_BASE, ThisSet>...>;
+
+    [[nodiscard]] static constexpr TypedIndexHelper from(INDEX_BASE t) { return TypedIndexHelper { *t }; }
 
     TypedIndexHelper(TypedIndexHelper&&) noexcept = default;
     TypedIndexHelper(const TypedIndexHelper&) noexcept = default;
@@ -167,6 +167,8 @@ public:
 
     using INDEX_BASE::INDEX_BASE;
     using INDEX_BASE::operator*;
+    using INDEX_BASE::operator==;
+    using INDEX_BASE::operator!=;
 
     template <EnumType... OtherSet> [[nodiscard]] static constexpr bool is_sub_set_of() {
         return ((details::enum_set_includes<EnumType, ThisSet, OtherSet...>()) && ...);
@@ -187,7 +189,7 @@ public:
     NOTE: it is the call-sight's job to ensure the passed in enum matches what the index actually represents.
      */
     template <EnumType T, typename = std::enable_if<sizeof...(ThisSet) != 0>> //
-    [[nodiscard]] constexpr std::variant<TypedIndexHelper<SPEC, INDEX_BASE, ThisSet>...> as_variant() const {
+    [[nodiscard]] constexpr Variant as_variant() const {
         // This might look weird, as this is compile time known, but for some reason compilers need it to be written
         // like this. I wonder if this is because this should be a consteval function but we don't have this in c++17?
         if constexpr ((((T == ThisSet) || ...))) {

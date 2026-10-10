@@ -139,7 +139,7 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 %type <DictionaryEntryIndex> literal.dictionary.entry
 
 %type <BlockItemIndex> block.contents.item
-%type <BlockContentsListIndex> block.contents block.contents.no_trailing_return
+%type <BlockContentsListIndex> block.contents 
 %type <BlockIndex> block 
 %type <NilLitIndex> nil
 %type <BooleanLitIndex> boolean
@@ -171,6 +171,7 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 go 
 	: region YYEOF { $$ = cxt.graph.assign_root($region); }
 	| classOrExtList.list[classes] YYEOF  { $$ = cxt.graph.assign_root($classes); }
+	| %empty { $$ = cxt.graph.assign_root(cxt.create(ClassOrExtensionList{}, @$));}
 	;
 
 
@@ -385,25 +386,29 @@ block.list
 	| block.list block { $$ = cxt.graph.append($1, @$, $2); }
 	;
 
-block.contents.no_trailing_return	
+block.contents
 	: block.contents.item { $$ = cxt.create(BlockContentsList{}, @$, $1); }
 	| block.contents SEMICOLON block.contents.item { $$ = cxt.graph.append($1, @$, $3); }
-	;
-
-block.contents
-	: block.contents.no_trailing_return { $$ = $1; }
-	// You do not need a semicolon before the final expression, if is a non local return.
-	| block.contents.no_trailing_return[block] NONLOCALRETURN expr
-		{
-			auto non_local = cxt.create(NonLocalReturnExpr{}, @2, $expr);
-			$$ = cxt.graph.append($block, @$, non_local);
+	| block.contents NONLOCALRETURN expr 
+		{ 
+			auto non_local = cxt.create(NonLocalReturnExpr{}, @expr, $expr);
+			$$ = cxt.graph.append($1, @$, non_local); 
+		}
+	| block.contents SEMICOLON NONLOCALRETURN expr 
+		{ 
+			auto non_local = cxt.create(NonLocalReturnExpr{}, @expr, $expr);
+			$$ = cxt.graph.append($1, @$, non_local); 
+		}
+	| NONLOCALRETURN expr 
+		{ 
+			auto non_local = cxt.create(NonLocalReturnExpr{}, @expr, $expr);
+			$$ = cxt.create(BlockContentsList{}, @$, non_local);
 		}
 	;
 
 block.contents.item
 	: expr { $$ = $1; }
 	| variable_declarations { $$ = $1; }
-	| NONLOCALRETURN expr { $$ = cxt.create(NonLocalReturnExpr{}, @$, $2); }
 	;
 
 msgsend 
@@ -411,7 +416,7 @@ msgsend
 		{
 			if ($blocks) {
 				cxt.graph.merge($args, $blocks);
-				cxt.graph.location(*$args) = {@args.begin, @blocks.end}; // spans arguments and block list
+				cxt.graph.location(*$args) = @$; // spans arguments and block list
 			}
 			$$ = cxt.create(MessageNode{}, @$, $selector, $args);
 		}
@@ -747,6 +752,8 @@ arguments.paren : OPENPAREN arguments CLOSEPAREN { $$ = $2; }
 
 arguments.maybe_paren 
 	: %empty { $$ = cxt.create(ArgumentList{}, @$); }
+	| OPENPAREN CLOSEPAREN
+		{ $$ = cxt.create(ArgumentList{}, @$); }
 	| arguments.paren { $$ = $1; }
 	;
 
@@ -923,9 +930,9 @@ float
 
 accessor
 	: %empty { $$ = ReadWriteAccessor::Private; }
-	| LESSTHAN { $$ = ReadWriteAccessor::PublicRead; }
-	| READWRITEVAR { $$ = ReadWriteAccessor::PublicReadAndWrite; }
-	| GREATERTHAN { $$ = ReadWriteAccessor::PublicWrite; }
+	| LESSTHAN { $$ = ReadWriteAccessor::ExternallyReadable; }
+	| READWRITEVAR { $$ = combine<ReadWriteAccessor::ExternallyReadable, ReadWriteAccessor::ExternallyWriteable>(); }
+	| GREATERTHAN { $$ = ReadWriteAccessor::ExternallyWriteable; }
 	;
 
 %%

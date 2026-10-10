@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <cstddef>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -45,6 +46,8 @@ struct FileCodeLocation {
 
 // A range within a source code snippet
 struct SourceCodeRange {
+    SourceCodeRange(SourceCodeLocation b, SourceCodeLocation e): begin(b), end(e) { assert(b <= e); }
+    SourceCodeRange(): begin({}), end({}) {}
     [[nodiscard]] static SourceCodeRange range(SourceCodeRange left, SourceCodeRange right);
     [[nodiscard]] std::size_t size() const;
     [[nodiscard]] std::size_t line_count() const;
@@ -55,7 +58,7 @@ struct SourceCodeRange {
     [[nodiscard]] bool operator<=(const SourceCodeRange& o) const noexcept;
     [[nodiscard]] bool operator>=(const SourceCodeRange& o) const noexcept;
 
-    [[nodiscard]] constexpr SourceCodeRange flatten() const noexcept {
+    [[nodiscard]] SourceCodeRange flatten() const noexcept {
         return { begin, { begin.absolute + 1, begin.line_number, begin.column } };
     }
 
@@ -64,6 +67,9 @@ struct SourceCodeRange {
 
 // A range within an entire file
 struct FileCodeRange {
+    FileCodeRange(FileCodeLocation b, FileCodeLocation e): begin(b), end(e) { assert(b <= e); }
+    FileCodeRange(): begin({}), end({}) {}
+
     [[nodiscard]] static FileCodeRange range(FileCodeRange left, FileCodeRange right);
     [[nodiscard]] static FileCodeRange sourceToFile(FileCodeLocation start_of_source, SourceCodeRange src);
     [[nodiscard]] std::size_t size() const;
@@ -75,7 +81,7 @@ struct FileCodeRange {
     [[nodiscard]] bool operator<=(const FileCodeRange& o) const noexcept;
     [[nodiscard]] bool operator>=(const FileCodeRange& o) const noexcept;
 
-    [[nodiscard]] constexpr FileCodeRange flatten() const noexcept {
+    [[nodiscard]] FileCodeRange flatten() const noexcept {
         return { begin, { begin.absolute + 1, begin.line_number, begin.column } };
     }
 

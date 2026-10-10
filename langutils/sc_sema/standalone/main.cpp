@@ -96,7 +96,18 @@ int main(int argc, char* argv[]) {
 
     std::cout << ast_and_index.size() << "\n";
 
-    sc::ir::IRCompiler comp { {}, std::move(ast_and_index) };
+    sc::ir::IRCompiler comp {};
+
+    const auto diags = comp.compile_class_library({}, std::move(ast_and_index));
+
+    if (!diags.empty()) {
+        for (const auto& d : diags)
+            std::cerr << d;
+    }
+
+    comp.context()->class_declarations.for_all([&](sc::ir::Symbol name, const sc::ir::ClassDeclaration& d) {
+        std::cout << comp.context()->symbol_table(name) << "\n";
+    });
 
     return 0;
 }

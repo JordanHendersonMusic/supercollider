@@ -1,4 +1,5 @@
 #pragma once
+#include "sc_parser/sc_grammar_shared.hpp"
 #include "sc_sema/ast_location.hpp"
 #include "sc_sema/const_expr.hpp"
 #include "sc_sema/symbols.hpp"
@@ -23,11 +24,14 @@ struct SymbolTable {
             return { *fnd->second };
         }
         T new_id = T::from(m_id_to_string_view.size());
-        const std::string_view view { s };
-        m_string_to_id.insert({ std::move(s), static_cast<Symbol>(new_id) });
-        m_id_to_string_view.push_back(view);
+        m_string_to_id.insert({ s, static_cast<Symbol>(new_id) });
+        m_id_to_string_view.push_back(std::move(s));
         return new_id;
     }
+
+    template <typename T> T get(std::string_view s) { return get<T>(std::string { s }); }
+
+    template <typename T> T get(const char* str) { return get<T>(std::string { str }); }
 
 
     [[nodiscard]] std::string_view operator()(Symbol i) const noexcept {
@@ -37,7 +41,7 @@ struct SymbolTable {
 
 private:
     mutable std::mutex m_lock { };
-    std::vector<std::string_view> m_id_to_string_view { };
+    std::vector<std::string> m_id_to_string_view {};
     std::unordered_map<std::string, Symbol> m_string_to_id { };
 };
 
@@ -47,12 +51,14 @@ private:
 
 struct ClassDeclaration {
     struct Member {
-        SymSCSelector name;
-        bool externally_readable;
-        bool externally_writeable;
-        bool internally_writeable; // aka, a const
+        SymSCIdentifier name;
+        ast::ReadWriteAccessor accessor;
         std::optional<ConstExprIndex> expr_index;
         std::optional<TypeInfo> type_info;
+    };
+    struct Method {
+        SymSCSelector name;
+        bool compiler_known_implementation;
     };
     ASTLocation location;
     SymSCClassName name;
@@ -60,6 +66,7 @@ struct ClassDeclaration {
     // Meta classes don't have meta classes.
     std::optional<SymSCClassName> meta_class {};
     std::vector<Member> members { };
+
     std::vector<SymSCSelector> consteval_methods { };
     bool poisoned { false };
 };
@@ -67,8 +74,8 @@ struct ClassDeclaration {
 
 struct ClassDeclarations {
     void register_class_declaration(ClassDeclaration decl) {
-        std::scoped_lock lock { m_lock };
         const auto name = decl.name;
+        std::scoped_lock lock { m_lock };
         m_class_declarations.insert({ name, std::move(decl) });
     }
 
@@ -83,16 +90,20 @@ struct ClassDeclarations {
         std::scoped_lock lock { m_lock };
         using R = std::invoke_result_t<F, ClassDeclaration&>;
         if constexpr (std::is_same_v<R, void>) {
-            if (const auto fnd = m_class_declarations.find(name); fnd != m_class_declarations.end()) {
+            if (const auto fnd = m_class_declarations.find(name); fnd != m_class_declarations.end())
                 std::invoke(std::forward<F>(f), m_class_declarations.find(name)->second);
-            }
-            return;
+            else
+                return;
+        } else if constexpr (std::is_pointer_v<R>) {
+            if (const auto fnd = m_class_declarations.find(name); fnd != m_class_declarations.end())
+                std::invoke(std::forward<F>(f), m_class_declarations.find(name)->second);
+            else
+                return nullptr;
         } else {
-            if (const auto fnd = m_class_declarations.find(name); fnd != m_class_declarations.end()) {
+            if (const auto fnd = m_class_declarations.find(name); fnd != m_class_declarations.end())
                 return std::optional<R> { std::invoke(std::forward<F>(f), m_class_declarations.find(name)->second) };
-            } else {
+            else
                 return std::optional<R> { std::nullopt };
-            }
         }
     }
 
@@ -112,6 +123,13 @@ struct ClassDeclarations {
             } else {
                 return std::optional<R> { std::nullopt };
             }
+        }
+    }
+
+    template <typename F> auto for_all(F f) const {
+        std::scoped_lock lock { m_lock };
+        for (const auto& [name, decl] : m_class_declarations) {
+            std::invoke(f, name, decl);
         }
     }
 
