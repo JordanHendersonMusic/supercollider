@@ -190,6 +190,12 @@ struct EnvIdentifierNode : Node<EnvIdentifierIndex(NamedIdentifierIndex)> {
     static constexpr auto name { "EnvIdentifierNode" };
 };
 
+
+struct NameList : ListNode<NameListIndex, NameOrEnvNameIndex> {
+    static constexpr auto name { "NameList" };
+};
+
+
 struct SelectorNode : TerminalNode<TypedIndex<NodeFlag::SelectorLiteral>> {
     static constexpr auto name { "SelectorNode" };
     constexpr SelectorNode(bool infix = false) noexcept: is_infix_keyword(infix) { }
@@ -262,6 +268,10 @@ struct DeclareArgumentList : ListNode<DeclareArgumentListIndex, DeclareAnyArgume
 struct DeclareVariableWithDefaultNode : Node<DeclareVariableWithDefaultIndex(NamedIdentifierIndex, AnyExprIndex)> {
     static constexpr auto name { "DeclareVariableWithDefaultNode" };
 };
+struct VariablePack : Node<VariablePackIndex(NameListIndex, AnyExprIndex)> {
+    static constexpr auto name { "DeclareVarUnpack" };
+};
+
 
 struct DeclareVariableList : ListNode<DeclareVariableListIndex, DeclareAnyVariableIndex> {
     static constexpr auto name { "DeclareVariableList" };
@@ -294,30 +304,35 @@ struct MethodList : ListNode<MethodListIndex, AnyMethodIndex> {
     static constexpr auto name { "MethodList" };
 };
 
-struct DeclareClassVar : Node<DeclareClassVarIndex(DeclareAnyVariableIndex)> {
-    static constexpr auto name { "DeclareClassVar" };
-    constexpr DeclareClassVar(ReadWriteAccessor rw = ReadWriteAccessor::Private): accessor(rw) { }
+
+struct RWAccessor : TerminalNode<RWAccessorIndex> {
+    static constexpr auto name { "RWAccessor" };
     ReadWriteAccessor accessor;
+    constexpr RWAccessor(ReadWriteAccessor r = ReadWriteAccessor::Private): accessor(r) {}
 };
 
-struct DeclareMemberList : ListNode<DeclareMemberListIndex, DeclareClassVarIndex> {
+struct DeclareMember : Node<DeclareMemberIndex(maybe<RWAccessorIndex>, DeclareAnyVariableIndex)> {
+    static constexpr auto name { "DeclareMember" };
+};
+
+struct DeclareMemberList : ListNode<DeclareMemberListIndex, DeclareMemberIndex> {
     static constexpr auto name { "DeclareClassVarList" };
 };
 
-struct DeclareClassMemberList : ListNode<DeclareClassMemberListIndex, DeclareClassVarIndex> {
+struct DeclareClassMemberList : ListNode<DeclareClassMemberListIndex, DeclareMemberIndex> {
     static constexpr auto name { "DeclareClassVarList" };
 };
 
-struct DeclareConstList : ListNode<DeclareConstListIndex, DeclareClassVarIndex> {
+struct DeclareConstList : ListNode<DeclareConstListIndex, DeclareMemberIndex> {
     static constexpr auto name { "DeclareClassVarList" };
 };
 
-struct ClassAnyVarList : ListNode<DeclareClassAnyVarListIndex, DeclareAnyList> {
-    static constexpr auto name { "ClassVarList" };
+struct BigMemberList : ListNode<BigMemberListIndex, DeclareAnyMemberListIndex> {
+    static constexpr auto name { "BigMemberList" };
 };
 struct Class
     : Node<ClassIndex(NamedIdentifierIndex name, maybe<NamedIdentifierIndex> slot,
-                      maybe<ClassNameIdentifierIndex> super, DeclareClassAnyVarListIndex vars, MethodListIndex meths)> {
+                      maybe<ClassNameIdentifierIndex> super, BigMemberListIndex members, MethodListIndex meths)> {
     static constexpr auto name { "Class" };
 };
 
@@ -341,7 +356,9 @@ struct Error : ListNode<ErrorIndex, AnyIndex> {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper<NodeFlag, TypedIndex, //
+using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper< //
+    NodeFlag, //
+    TypedIndex, //
     Missing, //
     ASCIINode, //
     IntNode, //
@@ -360,6 +377,8 @@ using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper<NodeFlag, T
     NamedIdentifier, //
     PrimitiveIdentifier, //
     ClassNameIdentifier, //
+
+    NameList, //
 
     EnvIdentifierNode, //
     SelectorNode, //
@@ -384,8 +403,12 @@ using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper<NodeFlag, T
     DeclareArgumentVariadicNode, //
 
     DeclareArgumentList, //
+
     DeclareVariableWithDefaultNode, //
+    VariablePack,
+
     DeclareVariableList, //
+
     BlockContentsList, //
     NonLocalReturnExpr, //
 
@@ -393,18 +416,18 @@ using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper<NodeFlag, T
     ClassMethod, //
     Class, //
     ClassExtension, //
-    ClassAnyVarList, //
+    RWAccessor,
+    BigMemberList, //
     DeclareMemberList, //
     DeclareClassMemberList, //
 
     DeclareConstList, //
-    DeclareClassVar, //
+    DeclareMember, //
     MethodList, //
     ClassOrExtensionList, //
     RegionList, //
     Error //
     >;
-
 
 
 } // sc::ast

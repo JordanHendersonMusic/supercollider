@@ -64,6 +64,9 @@ struct MyNode : Node<MyNodeIndex(FirstChildIndex, SecondChildIndex)> {};
 template <class ThisTypedIndex, typename... CHILD_INDEXES>
 struct Node<ThisTypedIndex(CHILD_INDEXES...)> : public NodeBase<ThisTypedIndex, NodeType::Node> {
     static_assert(sizeof...(CHILD_INDEXES) > 0, "Use TerminalNode instead.");
+    static_assert((typed_index::is_type_set_index<CHILD_INDEXES>() && ...),
+                  "TypedIndexs can only have constructors with other indexes in them, you have probably passed the "
+                  "node type, not its index.");
     static constexpr auto number_of_children { sizeof...(CHILD_INDEXES) };
     using ChildrenIndexTupleType = std::tuple<CHILD_INDEXES...>;
     using HeldType = ChildrenIndexTupleType;

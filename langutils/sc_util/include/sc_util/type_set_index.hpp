@@ -237,7 +237,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T> [[nodiscard]] static constexpr bool is_type_set_index() {
-    return std::is_base_of_v<details::TypedIndexBase, T>;
+    return std::is_base_of_v<details::TypedIndexBase, std::remove_cv_t<std::remove_reference_t<T>>>;
 }
 
 

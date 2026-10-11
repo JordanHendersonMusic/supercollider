@@ -125,9 +125,10 @@ void declare_class(const ast::ASTGraph& ast, ASTGraphIndex ast_id, Context& cxt,
                         accessor = remove(accessor, ast::ReadWriteAccessor::ExternallyWriteable);
                     }
 
-                    std::visit(append_member_to_decl(meta_class_decl,
-                                                     combine(class_var.accessor, ast::ReadWriteAccessor::Const)),
-                               ast.index_to_variant(member_node));
+                    std::visit(
+                        append_member_to_decl(meta_class_decl,
+                                              combine(class_var.accessor, ast::ReadWriteAccessor::InternallyWrite)),
+                        ast.index_to_variant(member_node));
                 }
             }
         };

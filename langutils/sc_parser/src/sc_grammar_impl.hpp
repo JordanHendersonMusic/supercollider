@@ -54,7 +54,7 @@ inline sc::ast::parser::parser::token_kind_type to_parser_token(sc::lex::TokenTy
     case TokenType::StringLine:
         return T::TOKEN_STRINGLINE;
     case TokenType::While:
-        return T::TOKEN_NAME; // There is no need to do this at this stage, inline it in the compiler.
+        return T::TOKEN_WHILE; // There is no need to do this at this stage, inline it in the compiler.
     case TokenType::Var:
         return T::TOKEN_VAR;
     case TokenType::Arg:

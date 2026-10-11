@@ -11,7 +11,6 @@ enum struct ReadWriteAccessor : std::uint8_t {
     ExternallyReadable = 0b001,
     ExternallyWriteable = 0b010,
     ExternallyReadAndWritable = 0b011,
-    Const = 0b100,
 };
 
 [[nodiscard]] constexpr bool has(ReadWriteAccessor r, ReadWriteAccessor flag) {

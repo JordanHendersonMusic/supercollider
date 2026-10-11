@@ -37,11 +37,17 @@ enum struct NodeFlag {
     DictionaryEntry,
     Collection,
 
+    //
+    RWAccessor,
+
     // identifiers
     ClassNameIdentifier,
     EnvIdentifier,
     PrimitiveNameIdentifier,
     NameIdentifier, // args, vars, consts (anything lowercase)
+
+    //
+    NameList,
 
     // argument calling
     KwArg,
@@ -62,12 +68,21 @@ enum struct NodeFlag {
     Setter,
     NonLocalReturnExpr,
 
+    Generator,
+    GeneratorQualList,
+    GeneratorQualAssign,
+    GeneratorQualDeclare,
+    GeneratorQualIf,
+    GeneratorQualSideEffect,
+
     // defining functions/methods
     DeclareArgumentVariadic,
     DeclareArgumentWithDefault,
     DeclareArgumentList,
     //
     DeclareVariableWithDefault,
+    VariablePack,
+
     DeclareVariableList,
     //
     BlockContentsList, // stuff that goes in a function.
@@ -79,14 +94,15 @@ enum struct NodeFlag {
     MethodList,
 
     // class instances variables
-    DeclareClassVar,
+    DeclareMember, // instance or member
+    DeclareConst,
 
     DeclareMemberList,
     DeclareClassMemberList,
     DeclareConstList,
 
 
-    DeclareClassAnyVarList,
+    BigMemberList,
 
 
     //
@@ -163,6 +179,10 @@ using NamedIdentifierIndex = TypedIndex<NodeFlag::NameIdentifier>;
 using EnvIdentifierIndex = TypedIndex<NodeFlag::EnvIdentifier>;
 using PrimitiveIdentifierIndex = TypedIndex<NodeFlag::PrimitiveNameIdentifier>;
 
+using NameOrEnvNameIndex = join<NamedIdentifierIndex, EnvIdentifierIndex>;
+
+using NameListIndex = TypedIndex<NodeFlag::NameList>;
+
 // TODO: remove SelectorLiteral
 using SelectorIndex = join<TypedIndex<NodeFlag::SelectorLiteral>, NamedIdentifierIndex>;
 using SelectorWAdverbIndex = TypedIndex<NodeFlag::SelectorWAdverb>;
@@ -183,9 +203,21 @@ using NonLocalReturnExprIndex = TypedIndex<NodeFlag::NonLocalReturnExpr>;
 //      save an extra node.
 using ExprSeqIndex = TypedIndex<NodeFlag::ExprSeq>;
 
-using AnyExprIndex =
-    join<ExprSeqIndex, AnyPossiblyLiteralIndex, ClassNameIdentifierIndex, EnvIdentifierIndex, NamedIdentifierIndex,
-         MessageIndex, NonLocalReturnExprIndex, ReferenceIndex, AssignmentIndex, AssignmentAtIndex, SetterIndex>;
+using VariablePackIndex = TypedIndex<NodeFlag::VariablePack>;
+using AnyExprIndex = join< //
+    ExprSeqIndex, //
+    AnyPossiblyLiteralIndex, //
+    ClassNameIdentifierIndex, //
+    EnvIdentifierIndex, //
+    NamedIdentifierIndex, //
+    MessageIndex, //
+    NonLocalReturnExprIndex, //
+    ReferenceIndex, //
+    AssignmentIndex, //
+    AssignmentAtIndex, //
+    SetterIndex, //
+    VariablePackIndex //
+    >;
 
 
 using AdverbExprIndex = TypedIndex<NodeFlag::AdverbExpr>;
@@ -210,9 +242,10 @@ using DeclareArgumentListIndex = TypedIndex<NodeFlag::DeclareArgumentList>;
 
 // Declare variables
 
+
 using DeclareVariableWithDefaultIndex = TypedIndex<NodeFlag::DeclareVariableWithDefault>;
 
-using DeclareAnyVariableIndex = join<NamedIdentifierIndex, DeclareVariableWithDefaultIndex>;
+using DeclareAnyVariableIndex = join<NamedIdentifierIndex, DeclareVariableWithDefaultIndex, VariablePackIndex>;
 
 using DeclareVariableListIndex = TypedIndex<NodeFlag::DeclareVariableList>;
 
@@ -226,15 +259,18 @@ using AnyMethodIndex = join<MethodIndex, ClassMethodIndex, TypedIndex<NodeFlag::
 
 using MethodListIndex = TypedIndex<NodeFlag::MethodList>;
 
-using DeclareClassVarIndex = TypedIndex<NodeFlag::DeclareClassVar>;
+using DeclareMemberIndex = TypedIndex<NodeFlag::DeclareMember>;
+using DeclareConstMemberIndex = TypedIndex<NodeFlag::DeclareConst>;
+
+using RWAccessorIndex = TypedIndex<NodeFlag::RWAccessor>;
 
 using DeclareMemberListIndex = TypedIndex<NodeFlag::DeclareMemberList>;
 using DeclareClassMemberListIndex = TypedIndex<NodeFlag::DeclareClassMemberList>;
 using DeclareConstListIndex = TypedIndex<NodeFlag::DeclareConstList>;
 
-using DeclareAnyList = join<DeclareMemberListIndex, DeclareClassMemberListIndex, DeclareConstListIndex>;
+using DeclareAnyMemberListIndex = join<DeclareMemberListIndex, DeclareClassMemberListIndex, DeclareConstListIndex>;
 
-using DeclareClassAnyVarListIndex = TypedIndex<NodeFlag::DeclareClassAnyVarList>;
+using BigMemberListIndex = TypedIndex<NodeFlag::BigMemberList>;
 
 using ClassIndex = TypedIndex<NodeFlag::Class>;
 using ClassExtensionIndex = TypedIndex<NodeFlag::ClassExtension>;
