@@ -38,7 +38,6 @@
 #include "sc_grammar_impl.hpp"
 #include "parser_context.hpp"
 
-namespace sc::ast::parser{ class parser; } // forward declare the parser
 
 using namespace sc::ast;
 
@@ -57,6 +56,7 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 
 
 
+
 // There is still location data, just no semantic value (the token tag is all the data you need)
 %token <LexerToken> REGION_SEPARATOR
 %token <LexerToken> OPENCURLY CLOSECURLY OPENSQUARE CLOSESQUARE OPENPAREN CLOSEPAREN 
@@ -69,6 +69,7 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 %token <LexerToken> ELLIPSIS DOTDOT BEGINCLOSEDFUNC
 %token <LexerToken> BADTOKEN INTERPRET
 %token <LexerToken> LEFTARROW 
+%token <LexerToken> WHILE
 %token <LexerToken> LEXER_ERROR
 
 %left  <LexerToken> COLON
@@ -96,12 +97,12 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 %type <maybe<ClassNameIdentifierIndex>> class.super.opt
 %type <maybe<NamedIdentifierIndex>> class.slot.opt
 
-%type <DeclareClassAnyVarListIndex> class.vars class.vars.opt
-%type <DeclareAnyList> class.vars.entry
+%type <BigMemberListIndex> members members.opt
+%type <DeclareAnyMemberListIndex> members.entry
 
-%type <DeclareMemberListIndex> class.vars.entry.list
+%type <DeclareMemberListIndex> members.entry.list
 
-%type <DeclareClassVarIndex> class.vars.entry.item 
+%type <DeclareMemberIndex> members.entry.item 
 
 %type <SelectorIndex> method.name
 %type <AnyMethodIndex> method 
@@ -138,6 +139,8 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 %type <DictionaryIndex> literal.dictionary literal.dictionary.entries
 %type <DictionaryEntryIndex> literal.dictionary.entry
 
+%type <NameListIndex> name.list
+
 %type <BlockItemIndex> block.contents.item
 %type <BlockContentsListIndex> block.contents 
 %type <BlockIndex> block 
@@ -152,7 +155,7 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 %type <ASCIIIndex> ascii
 
 // misc
-%type <ReadWriteAccessor> accessor 
+%type <RWAccessorIndex> accessor 
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -169,11 +172,14 @@ auto create_error(sc::ast::parser::ParserContext& cxt, sc::lex::SourceCodeRange 
 %%
 
 go 
-	: region YYEOF { $$ = cxt.graph.assign_root($region); }
+	: region semicolon.opt YYEOF { $$ = cxt.graph.assign_root($region); }
 	| classOrExtList.list[classes] YYEOF  { $$ = cxt.graph.assign_root($classes); }
 	| %empty { $$ = cxt.graph.assign_root(cxt.create(ClassOrExtensionList{}, @$));}
 	;
 
+////////////////////////////////////////////////////////////////////////////////
+// region
+////////////////////////////////////////////////////////////////////////////////
 
 region.item
 	: expr
@@ -203,10 +209,9 @@ region.item
 	;
 
 region
-	: INTERPRET expr
-		{ 
-			$$ = cxt.create(RegionList{}, @$, $expr);
-		} 
+	: 
+	INTERPRET expr
+		{ $$ = cxt.create(RegionList{}, @$, $expr); } 
 	| INTERPRET error
 		{
 			error_recovery::expr(cxt);
@@ -270,6 +275,12 @@ expr.error
 
 	;
 
+
+
+////////////////////////////////////////////////////////////////////////////////
+// class or class extension list
+////////////////////////////////////////////////////////////////////////////////
+
 classOrExtList.list
 	: classOrExtList.item[item]
 		{ $$ = cxt.create(ClassOrExtensionList{}, @$, $item); }
@@ -283,7 +294,7 @@ classOrExtList.item
 	;
 
 class 
-	: CLASSNAME[name] class.slot.opt[slot] class.super.opt[super] OPENCURLY class.vars.opt[vars] method.list.opt[meths] CLOSECURLY
+	: CLASSNAME[name] class.slot.opt[slot] class.super.opt[super] OPENCURLY members.opt[vars] method.list.opt[meths] CLOSECURLY
 		{ $$ = cxt.create(Class{}, @$, cxt.create(ClassNameIdentifier{}, @name), $slot, $super, $vars, $meths); }
 	;
 
@@ -302,38 +313,46 @@ class.extension
 		{ $$ = cxt.create(ClassExtension{}, @$, cxt.create(ClassNameIdentifier{}, @name), $meths); }
 	;
 
-class.vars.entry.item 
+////////////////////////////////////////////////////////////////////////////////
+// members
+////////////////////////////////////////////////////////////////////////////////
+
+members.entry.item 
 	: accessor variable_declarations.list.item[decl] 
-		{ $$ = cxt.create(DeclareClassVar{$accessor}, @$, $decl);}
+		{ $$ = cxt.create(DeclareMember{}, @$, $accessor, $decl); }
 	;
 
-class.vars.entry.list
-	: class.vars.entry.item 
+members.entry.list
+	: members.entry.item 
 		{ $$ = cxt.create(DeclareMemberList{}, @$, $1); }
-	| class.vars.entry.list COMMA class.vars.entry.item
+	| members.entry.list COMMA members.entry.item
 		{ $$ = cxt.graph.append($1, $3); }
 	;
 
-class.vars.entry
-	: CLASSVAR class.vars.entry.list[vars]
+members.entry
+	: CLASSVAR members.entry.list[vars]
 		{ $$ = cxt.graph.cast<DeclareClassMemberList>($vars); }
-	| VAR class.vars.entry.list[vars]
+	| VAR members.entry.list[vars]
 		{ $$ = cxt.graph.cast<DeclareMemberList>($vars); }
-	| CONST class.vars.entry.list[vars]
+	| CONST members.entry.list[vars]
 		{ $$ = cxt.graph.cast<DeclareConstList>($vars); }
 	;
 
-class.vars
-	: class.vars.entry 
-		{ $$ = cxt.create(ClassAnyVarList{}, @$, $1);}
-	| class.vars SEMICOLON class.vars.entry
+members
+	: members.entry 
+		{ $$ = cxt.create(BigMemberList{}, @$, $1);}
+	| members SEMICOLON members.entry
 		{ $$ = cxt.graph.append($1, $3); }
 	;
 
-class.vars.opt
-	: %empty { $$ = cxt.create(ClassAnyVarList{}, @$); }
-	| class.vars semicolon.opt { $$ = $1; }
+members.opt
+	: %empty { $$ = cxt.create(BigMemberList{}, @$); }
+	| members semicolon.opt { $$ = $1; }
 	;
+
+////////////////////////////////////////////////////////////////////////////////
+// methods
+////////////////////////////////////////////////////////////////////////////////
 
 method.name 
 	: name { $$ = $1; }
@@ -366,6 +385,11 @@ method.list.opt
 	: %empty { $$ = cxt.create(MethodList{}, @$); }
 	| method.list { $$ = $1; }
 	;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// block and block lists
+////////////////////////////////////////////////////////////////////////////////
 
 block.open : OPENCURLY | BEGINCLOSEDFUNC;
 
@@ -409,6 +433,40 @@ block.contents
 block.contents.item
 	: expr { $$ = $1; }
 	| variable_declarations { $$ = $1; }
+	;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// msgsends
+////////////////////////////////////////////////////////////////////////////////
+
+adverb  
+	: DOT name { $$ = $2; }
+	| DOT integer { $$ = $2; }
+	| DOT OPENPAREN expr.seq CLOSEPAREN { $$ = cxt.create(AdverbExprNode{}, @$, $3);  };
+	;
+
+binary_op.raw	
+	: BINOP { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	| READWRITEVAR { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	| LESSTHAN { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	| GREATERTHAN { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	| MINUS { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	| MULTIPLY { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	| ADD { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	| PIPE { $$ = cxt.create(SelectorNode{ false }, @$); }	
+	;
+
+binary_op.no_adverb 	
+	: binary_op.raw   { $$ = $1; }
+	| KEYBINOP { $$ = cxt.create(SelectorNode{ true }, @$); } 
+	;
+
+binary_op	
+	: binary_op.no_adverb adverb
+		{ $$ = cxt.create(SelectorWAdverb{}, @$, $1, $2); }
+	| binary_op.no_adverb
+		{ $$ = $1; }
 	;
 
 msgsend 
@@ -507,10 +565,13 @@ msgsend
 		}
 	;
 
+////////////////////////////////////////////////////////////////////////////////
+// expression and expression sequences
+////////////////////////////////////////////////////////////////////////////////
 
 expr.base	
 	: literal { $$ = $1; }
-	// | generator { $$ = $1; }
+	| generator { $$ = $1; }
 	| name { $$ = $1; }
 	// | curry_arg { $$ = $1; }
 	| msgsend { $$ = $1; }
@@ -578,7 +639,10 @@ expr
 	| name OPENPAREN arguments CLOSEPAREN EQUALSSIGN expr
 		{ $$ = cxt.create(SetterNode{}, @$, $3, $1, $6); }
 
-	// | HASH mavars EQUALSSIGN expr
+	| HASH name.list[names] comma.opt EQUALSSIGN expr[e]
+		{ $$ = cxt.create(VariablePack{}, @$, $names, $e); }
+	| HASH name.list[names] comma.opt OPENPAREN expr.seq[expr_seq] CLOSEPAREN
+		{ $$ = cxt.create(VariablePack{}, @$, $names, $expr_seq); }
 
 	// This is a slight change from the original. You used to be required to give an argument, even if the 'put' method had a default.
 	// Likewise you couldn't use variadic or keywords, even if the 'put' method supported these.
@@ -611,11 +675,58 @@ expr.seq.base
 
 expr.seq : expr.seq.base semicolon.opt { $$ = $1; };
 
-adverb  
-	: DOT name { $$ = $2; }
-	| DOT integer { $$ = $2; }
-	| DOT OPENPAREN expr.seq CLOSEPAREN { $$ = cxt.create(AdverbExprNode{}, @$, $3);  };
+
+////////////////////////////////////////////////////////////////////////////////
+// generators
+////////////////////////////////////////////////////////////////////////////////
+generator 
+	: OPENCURLY COLON expr.seq COMMA generator.qual.list comma.opt CLOSECURLY
+		{}
+	| OPENCURLY SEMICOLON expr.seq COMMA generator.qual.list comma.opt CLOSECURLY
+		{}
 	;
+
+generator.next_qual
+	: %empty {}
+	| COMMA generator.qual {}
+	;
+
+generator.qual.list
+	: generator.qual[item]
+		{ $$ = cxt.create(GeneratorQualList{}, @$, $item); }
+	| generator.qual.list[list] COMMA generator.qual[item]
+		{ $$ = cxt.graph.append($list, @list, $item); }
+	;
+
+generator.qual
+	//	Assignment
+	: name[elem] LEFTARROW expr.seq[expr]  generator.next_qual[next]
+		{}
+	// Assignment 2
+	| name[elem] name[count] LEFTARROW expr.seq[expr] generator.next_qual[next]
+		{}
+	// Declare 1
+	| VAR name[name] EQUALSSIGN expr.seq[expr] generator.next_qual[next]
+		{}
+	// Declare 2
+	| VAR name OPENPAREN expr.seq CLOSEPAREN generator.next_qual
+		{}
+	// If
+	| expr.seq generator.next_qual
+		{}
+	// Side effect
+	| COLON COLON expr.seq generator.next_qual
+		{}
+	| COLON WHILE expr.seq generator.next_qual
+		{}
+	;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// arguments
+////////////////////////////////////////////////////////////////////////////////
+// Everything is duplicated because pipe lists and arg lists don't acceept the same things.
+// Additionally, there is difference between default arguments that preserve nil and not on explicit assignment.
 
 // This can't be refactored into an 'item' and a 'list', it creates some conflicts.
 argument_declarations.list 
@@ -705,34 +816,10 @@ argument_declarations
 		}
 	;
 
-
 argument_declarations.opt
 	: %empty { $$ = cxt.create(DeclareArgumentList{}, @$); }
 	| argument_declarations { $$ = $1; }
 	;
-
-variable_declarations.list.item 
-	: name 
-		{ $$ = $1; }
-	| name EQUALSSIGN expr
-		{ $$ = cxt.create(DeclareVariableWithDefaultNode{}, @$, $1, $3); }
-	| name OPENPAREN expr.seq CLOSEPAREN
-		{ $$ = cxt.create(DeclareVariableWithDefaultNode{}, @$, $1, $3); }
-
-// TODO: there is no reason not to support these now.
-//	| HASH name.list comma.opt EQUALSSIGN expr
-//	| HASH name.list comma.opt OPENPAREN expr.seq CLOSEPAREN
-	;
-
-variable_declarations.list
-	: variable_declarations.list.item
-		{ $$ = cxt.create(DeclareVariableList{}, @$, $1); }
-	| variable_declarations.list COMMA variable_declarations.list.item
-		{$$ = cxt.graph.append($1, $3); }
-	;
-
-variable_declarations : VAR variable_declarations.list { $$ = $2; };
-
 
 arguments.entries 	
 	: KEYBINOP expr.seq { $$ = cxt.create(KwArgNode{}, @$, cxt.create(SymbolNode{SymbolNode::Kind::KeyBinOp}, @1), $2); }
@@ -747,7 +834,6 @@ arguments.no_trailing
 
 arguments : arguments.no_trailing comma.opt {$$ = $1; };
 
-
 arguments.paren : OPENPAREN arguments CLOSEPAREN { $$ = $2; }
 
 arguments.maybe_paren 
@@ -756,6 +842,37 @@ arguments.maybe_paren
 		{ $$ = cxt.create(ArgumentList{}, @$); }
 	| arguments.paren { $$ = $1; }
 	;
+
+////////////////////////////////////////////////////////////////////////////////
+// variable declarations
+////////////////////////////////////////////////////////////////////////////////
+
+variable_declarations.list.item 
+	: name 
+		{ $$ = $1; }
+	| name EQUALSSIGN expr
+		{ $$ = cxt.create(DeclareVariableWithDefaultNode{}, @$, $1, $3); }
+	| name OPENPAREN expr.seq CLOSEPAREN
+		{ $$ = cxt.create(DeclareVariableWithDefaultNode{}, @$, $1, $3); }
+	| HASH name.list[names] comma.opt EQUALSSIGN expr
+		{ $$ = cxt.create(VariablePack{}, @$, $names, $expr); }
+	| HASH name.list[names] comma.opt OPENPAREN expr.seq[expr] CLOSEPAREN
+		{ $$ = cxt.create(VariablePack{}, @$, $names, $expr); }
+	;
+
+variable_declarations.list
+	: variable_declarations.list.item
+		{ $$ = cxt.create(DeclareVariableList{}, @$, $1); }
+	| variable_declarations.list COMMA variable_declarations.list.item
+		{$$ = cxt.graph.append($1, $3); }
+	;
+
+variable_declarations : VAR variable_declarations.list { $$ = $2; };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// literals
+////////////////////////////////////////////////////////////////////////////////
 
 literal.terminal 	
 	: symbol { $$ = $1; }
@@ -826,39 +943,30 @@ literal
 	| literal.dictionary { $$ = $1; }
 	;
 
+////////////////////////////////////////////////////////////////////////////////
+// Name terminal and name list
+////////////////////////////////////////////////////////////////////////////////
+
 name : NAME { $$ = cxt.create(NamedIdentifier{}, @$); } ;
 
 // Used for destructuring
-//name.list 
-//	: name
-//	| name.list COMMA name
-//	;
-
-binary_op.raw	
-	: BINOP { $$ = cxt.create(SelectorNode{ false }, @$); }	
-	| READWRITEVAR { $$ = cxt.create(SelectorNode{ false }, @$); }	
-	| LESSTHAN { $$ = cxt.create(SelectorNode{ false }, @$); }	
-	| GREATERTHAN { $$ = cxt.create(SelectorNode{ false }, @$); }	
-	| MINUS { $$ = cxt.create(SelectorNode{ false }, @$); }	
-	| MULTIPLY { $$ = cxt.create(SelectorNode{ false }, @$); }	
-	| ADD { $$ = cxt.create(SelectorNode{ false }, @$); }	
-	| PIPE { $$ = cxt.create(SelectorNode{ false }, @$); }	
+name.list 
+	: name
+		{ $$ = cxt.create(NameList{}, @$, $name); }
+	| TILDE name 
+		{ $$ = cxt.create(NameList{}, @$, cxt.create(EnvIdentifierNode{}, @$, $name)); }
+	| name.list[list] COMMA name
+		{ $$ = cxt.graph.append($list, @$, $name); }
+	| name.list[list] COMMA TILDE name
+		{ $$ = cxt.graph.append($list, @$, cxt.create(EnvIdentifierNode{},@$, $name)); }
 	;
 
-binary_op.no_adverb 	
-	: binary_op.raw   { $$ = $1; }
-	| KEYBINOP { $$ = cxt.create(SelectorNode{ true }, @$); } 
-	;
 
-binary_op	
-	: binary_op.no_adverb adverb
-		{ $$ = cxt.create(SelectorWAdverb{}, @$, $1, $2); }
-	| binary_op.no_adverb
-		{ $$ = $1; }
-	;
+////////////////////////////////////////////////////////////////////////////////
+// Other terminals and 'literals'
+////////////////////////////////////////////////////////////////////////////////
 
-semicolon.opt : %empty | SEMICOLON;
-comma.opt : %empty | COMMA;
+
 
 ascii : ASCII { $$ = cxt.create(ASCIINode{}, @$); } ;
 
@@ -929,10 +1037,22 @@ float
 	;
 
 accessor
-	: %empty { $$ = ReadWriteAccessor::Private; }
-	| LESSTHAN { $$ = ReadWriteAccessor::ExternallyReadable; }
-	| READWRITEVAR { $$ = combine<ReadWriteAccessor::ExternallyReadable, ReadWriteAccessor::ExternallyWriteable>(); }
-	| GREATERTHAN { $$ = ReadWriteAccessor::ExternallyWriteable; }
+	: %empty { $$ = cxt.create(RWAccessor{ReadWriteAccessor::Private}, @$); }
+	| LESSTHAN { $$ = cxt.create(RWAccessor{ReadWriteAccessor::ExternallyReadable}, @$); }
+	| GREATERTHAN { $$ = cxt.create(RWAccessor{ReadWriteAccessor::ExternallyWriteable}, @$); }
+	| READWRITEVAR 
+		{ 
+			$$ = cxt.create(RWAccessor{
+				combine<ReadWriteAccessor::ExternallyReadable, ReadWriteAccessor::ExternallyWriteable>()
+			}, @$); 
+		}
 	;
+
+////////////////////////////////////////////////////////////////////////////////
+// Misc
+////////////////////////////////////////////////////////////////////////////////
+
+semicolon.opt : %empty | SEMICOLON;
+comma.opt : %empty | COMMA;
 
 %%

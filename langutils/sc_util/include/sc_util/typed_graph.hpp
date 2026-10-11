@@ -220,13 +220,16 @@ public: // This is meant to be privately inherited from.
     @tparam Node A node,
     @tparam  ...Children the typed children indexs
      */
-    template <typename Node, //
-              typename... ChildrenIndexes, //
-              typename = std::enable_if<Helper::template has_node<Node>()>, //
-              typename = std::enable_if<(std::is_convertible_v<ChildrenIndexes, UntypedNodeIndex> && ...)> //
-              >
+    template <typename Node, typename... ChildrenIndexes> //
     [[nodiscard]] typename Node::Index create(Node&& node, ChildrenIndexes&&... child_indexes) {
         assert((not_dead(child_indexes) && ...));
+        static_assert((typed_index::is_type_set_index<ChildrenIndexes>() && ...),
+                      "You have not passed an index to the constructor of a node, you have probably passed the node "
+                      "rather than its index.");
+        static_assert(typed_index::is_type_set_index<typename Node::Index>());
+        static_assert(Helper::template has_node<typename Node::Index>(),
+                      "You have either called create on a graph with the wrong type of node, or have failed to add the "
+                      "node to the template argument.");
         static_assert(Node::template constructible_from<ChildrenIndexes...>(),
                       "The children index types do not match the constructor");
         const typename Node::Index index = [&]() {

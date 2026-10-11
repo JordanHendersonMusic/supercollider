@@ -308,4 +308,9 @@ a.foo;
     tester("(|a| var x = 10; x * 2)", true);
 
     tester("foo(this: 2, arg2: 10)", true);
+
+
+    tester("{ var #a, b, c = array; }", true);
+    tester("{ var #a, b, c = array, d = 10; }", true);
+    tester("#~foo, rest = array;", true);
 }
