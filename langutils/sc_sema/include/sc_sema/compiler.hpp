@@ -53,45 +53,16 @@ struct CommonClasses {
 
 
 struct InheritanceEdges {
-    void insert(SymSCClassName parent, SymSCClassName child) { m_sub_classes[parent].push_back(child); }
+    void insert(SymSCClassName parent, SymSCClassName child);
 
     /// Requires root has no parents.
-    /// Returns inheritance loops
-    std::vector<std::vector<SymSCClassName>> cycle_check(SymSCClassName root) const {
-        std::unordered_set<SymSCClassName, std::hash<Symbol>> not_visited, visited;
-
-        const auto dfs = [&](auto&& self, SymSCClassName n) -> void {
-            not_visited.erase(n);
-            visited.insert(n);
-
-            for (const SymSCClassName child : m_sub_classes.at(n))
-                self(self, child);
-        };
-
-        for (const auto& [k, v] : m_sub_classes) {
-            not_visited.insert(k);
-        }
-
-        dfs(dfs, root);
-
-        std::vector<std::vector<SymSCClassName>> loops;
-
-        const auto loop_maker = [&](SymSCClassName n, std::vector<SymSCClassName>& cycle) -> void {
-            cycle.push_back(n);
-        };
-
-        while (!not_visited.empty()) {
-            std::vector<SymSCClassName> cycles;
-            loop_maker(*not_visited.begin(), cycles);
-            loops.push_back(std::move(cycles));
-        }
-
-        return loops;
-    }
+    /// Returns inheritance cycles.
+    /// If empty, no cycles.
+    std::vector<std::vector<SymSCClassName>> cycle_check(SymSCClassName root) const;
 
 private:
     mutable std::mutex m_lock {};
-    std::unordered_map<SymSCClassName, std::vector<SymSCClassName>, std::hash<Symbol>> m_sub_classes;
+    std::unordered_map<SymSCClassName, std::vector<SymSCClassName>, std::hash<Symbol>> m_sub_classes {};
 };
 
 using GraphAndIndex = std::pair<ast::ASTGraph, ast::ClassOrExtensionListIndex>;
@@ -110,6 +81,7 @@ struct Context {
     ConstantTable constant_table { };
     CurrentDiagnostics diagnostics { };
     CommonClasses common_classes;
+    InheritanceEdges inheritance_edges {};
     [[nodiscard]] const std::vector<GraphAndIndex>& ast_of_class_library() const { return m_ast_of_class_library; }
 
 private:

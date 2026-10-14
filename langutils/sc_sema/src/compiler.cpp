@@ -111,6 +111,14 @@ std::vector<Diagnostic> IRCompiler::compile_class_library( //
 
     // Step 2: Check hierarchy makes sense.
 
+    const auto cycles = m_context->inheritance_edges.cycle_check(m_context->common_classes.root_object);
+    for (const auto& chain : cycles) {
+        // TODO: create diagnostic for inheritance chain.
+        for (const auto c : chain) {
+            m_context->class_declarations.get_unsafe(c)->poisoned = true;
+        }
+    }
+
     // Step 3: Compile all ast class nodes.
     // Step 4: Compile all ast class extension nodes.
 
@@ -308,5 +316,51 @@ IntrinsicConstraint::operator()(Context& cxt, ClassDeclaration& decl,
 
 
     return out;
+}
+void InheritanceEdges::insert(SymSCClassName parent, SymSCClassName child) {
+    std::scoped_lock l { m_lock };
+    m_sub_classes[parent].push_back(child);
+}
+std::vector<std::vector<SymSCClassName>> InheritanceEdges::cycle_check(SymSCClassName root) const {
+    std::scoped_lock l { m_lock };
+    // Because root is empty, and we have single inheritance, it is impossible to create cycles that are attached to
+    // root.
+    std::unordered_set<SymSCClassName, std::hash<Symbol>> not_visited, visited;
+
+    const auto dfs = [&](auto&& self, SymSCClassName n) -> void {
+        assert(visited.count(n) == 0);
+        not_visited.erase(n);
+        visited.insert(n);
+
+        for (const SymSCClassName child : m_sub_classes.at(n))
+            self(self, child);
+    };
+
+    for (const auto& [k, v] : m_sub_classes) {
+        not_visited.insert(k);
+    }
+
+    dfs(dfs, root);
+
+    std::vector<std::vector<SymSCClassName>> loops;
+
+    const auto loop_maker = [&](auto&& self, SymSCClassName n, std::vector<SymSCClassName>& current_cycle) -> void {
+        assert(not_visited.count(n));
+        current_cycle.push_back(n);
+        not_visited.erase(n);
+
+        for (const SymSCClassName child : m_sub_classes.at(n))
+            self(self, child, current_cycle);
+    };
+
+    // Effectively pulls a random class from the not_visited set and returns the cycle it is connected to.
+    // Repeats until there are no more.
+    while (!not_visited.empty()) {
+        std::vector<SymSCClassName> cycles;
+        loop_maker(loop_maker, *not_visited.begin(), cycles);
+        loops.push_back(std::move(cycles));
+    }
+
+    return loops;
 }
 }

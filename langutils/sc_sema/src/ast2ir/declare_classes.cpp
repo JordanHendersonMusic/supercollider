@@ -85,25 +85,33 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
     class_decl.meta_class = meta_class_name;
 
     if (auto super = ast_graph.present(super_name_i)) {
-        const auto sym = cxt.symbol_table.get_class_name(std::string { ast_graph.string_view(super_name_i) });
+        const auto super_name_view = ast_graph.string_view(super_name_i);
+        const auto sym = cxt.symbol_table.get_class_name(super_name_view);
         class_decl.super = { ASTLocation { ast_index, ast::Index { *super_name_i } }, sym };
+
+        cxt.inheritance_edges.insert(sym, class_name);
     } else if (is_root_class) {
         // do nothing
     } else {
         // Location here is just white space.
         class_decl.super = { ASTLocation { ast_index, ast::Index { *super_name_i } },
                              cxt.common_classes.default_inheritor };
+
+        cxt.inheritance_edges.insert(cxt.common_classes.default_inheritor, class_name);
     }
 
     // aka, if this is not abstract object
     if (class_decl.super) {
         std::string super_meta_class_name = meta_prefix + std::string { cxt.symbol_table(*class_decl.super->value) };
-        meta_class_decl.super = { class_decl.super->location,
-                                  cxt.symbol_table.get_class_name(std::move(super_meta_class_name)) };
+        const auto super_meta_class_name_sym = cxt.symbol_table.get_class_name(super_meta_class_name);
+        meta_class_decl.super = { class_decl.super->location, super_meta_class_name_sym };
+
+        cxt.inheritance_edges.insert(super_meta_class_name_sym, meta_class_name);
     } else {
         // META_AbstractObject inherits from Class
         // Basically a random location here.
         meta_class_decl.super = { meta_class_decl.name.location, cxt.common_classes.class_ };
+        cxt.inheritance_edges.insert(cxt.common_classes.class_, meta_class_name);
     }
 
     // Add consts
