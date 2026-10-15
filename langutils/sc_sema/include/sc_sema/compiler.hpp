@@ -60,9 +60,13 @@ struct InheritanceEdges {
     /// If empty, no cycles.
     std::vector<std::vector<SymSCClassName>> cycle_check(SymSCClassName root) const;
 
+    // Not thread safe.
+    const std::vector<SymSCClassName>& get_unsafe(SymSCClassName n) const;
+
 private:
     mutable std::mutex m_lock {};
     std::unordered_map<SymSCClassName, std::vector<SymSCClassName>, std::hash<Symbol>> m_sub_classes {};
+    std::unordered_map<SymSCClassName, SymSCClassName, std::hash<Symbol>> m_super_class {};
 };
 
 using GraphAndIndex = std::pair<ast::ASTGraph, ast::ClassOrExtensionListIndex>;
