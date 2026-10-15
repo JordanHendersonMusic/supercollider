@@ -1,4 +1,5 @@
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -51,6 +52,8 @@ int main(int argc, char* argv[]) {
     const auto* const dir = argv[1];
 #endif // _MSC_VER
 
+    const auto start_time = std::chrono::high_resolution_clock::now();
+
     std::filesystem::path dir_path { dir };
 
     std::vector<sc::ir::GraphAndIndex> ast_and_index;
@@ -59,7 +62,7 @@ int main(int argc, char* argv[]) {
         if (dir_entry.is_regular_file() && dir_entry.path().extension() == ".sc") {
             std::ifstream file_stream { dir_entry.path() };
             if (!file_stream.is_open()) {
-                std::cerr << "Could not open file" << dir_entry.path();
+                std::cout << "Could not open file" << dir_entry.path();
                 continue;
             }
             std::stringstream ss {};
@@ -74,20 +77,20 @@ int main(int argc, char* argv[]) {
 
             auto [ast_graph, result] = sc::ast::parse(text_info);
             if (result != 0 || !ast_graph) {
-                std::cerr << "Failed to parse " << dir_entry.path()
+                std::cout << "Failed to parse " << dir_entry.path()
                           << " diagnostic count = " << ast_graph.diagnostics().size() << "\n";
                 for (const auto& d : ast_graph.diagnostics()) {
-                    std::cerr << d;
+                    std::cout << d;
                 }
             }
 
             const auto roots = ast_graph.root();
             if (!roots) {
-                std::cerr << "No roots  " << dir_entry.path() << "\n";
+                std::cout << "No roots  " << dir_entry.path() << "\n";
                 continue;
             }
             if (!std::get_if<sc::ast::ClassOrExtensionListIndex>(&*roots)) {
-                std::cerr << "Parser returned an scd file, not a class file.";
+                std::cout << "Parser returned an scd file, not a class file.";
                 continue;
             }
 
@@ -140,14 +143,21 @@ int main(int argc, char* argv[]) {
 
     if (!diags.empty()) {
         for (const auto& d : diags)
-            std::cerr << d;
+            std::cout << d;
     }
 
-    std::cout << "Successfully compiled " << comp.context()->class_declarations.size() << " classes." << std::endl;
+    std::cout << "Successfully compiled " << comp.context()->class_declarations.size() / 2 << " classes." << std::endl;
 
     // comp.context()->class_declarations.for_all([&](sc::ir::Symbol name, const sc::ir::ClassDeclaration& d) {
     //     std::cout << comp.context()->symbol_table(name) << "\n";
     // });
+
+    const auto finish_time = std::chrono::high_resolution_clock::now();
+    const auto time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(finish_time - start_time);
+
+    const auto seconds = static_cast<double>(time_taken.count()) / 1000.0;
+
+    std::cout << "Time taken : " << seconds << " seconds";
 
     return 0;
 }

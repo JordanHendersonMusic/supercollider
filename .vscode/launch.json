@@ -72,8 +72,10 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/langutils/sc_sema/utils/standalone/sc_sema_standalone",
       "args": [
-        "/home/jordan/.repo/sclang_corpus/corpus"
+        "/home/jordan/.repo/sclang_corpus/corpus",
         //"SCClassLibrary"
+        ">",
+        "langutils/sc_sema/utils/standalone/corpus_output.txt"
       ],
       "cwd": "${workspaceFolder}",
       "environment": [],

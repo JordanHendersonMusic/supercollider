@@ -9,8 +9,9 @@
 
 #include "ast2ir.hpp"
 
-#include <exception>
+#include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace sc::ir {
 
@@ -111,11 +112,64 @@ std::vector<Diagnostic> IRCompiler::compile_class_library( //
 
     // Step 2: Check hierarchy makes sense.
 
+    // Chains don't intersect, this is thread safe.
     const auto cycles = m_context->inheritance_edges.cycle_check(m_context->common_classes.root_object);
+
     for (const auto& chain : cycles) {
         // TODO: create diagnostic for inheritance chain.
+        std::optional<SymSCClassName> missing {};
         for (const auto c : chain) {
-            m_context->class_declarations.get_unsafe(c)->poisoned = true;
+            if (auto* decl = m_context->class_declarations.get_unsafe(c)) {
+                decl->poisoned = true;
+            } else {
+                // Since it isn't possible to create an edge without defining a class and you can only have one
+                // superclass, there should only ever be one missing superclass within a cycle
+                assert(!missing);
+                missing = c;
+            }
+        }
+
+        if (missing) {
+            if (!m_context->symbol_table.is_meta(*missing)) {
+                // super class does not exist.
+                std::vector<std::pair<std::shared_ptr<const sc::lex::TextInfo>, sc::lex::SourceCodeRange>> a;
+
+                for (SymSCClassName child : m_context->inheritance_edges.get_unsafe(*missing)) {
+                    if (auto child_ptr = m_context->class_declarations.get_unsafe(child)) {
+                        const ASTLocation loc =
+                            child_ptr->super ? child_ptr->super->location : child_ptr->name.location;
+                        const auto& child_graph = m_context->ast_of_class_library()[*loc.graph_index].first;
+                        a.push_back({ child_graph.text_info(), child_graph.location(loc.node_index) });
+                    }
+                }
+
+                m_context->diagnostics(Diagnostic::super_class_not_defined(
+                    std::string { m_context->symbol_table(*missing) }, std::move(a)));
+            }
+        } else if (chain.size() == 1) {
+            // Class inherits from itself.
+            if (!m_context->symbol_table.is_meta(chain[0])) {
+                auto ptr = m_context->class_declarations.get_unsafe(chain[0]);
+                assert(ptr);
+                assert(ptr->super);
+                const auto super_loc = ptr->super->location;
+                const auto& graph = m_context->ast_of_class_library()[*super_loc.graph_index].first;
+                m_context->diagnostics(
+                    Diagnostic::self_inheritance(graph.text_info(), graph.location(super_loc.node_index)));
+            }
+        } else {
+            // Loop
+
+            std::vector<std::pair<std::shared_ptr<const sc::lex::TextInfo>, sc::lex::SourceCodeRange>> a;
+
+            for (const auto c : chain) {
+                auto child_ptr = m_context->class_declarations.get_unsafe(c);
+                assert(child_ptr);
+                const ASTLocation loc = child_ptr->super ? child_ptr->super->location : child_ptr->name.location;
+                const auto& child_graph = m_context->ast_of_class_library()[*loc.graph_index].first;
+                a.push_back({ child_graph.text_info(), child_graph.location(loc.node_index) });
+            }
+            m_context->diagnostics(Diagnostic::inheritance_cycle(std::move(a)));
         }
     }
 
@@ -320,7 +374,14 @@ IntrinsicConstraint::operator()(Context& cxt, ClassDeclaration& decl,
 void InheritanceEdges::insert(SymSCClassName parent, SymSCClassName child) {
     std::scoped_lock l { m_lock };
     m_sub_classes[parent].push_back(child);
+    // ensure child exists
+    const auto& _ = m_sub_classes[child];
+
+    // This means we
+    assert(m_super_class.count(child) == 0);
+    m_super_class.insert({ child, parent });
 }
+
 std::vector<std::vector<SymSCClassName>> InheritanceEdges::cycle_check(SymSCClassName root) const {
     std::scoped_lock l { m_lock };
     // Because root is empty, and we have single inheritance, it is impossible to create cycles that are attached to
@@ -345,22 +406,47 @@ std::vector<std::vector<SymSCClassName>> InheritanceEdges::cycle_check(SymSCClas
     std::vector<std::vector<SymSCClassName>> loops;
 
     const auto loop_maker = [&](auto&& self, SymSCClassName n, std::vector<SymSCClassName>& current_cycle) -> void {
+        // This is the end of a loop.
         assert(not_visited.count(n));
         current_cycle.push_back(n);
         not_visited.erase(n);
 
-        for (const SymSCClassName child : m_sub_classes.at(n))
+        for (const SymSCClassName child : m_sub_classes.at(n)) {
+            if (not_visited.count(child) == 0)
+                continue;
             self(self, child, current_cycle);
+        }
     };
 
     // Effectively pulls a random class from the not_visited set and returns the cycle it is connected to.
     // Repeats until there are no more.
     while (!not_visited.empty()) {
         std::vector<SymSCClassName> cycles;
-        loop_maker(loop_maker, *not_visited.begin(), cycles);
+        SymSCClassName n = *not_visited.begin();
+        std::unordered_set<SymSCClassName, std::hash<Symbol>> parent_visited;
+        parent_visited.insert(n);
+
+        while (true) {
+            auto fnd = m_super_class.find(n);
+            if (fnd == m_super_class.end())
+                break;
+            SymSCClassName s = fnd->second;
+            if (parent_visited.count(s)) {
+                break;
+            }
+            parent_visited.insert(s);
+            n = s;
+        }
+
+        loop_maker(loop_maker, n, cycles);
         loops.push_back(std::move(cycles));
     }
 
     return loops;
+}
+
+const std::vector<SymSCClassName>& InheritanceEdges::get_unsafe(SymSCClassName n) const {
+    assert(m_sub_classes.count(n));
+    return m_sub_classes.at(n);
 }
 }
