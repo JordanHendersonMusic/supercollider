@@ -49,11 +49,28 @@ private:
 struct CommonClasses {
     SymSCClassName root_object, default_inheritor, class_, string, true_, false_, nil, float_, int_, char_, symbol,
         array, event;
+    
+    template<typename F>
+    void for_each(F f) const {
+        // We could cast this into a SymSCClassName*... ?
+        f(root_object);
+        f(default_inheritor);
+        f(class_);
+        f(string);
+        f(true_);
+        f(false_);
+        f(nil);
+        f(float_);
+        f(int_);
+        f(char_);
+        f(symbol);
+    } 
 };
 
 
 struct InheritanceEdges {
     void insert(SymSCClassName parent, SymSCClassName child);
+    void insert(SymSCClassName none) { m_sub_classes[none]; };
 
     /// Requires root has no parents.
     /// Returns inheritance cycles.

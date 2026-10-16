@@ -94,7 +94,7 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
 
         cxt.inheritance_edges.insert(sym, class_name);
     } else if (is_root_class) {
-        // do nothing
+        cxt.inheritance_edges.insert(class_name);
     } else {
         // Location here is just white space.
         class_decl.super = { ASTLocation { ast_index, ast::Index { *super_name_i } },

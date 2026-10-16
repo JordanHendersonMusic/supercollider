@@ -90,10 +90,22 @@ std::vector<Diagnostic> IRCompiler::compile_class_library( //
         i += 1;
     }
 
+    bool common_missing = false;
+    m_context->common_classes.for_each([&](SymSCClassName c){
+        if (auto decl = m_context->class_declarations.get_unsafe(c); !decl) {
+            m_context->diagnostics(Diagnostic::missing_intrinsic_class(std::string { m_context->symbol_table(c) }));
+            common_missing = true;
+        }
+    });
+
+    if (common_missing) {
+        return m_context->diagnostics.consume();
+    }
+
 
     // Check intrinsics
     std::atomic<bool> intrinsic_constraints_met { true };
-    for (const auto& [k, v] : intrinsic_constraints) {
+    for (const auto& [k, constraint] : intrinsic_constraints) {
         // We know this is okay to multithread because the constraints are a map, so we only ever access the decl one at
         // a time and we are no longer inserting any new ones.
         auto* decl = m_context->class_declarations.get_unsafe(k);
@@ -103,7 +115,7 @@ std::vector<Diagnostic> IRCompiler::compile_class_library( //
             continue;
         }
 
-        if (auto diags = v(*m_context, *decl, m_context->ast_of_class_library()); !diags.empty()) {
+        if (auto diags = constraint(*m_context, *decl, m_context->ast_of_class_library()); !diags.empty()) {
             m_context->diagnostics(std::move(diags));
             intrinsic_constraints_met = false;
         }
