@@ -11,7 +11,7 @@ Return Region::operator()(ast::ErrorIndex) {
 }
 
 Return Region::operator()(ast::AnyExprIndex expr) {
-    return std::visit(Expr { building_ir, ast_graph, ast_index, context }, ast_graph.index_to_variant(expr));
+    return std::visit(Expr { building_ir, ast_graph, ast_index, context }, ast_graph->index_to_variant(expr));
 }
 
 }

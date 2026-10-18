@@ -137,7 +137,7 @@ Diagnostic::Diagnostic(const char* name, Severity severity, std::vector<Location
     m_locations(std::move(location)),
     extra_info(std::move(extra)),
     m_name(name),
-    m_severity(severity) {}
+    m_severity(severity) { }
 
 const std::vector<Diagnostic::Location>& Diagnostic::locations() const { return m_locations; }
 
@@ -207,7 +207,11 @@ Diagnostic Diagnostic::region_missing_semicolon(std::shared_ptr<const sc::lex::T
 }
 
 [[nodiscard]] Diagnostic Diagnostic::missing_intrinsic_class(std::string extra) {
-    return { "Missing intrinsic class", Severity::Error, {}, std::move(extra) };
+    return { "Missing intrinsic class", Severity::Error, { }, std::move(extra) };
+}
+
+[[nodiscard]] Diagnostic Diagnostic::missing_common_class(std::string extra) {
+    return { "Missing common class", Severity::Error, { }, std::move(extra) };
 }
 
 [[nodiscard]] Diagnostic Diagnostic::intrinsic_class_wrong_member_name(std::shared_ptr<const sc::lex::TextInfo> t,
@@ -223,7 +227,7 @@ Diagnostic Diagnostic::region_missing_semicolon(std::shared_ptr<const sc::lex::T
 
 [[nodiscard]] Diagnostic Diagnostic::inheritance_cycle(
     std::vector<std::pair<std::shared_ptr<const sc::lex::TextInfo>, sc::lex::SourceCodeRange>> m) {
-    std::vector<Location> locs {};
+    std::vector<Location> locs { };
 
     for (auto& [t, r] : m) {
         locs.push_back({ std::move(t), r, "cycle detected" });
@@ -246,4 +250,29 @@ Diagnostic Diagnostic::region_missing_semicolon(std::shared_ptr<const sc::lex::T
         } //
     };
 }
+
+
+[[nodiscard]] Diagnostic Diagnostic::duplicate_method_name(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
+                                                           TextInfoPtr second_t, sc::lex::SourceCodeRange second_l) {
+    return { "Duplicate method name.",
+             Severity::Error,
+             {
+                 { std::move(first_t), first_l, "This method was duplicated..." },
+                 { std::move(second_t), second_l, "...here." },
+             } };
+}
+
+
+    [[nodiscard]] Diagnostic Diagnostic::duplicate_extention(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
+                                                        TextInfoPtr second_t, sc::lex::SourceCodeRange second_l) {
+    return { "Duplicate extention.",
+             Severity::Error,
+             {
+                 { std::move(first_t), first_l, "Overrideen here..." },
+                 { std::move(second_t), second_l, "... and also overrideen here." },
+             },
+             "The compile cannot determine which should implementation should be used, please delete one."
+             };
+                                                        }
+
 }

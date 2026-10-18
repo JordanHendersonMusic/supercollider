@@ -1,41 +1,19 @@
 #pragma once
 
-#include "sc_sema/symbols.hpp"
 #include "sc_util/strong_index.hpp"
 #include "sc_util/type_set_index.hpp"
 #include "sc_util/typed_graph.hpp"
 #include "sc_util/typed_graph_node.hpp"
 
+#include "symbols.hpp"
+
 #include "ast_location.hpp"
-#include "const_expr.hpp"
+#include "const_expr_index.hpp"
 
 #include <unordered_map>
 #include <utility>
 
 namespace sc::ir {
-
-template <typename T> struct Locatable {
-    ASTLocation location;
-    T value;
-    [[nodiscard]] constexpr T& operator->() { return value; }
-    [[nodiscard]] constexpr const T& operator->() const { return value; }
-
-    [[nodiscard]] constexpr T& operator*() { return value; }
-    [[nodiscard]] constexpr const T& operator*() const { return value; }
-};
-
-template <typename T> struct OptionallyLocatable {
-    std::optional<ASTLocation> location;
-    T value;
-
-    [[nodiscard]] constexpr T& operator->() { return value; }
-    [[nodiscard]] constexpr const T& operator->() const { return value; }
-
-    [[nodiscard]] constexpr T& operator*() { return value; }
-    [[nodiscard]] constexpr const T& operator*() const { return value; }
-};
-
-////////////////////////////////////////////////////////////////////////////////
 
 enum struct SCNodeType {
     Missing,

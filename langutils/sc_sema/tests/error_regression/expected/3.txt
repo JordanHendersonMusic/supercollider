@@ -1,0 +1,56 @@
+
+/*
+Contains all the common classes, which are required to compile, but adds the instrinsic constraints
+*/
+
+AbstractObjectExperimental {}
+Object : Class {}
+Class {}
+String {}
+True {}
+False {}
+Nil {}
+Float {}
+Integer {}
+Char {}
+Symbol {}
+
+──────────────────────────────────────────────────────────────────────────────────
+Error: TODO NOT IMPLEMENTED
+file:
+    5 │ 
+    6 │ AbstractObjectExperimental {}
+    7 │ Object : Class {}
+      ┆          ^^^^^ diagnostic not implemented
+    8 │ Class {}
+    9 │ String {}
+   10 │ True {}
+
+──────────────────────────────────────────────────────────────────────────────────
+
+──────────────────────────────────────────────────────────────────────────────────
+Error: TODO NOT IMPLEMENTED
+file:
+    5 │ 
+    6 │ AbstractObjectExperimental {}
+    7 │ Object : Class {}
+      ┆ ^^^^^^ diagnostic not implemented
+    8 │ Class {}
+    9 │ String {}
+   10 │ True {}
+
+──────────────────────────────────────────────────────────────────────────────────
+
+──────────────────────────────────────────────────────────────────────────────────
+Error: TODO NOT IMPLEMENTED
+file:
+    5 │ 
+    6 │ AbstractObjectExperimental {}
+    7 │ Object : Class {}
+      ┆          ^^^^^ diagnostic not implemented
+    8 │ Class {}
+    9 │ String {}
+   10 │ True {}
+
+──────────────────────────────────────────────────────────────────────────────────
+Successfully compiled 0 classes.

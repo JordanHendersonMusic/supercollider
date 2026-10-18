@@ -4,10 +4,10 @@
 #include "sc_parser/ast.hpp"
 #include "sc_parser/sc_grammar_shared.hpp"
 #include "sc_sema/ast_location.hpp"
-#include "sc_sema/const_expr.hpp"
 #include "sc_sema/compiler.hpp"
+#include "sc_sema/context.hpp"
+#include "sc_sema/decls.hpp"
 #include "sc_sema/ir.hpp"
-#include "sc_sema/tables.hpp"
 #include "sc_sema/type_info.hpp"
 #include "sc_util/overload.hpp"
 #include <type_traits>
@@ -34,7 +34,7 @@ template <typename T, typename I> [[nodiscard]] static constexpr bool callable_w
 ////////////////////////////////////////////////////////////////////////////////
 
 struct DeclareClass {
-    DeclareClass(Context& cx, const ast::ASTGraph& ast, ASTGraphIndex ast_i):
+    DeclareClass(Context& cx, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i):
         cxt(cx),
         ast_graph(ast),
         ast_index(ast_i) {}
@@ -54,7 +54,7 @@ private:
                                ast::VariablePackAssignIndex);
 
     Context& cxt;
-    const ast::ASTGraph& ast_graph;
+    std::shared_ptr<const ast::ASTGraph> ast_graph;
     ASTGraphIndex ast_index;
 };
 
@@ -79,14 +79,14 @@ struct Return {
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Base {
-    Base(IRGraph& ir, const ast::ASTGraph& ast, ASTGraphIndex ast_i, Context& cxt):
+    Base(IRGraph& ir, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i, Context& cxt):
         context(cxt),
         building_ir(ir),
-        ast_graph(ast),
+        ast_graph(std::move(ast)),
         ast_index(ast_i) {}
     Context& context;
     IRGraph& building_ir;
-    const ast::ASTGraph& ast_graph;
+    std::shared_ptr<const ast::ASTGraph> ast_graph;
     ASTGraphIndex ast_index;
 };
 
@@ -98,9 +98,9 @@ struct Base {
 /// It is designed to be called...
 //      ConstEval{...}(index_to_visit).visit([](ConstEval::Success){...}, [](Diagnostic&&){...});
 struct ConstEval {
-    ConstEval(Context& ct, const ast::ASTGraph& ast, ASTGraphIndex ast_i, ClassDeclaration* optional_class = nullptr):
+    ConstEval(Context& ct, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i, ClassDeclaration* optional_class = nullptr):
         cxt(ct),
-        ast_graph(ast),
+        ast_graph(std::move(ast)),
         ast_index(ast_i),
         class_decl(optional_class) {}
 
@@ -108,23 +108,23 @@ struct ConstEval {
     using Success = std::pair<ConstExprIndex, TypeInfo>;
     struct Result {
         Result(Success s): v(s) {}
-        Result(Diagnostic d): v(std::move(d)) {}
+        Result(sc::diag::Diagnostic d): v(std::move(d)) {}
 
         template <typename S, typename F> auto visit(S&& success, F&& failure) && {
             static_assert(std::is_invocable_v<S, Success>);
-            static_assert(std::is_invocable_v<F, Diagnostic&&>);
+            static_assert(std::is_invocable_v<F, sc::diag::Diagnostic&&>);
             using SR = std::invoke_result_t<S, Success>;
-            using FR = std::invoke_result_t<F, Diagnostic&&>;
+            using FR = std::invoke_result_t<F, sc::diag::Diagnostic&&>;
             static_assert(std::is_same_v<SR, FR>);
             return std::visit(util::overload { std::forward<S>(success), std::forward<F>(failure) }, std::move(v));
         }
 
         [[nodiscard]] std::optional<Success> success() const;
-        [[nodiscard]] std::optional<Diagnostic> diagnostic() const&;
-        [[nodiscard]] std::optional<Diagnostic> diagnostic() &&;
+        [[nodiscard]] std::optional<sc::diag::Diagnostic> diagnostic() const&;
+        [[nodiscard]] std::optional<sc::diag::Diagnostic> diagnostic() &&;
 
     private:
-        std::variant<Success, Diagnostic> v;
+        std::variant<Success, sc::diag::Diagnostic> v;
     };
 
     // Hard nos
@@ -166,7 +166,7 @@ struct ConstEval {
     Result operator()(ast::KeyBinOpIndex);
 
     Context& cxt;
-    const ast::ASTGraph& ast_graph;
+    std::shared_ptr<const ast::ASTGraph> ast_graph;
     ASTGraphIndex ast_index;
     ClassDeclaration* class_decl; // optional
     bool encountered_immutable_array { false };

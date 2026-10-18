@@ -32,7 +32,7 @@ We would then have the following typed indexes:
     using ExpressionIndex = join<IntIndex, FloatIndex, FunctionIndex>;
 
     using ExpressionListIndex = TypedIndex<IRType::ExpressionList>;
-
+&, 
 Then the nodes would look like this:
 
     struct IntLiteral : public priv::TerminalNode<IntLiteral, IntIndex> {};

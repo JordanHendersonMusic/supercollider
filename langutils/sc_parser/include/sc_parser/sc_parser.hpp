@@ -8,8 +8,8 @@
 
 namespace sc::ast {
 
-[[nodiscard]] std::tuple<ASTGraph, bool> parse(std::shared_ptr<const sc::lex::TextInfo>, sc::lex::SourceCodeRange);
-[[nodiscard]] std::tuple<ASTGraph, bool> parse(std::shared_ptr<const sc::lex::TextInfo>, sc::lex::SourceCodeLocation);
-[[nodiscard]] std::tuple<ASTGraph, bool> parse(std::shared_ptr<const sc::lex::TextInfo>);
+[[nodiscard]] std::tuple<std::shared_ptr<ASTGraph>, bool> parse(std::shared_ptr<const sc::lex::TextInfo>, sc::lex::SourceCodeRange);
+[[nodiscard]] std::tuple<std::shared_ptr<ASTGraph>, bool> parse(std::shared_ptr<const sc::lex::TextInfo>, sc::lex::SourceCodeLocation);
+[[nodiscard]] std::tuple<std::shared_ptr<ASTGraph>, bool> parse(std::shared_ptr<const sc::lex::TextInfo>);
 
 }
