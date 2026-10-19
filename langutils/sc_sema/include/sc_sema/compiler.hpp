@@ -1,8 +1,7 @@
 #pragma once
 #include "sc_diagnostic/sc_diagnostic.hpp"
 
-#include "sc_sema/const_expr.hpp"
-#include "sc_sema/context.hpp"
+#include "sc_sema/common_classes.hpp"
 #include "sc_sema/intrinsic_constraint.hpp"
 
 #include <memory>
@@ -19,6 +18,12 @@ struct IRGraph;
 
 CommonClasses symbol_table_and_common_classes(SymbolTable& sym_table, SymSCClassName root_object);
 
+
+struct IntrinsicConstraint;
+struct ClassDeclaration;
+[[nodiscard]] std::vector<sc::diag::Diagnostic> check_intrinsic_constraint(const IntrinsicConstraint& c, Context& cxt,
+                                                                           ClassDeclaration& decl);
+
 struct IRCompiler {
     IRCompiler(Context& mctx): ctx(mctx) {}
 
@@ -33,11 +38,7 @@ private:
 
     std::atomic<bool> m_compile_has_been_called { false };
 
-    // Called during declaration.
-    void insert_class_ir(SymSCClassName name, std::shared_ptr<IRGraph> graph);
-
-    mutable std::mutex m_ir_graphs_lock { };
-    // Perhaps this could be a unique ptr instead?
+    mutable std::mutex m_classes_lock;
     std::unordered_map<SymSCClassName, std::shared_ptr<IRGraph>, std::hash<Symbol>> m_classes { };
 };
 

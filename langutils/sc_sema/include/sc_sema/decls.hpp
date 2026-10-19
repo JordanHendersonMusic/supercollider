@@ -1,12 +1,14 @@
 #pragma once
 
-#include "sc_parser/ast.hpp"
 #include "sc_parser/indexes_typed.hpp"
 #include "sc_parser/sc_grammar_shared.hpp"
+
 #include "sc_sema/ast_location.hpp"
 #include "sc_sema/const_expr_index.hpp"
+#include "sc_sema/module.hpp"
 #include "sc_sema/symbols.hpp"
 #include "sc_sema/type_info.hpp"
+
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -16,6 +18,7 @@ namespace sc::ir {
 struct ClassDeclaration {
 public:
     struct Member {
+        ast::Index total_index;
         // All ast indexes here are those in the main decl.
         SymSCIdentifier name;
         ast::Index name_index;
@@ -28,6 +31,7 @@ public:
     struct Method {
         // All ast indexes here refer to this graph.
         std::shared_ptr<const ast::ASTGraph> ast_graph;
+        ModuleIndex module_of_def;
         ast::AnyValidMethodIndex ast_node_index;
         SymSCSelector name;
         ast::Index name_index;
@@ -36,18 +40,22 @@ public:
         bool poisoned { false };
     };
 
-    ClassDeclaration(std::shared_ptr<const ast::ASTGraph> ast_graph, SymSCClassName name, ast::Index name_index):
+    ClassDeclaration(std::shared_ptr<const ast::ASTGraph> ast_graph, ModuleIndex mod, ast::Index index,
+                     SymSCClassName name, ast::Index name_index):
         m_ast_graph_of_decl(ast_graph),
+        module(mod),
+        m_whole_index(index),
         m_name(name),
-        m_name_index(name_index) { }
-    
+        m_name_index(name_index) {}
+
+    [[nodiscard]] ast::Index index() const { return m_whole_index; }
     [[nodiscard]] SymSCClassName name() const { return m_name; }
     [[nodiscard]] ast::Index name_index() const { return m_name_index; }
     [[nodiscard]] std::shared_ptr<const ast::ASTGraph> ast_graph() const { return m_ast_graph_of_decl; }
     
     void super(SymSCClassName n, ast::Index i) { m_super.emplace(n, i); };
     [[nodiscard]] std::optional<std::pair<SymSCClassName, ast::Index>> super() const { return m_super; }
-    void slot_def(SymSCClassName, ast::Index);
+    void slot_def(SymSCIdentifier sym, ast::Index i) { m_slot_def = { sym, i }; };
     [[nodiscard]] std::optional<std::pair<SymSCIdentifier, ast::Index>> slot_def() const { return m_slot_def; }
     void meta_class(SymSCClassName m) { m_meta_class = m; }
     [[nodiscard]] std::optional<SymSCClassName> meta_class() const { return m_meta_class; }
@@ -67,6 +75,8 @@ public:
         DuplicatedByAccessor,
     };
     [[nodiscard]] MethodInsertResult insert(Method m);
+
+    // Called from within the class declaration, here we assume we are in the original class declaration.
     enum struct DuplicateLocation {
         None,
         Method,
@@ -79,13 +89,17 @@ public:
     [[nodiscard]] auto unsafe_methods_begin() const { return m_methods.begin(); }
     [[nodiscard]] auto unsafe_methods_end() const { return m_methods.end(); }
 
-    // The only reason a class should be poisoned is if there is a problem with its class heirachy (e.g., it is in a cycle)
+    // The only reason a class should be poisoned is if there is a problem with its class heirachy (e.g., it is in a
+    // cycle) These are thread safe because it is an atomic.
     void poison() { m_poisoned = true; }
     [[nodiscard]] bool poisoned() const {return m_poisoned; }
 
 
 private:
     std::shared_ptr<const ast::ASTGraph> m_ast_graph_of_decl;
+    ModuleIndex module;
+    ast::Index m_whole_index;
+
     SymSCClassName m_name;
     ast::Index m_name_index;
 
@@ -187,11 +201,10 @@ struct ClassDeclarations {
     [[nodiscard]] auto unsafe_begin() const -> decltype(auto) { return m_class_declarations.begin(); }
     [[nodiscard]] auto unsafe_end() const -> decltype(auto) { return m_class_declarations.end(); }
 
-    void poison_all() {
-        std::scoped_lock lk{m_lock};
-        for(auto& [k, v] : m_class_declarations)
-            v.poison();
-    }
+    [[nodiscard]] auto unsafe_begin() -> decltype(auto) { return m_class_declarations.begin(); }
+    [[nodiscard]] auto unsafe_end() -> decltype(auto) { return m_class_declarations.end(); }
+
+    void poison_all();
 
 private:
     mutable std::mutex m_lock { };

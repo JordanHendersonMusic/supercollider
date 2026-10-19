@@ -11,16 +11,17 @@
 
 namespace sc::ir::ast2ir {
 
-void DeclareClass::append_member_to_decl(ClassDeclaration& decl, ast::UntypedIndex accessor_i,
+void DeclareClass::append_member_to_decl(ClassDeclaration& decl, ast::Index total_index, ast::UntypedIndex accessor_i,
                                          ast::ReadWriteAccessor accessor, ast::NamedIdentifierIndex name_i) {
     const auto name = cxt.symbol_table.get_identifier(ast_graph->string(name_i));
-    const auto r = decl.insert(ClassDeclaration::Member { name, { *name_i }, accessor, accessor_i, { }, { } });
+    const auto r =
+        decl.insert(ClassDeclaration::Member { total_index, name, { *name_i }, accessor, accessor_i, {}, {} });
     if (!r) {
         cxt.diagnostics(diag::Diagnostic::todo(decl.ast_graph()->text_info(), decl.ast_graph()->location(name_i)));
     }
 }
 
-void DeclareClass::append_member_to_decl(ClassDeclaration& decl, ast::UntypedIndex accessor_i,
+void DeclareClass::append_member_to_decl(ClassDeclaration& decl, ast::Index total, ast::UntypedIndex accessor_i,
                                          ast::ReadWriteAccessor accessor,
                                          ast::DeclareVariableWithDefaultIndex name_with_expr_i) {
     const auto [name_i_t, expr_i_t] = ast_graph->children(name_with_expr_i);
@@ -34,7 +35,7 @@ void DeclareClass::append_member_to_decl(ClassDeclaration& decl, ast::UntypedInd
                 const auto [const_expr_index, type_info] = p;
                 const auto name = cxt.symbol_table.get_identifier(ast_graph->string(name_i));
                 const auto r = decl.insert(ClassDeclaration::Member {
-                    name, { *name_i }, accessor, accessor_i, { { const_expr_index, expr_i } }, { type_info } });
+                    total, name, { *name_i }, accessor, accessor_i, { { const_expr_index, expr_i } }, { type_info } });
                 if (!r) {
                     cxt.diagnostics(
                         diag::Diagnostic::todo(decl.ast_graph()->text_info(), decl.ast_graph()->location(name_i)));
@@ -47,7 +48,7 @@ void DeclareClass::append_member_to_decl(ClassDeclaration& decl, ast::UntypedInd
             });
 }
 
-void DeclareClass::append_member_to_decl(ClassDeclaration&, ast::UntypedIndex, ast::ReadWriteAccessor,
+void DeclareClass::append_member_to_decl(ClassDeclaration&, ast::Index, ast::UntypedIndex, ast::ReadWriteAccessor,
                                          ast::VariablePackAssignIndex) {
     assert(false);
 }
@@ -64,6 +65,13 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
     }
     const auto class_name = cxt.symbol_table.get_class_name(class_name_str);
 
+    if (auto before = cxt.class_names.encountered_class_before(class_name, ast_graph, class_name_i)) {
+        const auto& [g, i] = *before;
+        cxt.diagnostics( //
+            diag::Diagnostic::duplicate_class(g->text_info(), g->location(i), ast_graph->text_info(),
+                                              ast_graph->location(class_name_i)));
+        return {};
+    }
 
     // the one class with no super.
     const bool is_root_class = class_name == cxt.common_classes.root_object;
@@ -72,25 +80,31 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
 
     // Create decls
     // These are the only mutable variables in this function, it is what we build.
-    ClassDeclaration class_decl { ast_graph, class_name, { *class_name_i } };
+    ClassDeclaration class_decl { ast_graph, module, { *class_i }, class_name, { *class_name_i } };
 
-    ClassDeclaration meta_class_decl { ast_graph, meta_class_name, { *class_name_i } };
+    ClassDeclaration meta_class_decl { ast_graph, module, { *class_i }, meta_class_name, { *class_name_i } };
 
     class_decl.meta_class(meta_class_name);
 
 
     if (auto super = ast_graph->present(super_name_i)) {
         if (!is_root_class) {
-        const auto sym = cxt.symbol_table.get_class_name(ast_graph->string(super_name_i));
-        class_decl.super(sym, { *super_name_i });
-        cxt.inheritance_edges.insert(sym, class_name);
+            const auto sym = cxt.symbol_table.get_class_name(ast_graph->string(super_name_i));
+            class_decl.super(sym, { *super_name_i });
+            cxt.inheritance_edges.insert(sym, class_name);
         } else {
             // the root object cannot inheirt from anything.
-            cxt.diagnostics(diag::Diagnostic::todo(ast_graph->text_info(), ast_graph->location(super_name_i)));
+            cxt.diagnostics(diag::Diagnostic::root_object_must_not_inherit(ast_graph->text_info(),
+                                                                           ast_graph->location(super_name_i)));
             return {};
         }
     } else if (is_root_class) {
         cxt.inheritance_edges.insert(class_name);
+    } else if (cxt.common_classes.default_inheritor == class_name) {
+        // The default inheritor must inherit from something (unless it is also the root).
+        cxt.diagnostics(diag::Diagnostic::default_inheritor_must_have_super(ast_graph->text_info(),
+                                                                            ast_graph->location(class_name_i)));
+        return {};
     } else {
         // Location here is just white space.
         class_decl.super(cxt.common_classes.default_inheritor, { *super_name_i });
@@ -109,6 +123,26 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
         cxt.inheritance_edges.insert(cxt.common_classes.class_, meta_class_name);
     }
 
+
+    // Slot def
+    std::visit( //
+        util::overload {
+            //
+            [&](ast::MissingIndex) -> void {}, //
+            [&](ast::NamedIdentifierIndex i) -> void {
+                const auto slot_sym = cxt.symbol_table.get_identifier(ast_graph->string(i));
+                if (slot_sym == cxt.symbol_table.get_identifier("slot")
+                    || slot_sym == cxt.symbol_table.get_identifier("float")
+                    || slot_sym == cxt.symbol_table.get_identifier("int")) {
+                    class_decl.slot_def(slot_sym, { *i });
+                } else {
+                    cxt.diagnostics(
+                        diag::Diagnostic::unexpected_slot_def(ast_graph->text_info(), ast_graph->location(i)));
+                    class_decl.poison();
+                }
+            } //
+        },
+        ast_graph->index_to_variant(backing_slot));
 
     // Add consts
     for (auto member_list_iter = ast_graph->children(members).iter(); member_list_iter; ++member_list_iter) {
@@ -130,7 +164,10 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
                         }
 
                         std::visit(
-                            [&](auto i) { this->append_member_to_decl(meta_class_decl, accessor_i, accessor, i); },
+                            [&](auto i) {
+                                this->append_member_to_decl(meta_class_decl, { **class_var_it }, accessor_i, accessor,
+                                                            i);
+                            },
                             ast_graph->index_to_variant(member_node));
                     }
                 } //
@@ -149,8 +186,11 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
                         const ast::UntypedIndex accessor_i = accessor_i_t;
                         const auto accessor = synthesize_literal(accessor_i_t, *ast_graph);
 
-                        std::visit([&](auto i) { this->append_member_to_decl(class_decl, accessor_i, accessor, i); },
-                                   ast_graph->index_to_variant(member_i));
+                        std::visit(
+                            [&](auto i) {
+                                this->append_member_to_decl(class_decl, { **class_var_it }, accessor_i, accessor, i);
+                            },
+                            ast_graph->index_to_variant(member_i));
                     }
                 },
                 [&](ast::DeclareClassMemberListIndex list_i) {
@@ -160,7 +200,10 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
                         const auto accessor = synthesize_literal(accessor_i_t, *ast_graph);
 
                         std::visit(
-                            [&](auto i) { this->append_member_to_decl(meta_class_decl, accessor_i, accessor, i); },
+                            [&](auto i) {
+                                this->append_member_to_decl(meta_class_decl, { **class_var_it }, accessor_i, accessor,
+                                                            i);
+                            },
                             ast_graph->index_to_variant(member_i));
                     }
                 },
@@ -177,8 +220,8 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
                            const auto [name_i, args_i, maybe_prim_i, body_i] = ast_graph->children(i);
                            const auto name = cxt.symbol_table.get_selector(ast_graph->string(name_i));
 
-                           const auto r =
-                               class_decl.insert_no_ext(ClassDeclaration::Method { ast_graph, i, name, { *name_i } });
+                           const auto r = class_decl.insert_no_ext(
+                               ClassDeclaration::Method { ast_graph, module, i, name, { *name_i } });
                            switch (r) {
                            case ClassDeclaration::DuplicateLocation::None:
                                return;
@@ -207,7 +250,7 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
                            const auto [name_i, args_i, maybe_prim_i, body_i] = ast_graph->children(i);
                            const auto name = cxt.symbol_table.get_selector(ast_graph->string(name_i));
                            const auto r = meta_class_decl.insert_no_ext(
-                               ClassDeclaration::Method { ast_graph, i, name, { *name_i } });
+                               ClassDeclaration::Method { ast_graph, module, i, name, { *name_i } });
                            switch (r) {
                            case ClassDeclaration::DuplicateLocation::None:
                                return;
@@ -243,7 +286,7 @@ std::optional<DeclareClass::Result> DeclareClass::operator()(ast::ClassIndex cla
     }
 
 
-    return { { std::move(class_decl), std::move(meta_class_decl) } };
+    return { Result { std::move(class_decl), std::move(meta_class_decl) } };
 }
 
 

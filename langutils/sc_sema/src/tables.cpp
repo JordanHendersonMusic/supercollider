@@ -42,6 +42,10 @@ const static std::string meta_prefix = "Meta_";
 }
 
 
+[[nodiscard]] SymSCPrimitive SymbolTable::get_primitive(std::string s) {
+    return SymSCPrimitive::from(*get(std::move(s)));
+}
+
 std::string_view SymbolTable::operator()(Symbol i) const noexcept {
     std::scoped_lock lock { m_lock };
     return m_id_to_string[*i];
@@ -80,14 +84,22 @@ using Member = ClassDeclaration::Member;
 }
 
 
+/// Extention method overriding rules:
+///     You can only override an extention method if it was written in the decl module.
+///     If an extention method exists not from the decl module, it is ambiguos, and we generate a diagnostic.
 ClassDeclaration::MethodInsertResult ClassDeclaration::insert(Method m) {
+    ModuleIndex from = m.module_of_def;
     const auto name = m.name;
-    if (auto normal = m_methods.find(name); normal != m_methods.end()) {
-        if (auto ext = m_overriden_methods.find(name); ext != m_overriden_methods.end()) {
+    if (auto existing = m_methods.find(name); existing != m_methods.end()) {
+        if (existing->second.is_extention && existing->second.module_of_def == module) {
+            m_overriden_methods.insert({ name, std::move(existing->second) });
+            existing->second = std::move(m);
+            return MethodInsertResult::Ok;
+        } else if (existing->second.is_extention) {
             return MethodInsertResult::DuplicatedByExtentionMethod;
         }
-        m_overriden_methods.insert({name, std::move(normal->second)});
-        normal->second = std::move(m);
+        m_overriden_methods.insert({ name, std::move(existing->second) });
+        existing->second = std::move(m);
         return MethodInsertResult::Ok;
     } else {
         m_methods.insert({name, std::move(m)});
@@ -119,7 +131,7 @@ bool ClassDeclaration::insert(Member m) {
 
 
 bool ClassDeclarations::register_class_declaration(ClassDeclaration& decl) {
-    const auto name = decl.name();
+    SymSCClassName name = decl.name();
     std::scoped_lock lock { m_lock };
     if (m_class_declarations.find(name) != m_class_declarations.end()) {
         return false;
@@ -157,6 +169,12 @@ bool ClassDeclarations::register_class_declaration(ClassDeclaration& decl) {
         return nullptr;
     }
 }
+void ClassDeclarations::poison_all() {
+    std::scoped_lock lk { m_lock };
+    for (auto& [k, v] : m_class_declarations)
+        v.poison();
+}
+
 
 [[nodiscard]] ConstExprIndex ConstantTable::register_constexpr(ConstExpression&& expr) {
     std::scoped_lock lock { m_lock };

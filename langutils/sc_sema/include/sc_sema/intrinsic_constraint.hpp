@@ -7,9 +7,9 @@ namespace sc::ir {
 
 struct IntrinsicConstraint {
     SymSCClassName target;
-    std::optional<SymSCClassName> super_class;
+    std::optional<OptionalSymSCClassName> super_class;
     // These are ordered.
-    std::vector<SymSCIdentifier> member_names;
+    std::optional<std::vector<SymSCIdentifier>> member_names;
     std::optional<SymSCIdentifier> slot_def;
 };
 

@@ -51,6 +51,20 @@ public:
     [[nodiscard]] static Diagnostic duplicate_method_name(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
                                                         TextInfoPtr second_t, sc::lex::SourceCodeRange second_l);
 
+    [[nodiscard]] static Diagnostic default_inheritor_must_have_super(TextInfoPtr first_t,
+                                                                      sc::lex::SourceCodeRange first_l);
+
+    [[nodiscard]] static Diagnostic root_object_must_not_inherit(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l);
+    [[nodiscard]] static Diagnostic unexpected_slot_def(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l);
+
+    // intrinsic
+    [[nodiscard]] static Diagnostic incorrect_super_class(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
+                                                          std::string_view expected);
+    [[nodiscard]] static Diagnostic incorrect_super_class(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l);
+    [[nodiscard]] static Diagnostic incorrect_slot_def(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
+                                                       std::string_view expected);
+    [[nodiscard]] static Diagnostic incorrect_slot_def(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l);
+
 
     Diagnostic() = delete;
     Diagnostic(Diagnostic&&) noexcept = default;

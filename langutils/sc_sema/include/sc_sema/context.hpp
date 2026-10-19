@@ -3,9 +3,12 @@
 #include "sc_diagnostic/sc_diagnostic.hpp"
 #include "sc_parser/ast.hpp"
 #include "sc_parser/indexes_typed.hpp"
+#include "sc_sema/common_classes.hpp"
 #include "sc_sema/const_expr.hpp"
 #include "sc_sema/decls.hpp"
+#include "sc_sema/module.hpp"
 #include "sc_sema/symbols.hpp"
+
 #include <mutex>
 
 namespace sc::ast {
@@ -43,37 +46,6 @@ private:
 };
 
 
-struct CommonClasses {
-    SymSCClassName root_object;
-    SymSCClassName default_inheritor;
-    SymSCClassName class_;
-    SymSCClassName string;
-    SymSCClassName true_;
-    SymSCClassName false_;
-    SymSCClassName nil;
-    SymSCClassName float_;
-    SymSCClassName int_;
-    SymSCClassName char_;
-    SymSCClassName symbol;
-    SymSCClassName array;
-    SymSCClassName event;
-
-    template <typename F> void for_each(F f) const {
-        // We could cast this into a SymSCClassName*... ?
-        f(root_object);
-        f(default_inheritor);
-        f(class_);
-        f(string);
-        f(true_);
-        f(false_);
-        f(nil);
-        f(float_);
-        f(int_);
-        f(char_);
-        f(symbol);
-    }
-};
-
 struct InheritanceEdges {
     void insert(SymSCClassName parent, SymSCClassName child);
     void insert(SymSCClassName none) { m_sub_classes[none]; };
@@ -86,29 +58,55 @@ struct InheritanceEdges {
     // Not thread safe.
     const std::vector<SymSCClassName>& get_unsafe(SymSCClassName n) const;
 
+
+    template <typename F> void depth_first_do(SymSCClassName root, F&& f) {
+        std::invoke(f, root);
+        for (const auto sub : m_sub_classes.at(root)) {
+            depth_first_do(sub, f);
+        }
+    }
+
 private:
     mutable std::mutex m_lock { };
     std::unordered_map<SymSCClassName, std::vector<SymSCClassName>, std::hash<Symbol>> m_sub_classes { };
     std::unordered_map<SymSCClassName, SymSCClassName, std::hash<Symbol>> m_super_class { };
 };
 
+struct ClassNames {
+    using V = std::pair<std::shared_ptr<const ast::ASTGraph>, ast::ClassNameIdentifierIndex>;
+    [[nodiscard]] std::optional<V> encountered_class_before(SymSCClassName n, std::shared_ptr<const ast::ASTGraph> g,
+                                                            ast::ClassNameIdentifierIndex i);
+
+private:
+    mutable std::mutex m_lock {};
+    std::unordered_map<SymSCClassName, V, std::hash<Symbol>> m_class_locations {};
+};
 
 struct SymbolTable;
 
+struct SourceEntry {
+    std::shared_ptr<const ast::ASTGraph> graph;
+    ast::ClassOrExtensionListIndex index;
+    ModuleIndex module;
+};
+
+
 struct Context {
-    Context(SymbolTable& sym_table, CommonClasses com,
-            std::vector<std::pair<std::shared_ptr<const ast::ASTGraph>, ast::ClassOrExtensionListIndex>>& class_library):
+    Context(SymbolTable& sym_table, CommonClasses com, ModuleTable& mod_t, std::vector<SourceEntry>& class_library):
         symbol_table(sym_table),
         common_classes(com),
-        class_library_ast(class_library) { }
+        modules(mod_t),
+        class_library_ast(class_library) {}
 
     SymbolTable& symbol_table;
     CommonClasses common_classes;
+    ModuleTable& modules;
     ClassDeclarations class_declarations { };
-    std::vector<std::pair<std::shared_ptr<const ast::ASTGraph>, ast::ClassOrExtensionListIndex>>& class_library_ast;
+    std::vector<SourceEntry>& class_library_ast;
     ConstantTable constant_table { };
     CurrentDiagnostics diagnostics { };
     InheritanceEdges inheritance_edges { };
+    ClassNames class_names {};
 };
 
 }

@@ -1,56 +1,29 @@
 
-/*
-Contains all the common classes, which are required to compile, but adds the instrinsic constraints
-*/
-
-AbstractObjectExperimental {}
-Object : Class {}
-Class {}
-String {}
-True {}
-False {}
-Nil {}
-Float {}
-Integer {}
-Char {}
-Symbol {}
-
 ──────────────────────────────────────────────────────────────────────────────────
-Error: TODO NOT IMPLEMENTED
+Error: Intrinsic has incorrect super class
 file:
     5 │ 
     6 │ AbstractObjectExperimental {}
     7 │ Object : Class {}
-      ┆          ^^^^^ diagnostic not implemented
+      ┆          ^^^^^ Should be 'Meta_AbstractObjectExperimental'.
     8 │ Class {}
     9 │ String {}
    10 │ True {}
 
+Intrinsic classes are a part of the compiler and cannot be changed.
 ──────────────────────────────────────────────────────────────────────────────────
 
 ──────────────────────────────────────────────────────────────────────────────────
-Error: TODO NOT IMPLEMENTED
+Error: Intrinsic has incorrect super class
 file:
     5 │ 
     6 │ AbstractObjectExperimental {}
     7 │ Object : Class {}
-      ┆ ^^^^^^ diagnostic not implemented
+      ┆          ^^^^^ Should be 'AbstractObjectExperimental'.
     8 │ Class {}
     9 │ String {}
    10 │ True {}
 
-──────────────────────────────────────────────────────────────────────────────────
-
-──────────────────────────────────────────────────────────────────────────────────
-Error: TODO NOT IMPLEMENTED
-file:
-    5 │ 
-    6 │ AbstractObjectExperimental {}
-    7 │ Object : Class {}
-      ┆          ^^^^^ diagnostic not implemented
-    8 │ Class {}
-    9 │ String {}
-   10 │ True {}
-
+Intrinsic classes are a part of the compiler and cannot be changed.
 ──────────────────────────────────────────────────────────────────────────────────
 Successfully compiled 0 classes.

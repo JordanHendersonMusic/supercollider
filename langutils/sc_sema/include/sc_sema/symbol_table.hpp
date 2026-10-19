@@ -16,6 +16,9 @@ struct SymbolTable {
     [[nodiscard]] SymSCClassName get_meta_class_name(std::string s);
     [[nodiscard]] SymSCClassName get_meta_class_name(SymSCClassName);
 
+
+    [[nodiscard]] SymSCPrimitive get_primitive(std::string);
+
     [[nodiscard]] SymSCSymbol get_symbol(std::string s);
     [[nodiscard]] SymSCIdentifier get_identifier(std::string s);
     [[nodiscard]] SymSCString get_string(std::string s);

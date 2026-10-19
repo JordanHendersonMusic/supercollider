@@ -5,10 +5,9 @@
 #include "sc_lexer/text_info.hpp"
 #include "sc_lexer/text_location.hpp"
 #include "nodes.hpp"
-#include "sc_util/type_set_index.hpp"
-#include "sc_util/typed_graph.hpp"
 
 #include "sc_diagnostic/sc_diagnostic.hpp"
+#include "sc_util/typed_graph.hpp"
 
 #include <functional>
 #include <memory>
@@ -19,6 +18,114 @@
 #include <variant>
 #include <vector>
 
+
+namespace sc::ast {
+using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper< //
+    NodeFlag, //
+    TypedIndex, //
+    Missing, //
+    ASCIINode, //
+    IntNode, //
+    FloatNode, //
+    PiNode, //
+    AccidentalNode, //
+    StringLineNode, //
+    StringLineList, //
+
+
+    KeyBinOp, //
+    SymbolSlash, //
+    SymbolQuote, //
+
+    BooleanNode, //
+    NilNode, //
+    CurryNode, //
+    BlockList, //
+    ArrayNode, //
+    NamedIdentifier, //
+    PrimitiveIdentifier, //
+    ClassNameIdentifier, //
+
+    NameList, //
+    NamePack, //
+
+    EnvIdentifierNode, //
+    SelectorNode, //
+    SelectorWAdverb, //
+    VariadicArgNode, //
+    ArgumentList, //
+    BlockNode, //
+    KwArgNode, //
+    ExprSeq, //
+
+    Range, //
+    RangeGenerator, //
+    RangeAssign, //
+
+    ImmediatelyEvaluatedBlock, //
+
+    GeneratorNode, //
+    GeneratorFakeNode, //
+    GeneratorQualList, //
+    GeneratorQualAssign, //
+    GeneratorQualDeclare, //
+    GeneratorQualIf, //
+    GeneratorQualSideEffect, //
+    GeneratorQualGuard, //
+
+    PrefixMessage, //
+    PostfixMessage, //
+    BinaryMessage, //
+    ValueMessage, //
+    NewMessage, //
+    AtMessage, //
+
+    AdverbExprNode, //
+    ReferenceNode, //
+    AssignmentNode, //
+    AssignmentAtNode, //
+    SetterNode, //
+    DictionaryNode, //
+
+    DictionaryEntryNode, //
+    CollectionNode, //
+    DeclareArgumentWithDefaultNode, //
+    DeclareArgumentVariadicNode, //
+
+    DeclareArgumentList, //
+
+    DeclareVariableWithDefaultNode, //
+    VariablePackAssign,
+
+    DeclareVariableList, //
+
+    BlockContentsList, //
+    NonLocalReturnExpr, //
+
+    Method, //
+    ClassMethod, //
+    Class, //
+    ClassExtension, //
+    RWAccessor,
+    BigMemberList, //
+    DeclareMemberList, //
+    DeclareClassMemberList, //
+
+    DeclareConstList, //
+    DeclareMember, //
+    MethodList, //
+    ClassOrExtensionList, //
+    FileAsFunction, //
+    RegionList, //
+    Error //
+    >;
+}
+
+
+namespace sc::util::typed_graph {
+extern template struct sc::util::typed_graph::GraphImplementation<sc::ast::OptionalIndex, sc::ast::Index,
+                                                                  sc::ast::NodeCollectionHelper>;
+}
 
 namespace sc::ast {
 

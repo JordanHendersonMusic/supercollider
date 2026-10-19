@@ -1,17 +1,18 @@
 #pragma once
 
 #include "sc_parser/indexes_typed.hpp"
-#include "sc_parser/ast.hpp"
 #include "sc_parser/sc_grammar_shared.hpp"
 #include "sc_sema/ast_location.hpp"
-#include "sc_sema/compiler.hpp"
 #include "sc_sema/context.hpp"
-#include "sc_sema/decls.hpp"
-#include "sc_sema/ir.hpp"
+#include "sc_sema/ir_index.hpp"
 #include "sc_sema/type_info.hpp"
 #include "sc_util/overload.hpp"
 #include <type_traits>
 #include <variant>
+
+namespace sc::ir {
+struct IRGraph;
+}
 
 namespace sc::ir::ast2ir {
 
@@ -34,10 +35,11 @@ template <typename T, typename I> [[nodiscard]] static constexpr bool callable_w
 ////////////////////////////////////////////////////////////////////////////////
 
 struct DeclareClass {
-    DeclareClass(Context& cx, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i):
+    DeclareClass(Context& cx, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i, ModuleIndex mod):
         cxt(cx),
         ast_graph(ast),
-        ast_index(ast_i) {}
+        ast_index(ast_i),
+        module(mod) {}
     struct Result {
         ClassDeclaration class_;
         ClassDeclaration meta_class_;
@@ -46,16 +48,17 @@ struct DeclareClass {
     std::optional<Result> operator()(ast::ClassIndex);
 
 private:
-    void append_member_to_decl(ClassDeclaration&, ast::UntypedIndex accessor_i, ast::ReadWriteAccessor,
+    void append_member_to_decl(ClassDeclaration&, ast::Index, ast::UntypedIndex accessor_i, ast::ReadWriteAccessor,
                                ast::NamedIdentifierIndex);
-    void append_member_to_decl(ClassDeclaration&, ast::UntypedIndex accessor_i, ast::ReadWriteAccessor,
+    void append_member_to_decl(ClassDeclaration&, ast::Index, ast::UntypedIndex accessor_i, ast::ReadWriteAccessor,
                                ast::DeclareVariableWithDefaultIndex);
-    void append_member_to_decl(ClassDeclaration&, ast::UntypedIndex accessor_i, ast::ReadWriteAccessor,
+    void append_member_to_decl(ClassDeclaration&, ast::Index, ast::UntypedIndex accessor_i, ast::ReadWriteAccessor,
                                ast::VariablePackAssignIndex);
 
     Context& cxt;
     std::shared_ptr<const ast::ASTGraph> ast_graph;
     ASTGraphIndex ast_index;
+    ModuleIndex module;
 };
 
 void declare_class(const ast::ASTGraph&, ASTGraphIndex, Context&, const CommonClasses&, ast::ClassIndex);
@@ -63,15 +66,6 @@ void declare_class(const ast::ASTGraph&, ASTGraphIndex, Context&, const CommonCl
 ////////////////////////////////////////////////////////////////////////////////
 // Return type of most visitors
 ////////////////////////////////////////////////////////////////////////////////
-struct Return {
-    constexpr Return(NodeIndex i): ir_node(i) {}
-    constexpr Return(NodeIndex i, TypeInfo info): ir_node(i), type(info) {}
-    constexpr Return(NodeIndex i, ConstExprIndex expr_i, TypeInfo info): ir_node(i), const_index(expr_i), type(info) {}
-
-    NodeIndex ir_node;
-    std::optional<ConstExprIndex> const_index {};
-    std::optional<TypeInfo> type {};
-};
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -79,15 +73,13 @@ struct Return {
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Base {
-    Base(IRGraph& ir, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i, Context& cxt):
-        context(cxt),
-        building_ir(ir),
-        ast_graph(std::move(ast)),
-        ast_index(ast_i) {}
-    Context& context;
-    IRGraph& building_ir;
+    Base(IRGraph& ir, std::shared_ptr<const ast::ASTGraph> ast, Context& cxt):
+        ctx(cxt),
+        ir(ir),
+        ast_graph(std::move(ast)) {}
+    Context& ctx;
+    IRGraph& ir;
     std::shared_ptr<const ast::ASTGraph> ast_graph;
-    ASTGraphIndex ast_index;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -95,10 +87,9 @@ struct Base {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// ConstEval is special in that its return type is different as it is an error if we fail to produce a constexpr.
-/// It is designed to be called...
-//      ConstEval{...}(index_to_visit).visit([](ConstEval::Success){...}, [](Diagnostic&&){...});
 struct ConstEval {
-    ConstEval(Context& ct, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i, ClassDeclaration* optional_class = nullptr):
+    ConstEval(Context& ct, std::shared_ptr<const ast::ASTGraph> ast, ASTGraphIndex ast_i,
+              ClassDeclaration* optional_class = nullptr):
         cxt(ct),
         ast_graph(std::move(ast)),
         ast_index(ast_i),
@@ -175,10 +166,20 @@ static_assert(callable_with<ConstEval, ast::AnyExprIndex>());
 static_assert(callable_with<ConstEval, ast::KeyBinOpIndex>());
 
 
+template <typename I> struct Return {
+    constexpr Return(I i): ir_node(i) {}
+    constexpr Return(I i, TypeInfo info): ir_node(i), type(info) {}
+    constexpr Return(I i, ConstExprIndex expr_i, TypeInfo info): ir_node(i), const_index(expr_i), type(info) {}
+
+    I ir_node;
+    std::optional<ConstExprIndex> const_index {};
+    std::optional<TypeInfo> type {};
+};
+
 struct Region : private Base {
     using Base::Base;
-    Return operator()(ast::ErrorIndex);
-    Return operator()(ast::AnyExprIndex expr);
+    Return<NodeIndex> operator()(ast::ErrorIndex);
+    Return<NodeIndex> operator()(ast::AnyExprIndex expr);
 };
 
 static_assert(callable_with<Region, ast::AnyExprIndex>());
@@ -186,14 +187,23 @@ static_assert(callable_with<Region, ast::ErrorIndex>());
 
 struct Expr : private Base {
     using Base::Base;
-    Return operator()(ast::IntLitIndex i);
-    Return operator()(ast::FloatLitIndex i);
+    Return<SCAnyExpr_I> operator()(ast::IntLitIndex i);
+    Return<SCAnyExpr_I> operator()(ast::FloatLitIndex i);
     // TODO: implement all the types.
-    template <typename T> Return operator()(T) {
+    template <typename T> Return<SCAnyExpr_I> operator()(T) {
         assert(false);
-        return Return { NodeIndex { 0 } };
+        return { SCAnyExpr_I { 0 } };
     };
 };
 
 static_assert(callable_with<Expr, ast::AnyExprIndex>());
+
+
+struct Method : private Base {
+    using Base::Base;
+    Return<SCMethod_I> operator()(ast::AnyValidMethodIndex);
+
+private:
+    void append_args(SCArgumentDeclareList_I args, SCArgumentDeclareList_I var_args, ast::DeclareArgumentListIndex);
+};
 }
