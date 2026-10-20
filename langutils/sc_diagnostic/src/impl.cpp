@@ -351,4 +351,31 @@ Diagnostic Diagnostic::incorrect_slot_def(TextInfoPtr first_t, sc::lex::SourceCo
              },
              "Intrinsic classes are a part of the compiler and cannot be changed." };
 }
+
+
+Diagnostic Diagnostic::duplicate_member(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l, TextInfoPtr second_t,
+                                        sc::lex::SourceCodeRange second_l) {
+    return { "Duplicate member in class",
+             Severity::Error,
+             {
+                 { std::move(first_t), first_l},
+                 { std::move(second_t), second_l},
+             },
+             "Duplicate members are not allowed in a class definition. Please delete one." };
+
+                                         }
+
+
+Diagnostic   Diagnostic::duplicate_member_in_base(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
+                                                        TextInfoPtr second_t, sc::lex::SourceCodeRange second_l) {
+    return { "Duplicate member with base class.",
+             Severity::Error,
+             {
+                 { std::move(first_t), first_l, "First declared here..."},
+                 { std::move(second_t), second_l ," ...duplicated here."},
+             },
+             "Duplicate members are not allowed within a class hierachy. Please delete one." };
+
+                                                        }
+
 }

@@ -51,6 +51,12 @@ public:
     [[nodiscard]] static Diagnostic duplicate_method_name(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
                                                         TextInfoPtr second_t, sc::lex::SourceCodeRange second_l);
 
+    [[nodiscard]] static Diagnostic duplicate_member(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
+                                                        TextInfoPtr second_t, sc::lex::SourceCodeRange second_l);
+
+    [[nodiscard]] static Diagnostic duplicate_member_in_base(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l,
+                                                        TextInfoPtr second_t, sc::lex::SourceCodeRange second_l);
+
     [[nodiscard]] static Diagnostic default_inheritor_must_have_super(TextInfoPtr first_t,
                                                                       sc::lex::SourceCodeRange first_l);
 

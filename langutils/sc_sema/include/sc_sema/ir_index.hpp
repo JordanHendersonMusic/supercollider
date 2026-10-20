@@ -5,7 +5,9 @@ namespace sc::ir {
 enum struct SCNodeType {
     Missing,
     Message,
+
     Assign,
+    Read,
 
     KwArg,
     VariableDeclare,
@@ -50,6 +52,7 @@ using SCLiteral_I = TypedNodeIndex<SCNodeType::Literal>;
 
 using SCMessage_I = TypedNodeIndex<SCNodeType::Message>;
 using SCAssign_I = TypedNodeIndex<SCNodeType::Assign>;
+using SCRead_I = TypedNodeIndex<SCNodeType::Read>;
 
 using SCKwArgList_I = TypedNodeIndex<SCNodeType::KwArgList>;
 using SCPosArgList_I = TypedNodeIndex<SCNodeType::PosArgList>;

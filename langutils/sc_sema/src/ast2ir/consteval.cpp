@@ -11,7 +11,6 @@
 #include "sc_sema/type_info.hpp"
 #include "sc_util/overload.hpp"
 #include "sc_sema/symbol_table.hpp"
-#include <sstream>
 
 namespace sc::ir::ast2ir {
     using Diagnostic = diag::Diagnostic;
