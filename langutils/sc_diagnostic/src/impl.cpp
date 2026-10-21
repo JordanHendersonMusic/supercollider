@@ -371,11 +371,22 @@ Diagnostic   Diagnostic::duplicate_member_in_base(TextInfoPtr first_t, sc::lex::
     return { "Duplicate member with base class.",
              Severity::Error,
              {
-                 { std::move(first_t), first_l, "First declared here..."},
-                 { std::move(second_t), second_l ," ...duplicated here."},
+                 { std::move(first_t), first_l, "First declared here..." },
+                 { std::move(second_t), second_l, " ...duplicated here." },
              },
-             "Duplicate members are not allowed within a class hierachy. Please delete one." };
-
+             "Duplicate members are not allowed within a class hierarchy. Please delete one." };
                                                         }
 
+                                                        Diagnostic Diagnostic::non_terminating_return(
+                                                            TextInfoPtr first_t, sc::lex::SourceCodeRange first_l) {
+                                                            return {
+                                                                "Return is not final expression",
+                                                                Severity::Error,
+                                                                { {
+                                                                    std::move(first_t),
+                                                                    first_l,
+                                                                } },
+                                                                "Returns should be the final expression in a function."
+                                                            };
+                                                        }
 }

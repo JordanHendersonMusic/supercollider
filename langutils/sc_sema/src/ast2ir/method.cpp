@@ -1,4 +1,7 @@
-#include "../ast2ir.hpp"
+#include "method.hpp"
+#include "ast2ir/expr.hpp"
+#include "sc_parser/ast.hpp"
+#include "sc_sema/context.hpp"
 #include "sc_sema/ir.hpp"
 #include "sc_sema/symbol_table.hpp"
 

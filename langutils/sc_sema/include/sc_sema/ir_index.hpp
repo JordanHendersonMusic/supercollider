@@ -76,7 +76,7 @@ using SCExtention_I = TypedNodeIndex<SCNodeType::Extention>;
 
 using SCExprList_I = TypedNodeIndex<SCNodeType::ExprList>;
 
-using SCAnyExpr_I = join<SCExprList_I, SCFunction_I, SCVariableDeclare_I, SCAssign_I, SCExplicitReturn_I, SCLiteral_I>;
+using SCAnyExpr_I = join<SCExprList_I, SCFunction_I, SCAssign_I, SCRead_I, SCExplicitReturn_I, SCLiteral_I>;
 
 using SCClassList_I = TypedNodeIndex<SCNodeType::ClassOrExtentionList>;
 

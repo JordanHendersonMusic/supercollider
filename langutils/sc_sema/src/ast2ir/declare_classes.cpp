@@ -1,10 +1,12 @@
 
+#include "declare_classes.hpp"
+
+#include "consteval.hpp"
 #include "ast2ir/literal_synthesis.hpp"
 #include "sc_diagnostic/sc_diagnostic.hpp"
 #include "sc_parser/indexes_typed.hpp"
 #include "sc_sema/ast_location.hpp"
 #include "sc_sema/compiler.hpp"
-#include "ast2ir.hpp"
 #include "sc_sema/decls.hpp"
 #include "sc_sema/symbol_table.hpp"
 

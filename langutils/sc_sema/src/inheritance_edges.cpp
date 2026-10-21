@@ -1,4 +1,6 @@
 #include "sc_sema/context.hpp"
+#include <algorithm>
+#include <unordered_set>
 
 namespace sc::ir {
 

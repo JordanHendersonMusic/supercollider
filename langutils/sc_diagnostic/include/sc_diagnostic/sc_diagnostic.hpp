@@ -71,6 +71,8 @@ public:
                                                        std::string_view expected);
     [[nodiscard]] static Diagnostic incorrect_slot_def(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l);
 
+    [[nodiscard]] static Diagnostic non_terminating_return(TextInfoPtr first_t, sc::lex::SourceCodeRange first_l);
+
 
     Diagnostic() = delete;
     Diagnostic(Diagnostic&&) noexcept = default;
@@ -88,7 +90,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& s, const Diagnostic& d);
 
-    std::string to_string() const;
+    [[nodiscard]] std::string to_string() const;
 
 private:
     Diagnostic(const char* name, Severity severity, std::vector<Location> locations = { },

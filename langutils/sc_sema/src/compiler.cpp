@@ -1,18 +1,17 @@
+#include "ast2ir/method.hpp"
 #include "boost/asio/post.hpp"
 #include "boost/asio/thread_pool.hpp"
 #include "sc_diagnostic/sc_diagnostic.hpp"
 
 #include "sc_parser/ast.hpp"
-#include "sc_parser/indexes_typed.hpp"
+
+#include "ast2ir/declare_classes.hpp"
 
 #include "sc_sema/compiler.hpp"
 #include "sc_sema/ast_location.hpp"
-#include "sc_sema/decls.hpp"
 #include "sc_sema/symbol_table.hpp"
 #include "sc_sema/symbols.hpp"
 #include "sc_sema/ir.hpp"
-
-#include "ast2ir.hpp"
 
 #include <memory>
 #include <unordered_map>
