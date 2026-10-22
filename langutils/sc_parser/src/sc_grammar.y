@@ -75,7 +75,7 @@ using namespace sc::ast;
 %type <GoIndex> go
 
 %type <RegionListIndex> region
-%type <error_index<AnyExprIndex>> region.item 
+%type <RegionItemIndex> region.item 
 
 %type <ClassOrExtensionListIndex> classOrExtList.list
 %type <ClassOrExtensionIndex> classOrExtList.item
