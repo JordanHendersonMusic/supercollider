@@ -389,6 +389,23 @@ std::vector<sc::diag::Diagnostic> IRCompiler::compile_class_library( //
         pool.join();
     }
 
+    // A class inheriting from a poisoned class is poisoned too, e.g., from one with an invalid slot type,
+    // `Foo[bad] {}`, as is the meta class of a poisoned class. Nothing more is reported, the cause has been already.
+    // The topological ordering has parents before their children, so this reaches every descendant.
+    for (auto it = ctx.class_declarations.unsafe_begin(); it != ctx.class_declarations.unsafe_end(); ++it)
+        if (it->second.poisoned())
+            if (const auto meta = it->second.meta_class())
+                if (auto* meta_decl = ctx.class_declarations.get_unsafe(*meta))
+                    meta_decl->poison();
+    for (const auto c : m_topological_ordering) {
+        const auto* decl = ctx.class_declarations.get_unsafe(c);
+        if (!decl || !decl->poisoned())
+            continue;
+        for (const auto child : ctx.inheritance_edges.get_unsafe(c))
+            if (auto* child_decl = ctx.class_declarations.get_unsafe(child))
+                child_decl->poison();
+    }
+
     // The hierarchy is valid, so method lookups can be done.
     ctx.known_methods.check(ctx.class_declarations, ctx.common_classes, ctx.common_symbols);
 
@@ -464,8 +481,12 @@ std::vector<sc::diag::Diagnostic> IRCompiler::compile_class_library( //
         for (auto class_it = ctx.class_declarations.unsafe_begin(); class_it != ctx.class_declarations.unsafe_end();
              ++class_it) {
             const auto process = [&, class_it]() {
-                std::shared_ptr<IRGraph> class_ir = std::make_shared<IRGraph>();
                 auto& [name, decl] = *class_it;
+                // A poisoned class, e.g., one whose superclass isn't defined, has been reported already. Compiling it
+                // would only report what follows from that, e.g., every member being undefined.
+                if (decl.poisoned())
+                    return;
+                std::shared_ptr<IRGraph> class_ir = std::make_shared<IRGraph>();
 
                 const auto member_list_i = class_ir->create(
                     SCMemberList {}, ast2ir::location_of(*class_ir, *decl.ast_graph(), decl.name_index()));
@@ -518,11 +539,15 @@ std::vector<sc::diag::Diagnostic> IRCompiler::compile_class_library( //
              ++class_it) {
             const auto process = [&, class_it]() {
                 auto& [name, decl] = *class_it;
-                ClassBuild& build = *class_builds.at(name);
+                // Poisoned classes weren't built, see 4a.
+                auto& maybe_build = class_builds.at(name);
+                if (!maybe_build)
+                    return;
+                ClassBuild& build = *maybe_build;
 
                 const ast2ir::Scope* meta_members = nullptr;
                 if (const auto meta = decl.meta_class()) {
-                    if (const auto fnd = class_builds.find(*meta); fnd != class_builds.end())
+                    if (const auto fnd = class_builds.find(*meta); fnd != class_builds.end() && fnd->second)
                         meta_members = &fnd->second->members;
                 }
 
