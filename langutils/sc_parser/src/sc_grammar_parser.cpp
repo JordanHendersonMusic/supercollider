@@ -2830,7 +2830,10 @@ namespace sc { namespace ast { namespace parser {
   case 19: // region: region error
 #line 233 "langutils/sc_parser/src/sc_grammar.y"
                 {
-			if (yystack_[1].location.end.line_number != yystack_[0].location.begin.line_number){
+			// A missing semicolon between lines is recovered by re-emitting the token after a separator. A lexer error,
+			// e.g., an unclosed comment, can't start an item, so re-emitting it would fail the same way forever.
+			const bool previous_is_lexer_error = cxt.previous && sc::lex::is_error(cxt.previous->token);
+			if (yystack_[1].location.end.line_number != yystack_[0].location.begin.line_number && !previous_is_lexer_error){
 				auto first_child = cxt.graph->edges(*yystack_[1].value.as < RegionListIndex > ()).first_child.value();
 				auto last_child = cxt.graph->last_child(*yystack_[1].value.as < RegionListIndex > ());
 				auto loc = cxt.graph->location(last_child ? Index{*last_child} : Index{first_child});
@@ -2846,189 +2849,189 @@ namespace sc { namespace ast { namespace parser {
 				yyclearin;
 			} 
 		}
-#line 2850 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2853 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 20: // classOrExtList.list: classOrExtList.item
-#line 261 "langutils/sc_parser/src/sc_grammar.y"
+#line 264 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ClassOrExtensionListIndex > () = cxt.create(ClassOrExtensionList{}, yylhs.location, yystack_[0].value.as < ClassOrExtensionIndex > ()); }
-#line 2856 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2859 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 21: // classOrExtList.list: classOrExtList.list classOrExtList.item
-#line 263 "langutils/sc_parser/src/sc_grammar.y"
+#line 266 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ClassOrExtensionListIndex > () = cxt.graph->append(yystack_[1].value.as < ClassOrExtensionListIndex > (), yystack_[0].value.as < ClassOrExtensionIndex > ()); }
-#line 2862 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2865 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 22: // classOrExtList.item: class
-#line 267 "langutils/sc_parser/src/sc_grammar.y"
+#line 270 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ClassOrExtensionIndex > () = yystack_[0].value.as < ClassIndex > (); }
-#line 2868 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2871 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 23: // classOrExtList.item: class.extension
-#line 268 "langutils/sc_parser/src/sc_grammar.y"
+#line 271 "langutils/sc_parser/src/sc_grammar.y"
                           { yylhs.value.as < ClassOrExtensionIndex > () = yystack_[0].value.as < ClassExtensionIndex > (); }
-#line 2874 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2877 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 24: // class: CLASSNAME class.slot.opt class.super.opt OPENCURLY members.opt method.list.opt CLOSECURLY
-#line 273 "langutils/sc_parser/src/sc_grammar.y"
+#line 276 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ClassIndex > () = cxt.create(Class{}, yylhs.location, cxt.create(ClassNameIdentifier{}, yystack_[6].location), yystack_[5].value.as < maybe<NamedIdentifierIndex> > (), yystack_[4].value.as < maybe<ClassNameIdentifierIndex> > (), yystack_[2].value.as < BigMemberListIndex > (), yystack_[1].value.as < MethodListIndex > ()); }
-#line 2880 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2883 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 25: // class.super.opt: %empty
-#line 277 "langutils/sc_parser/src/sc_grammar.y"
+#line 280 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < maybe<ClassNameIdentifierIndex> > () = cxt.create(Missing{}, yylhs.location); }
-#line 2886 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2889 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 26: // class.super.opt: COLON CLASSNAME
-#line 278 "langutils/sc_parser/src/sc_grammar.y"
+#line 281 "langutils/sc_parser/src/sc_grammar.y"
                           { yylhs.value.as < maybe<ClassNameIdentifierIndex> > () = cxt.create(ClassNameIdentifier{}, yystack_[0].location); }
-#line 2892 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2895 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 27: // class.slot.opt: %empty
-#line 282 "langutils/sc_parser/src/sc_grammar.y"
+#line 285 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < maybe<NamedIdentifierIndex> > () = cxt.create(Missing{}, yylhs.location); }
-#line 2898 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2901 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 28: // class.slot.opt: OPENSQUARE name CLOSESQUARE
-#line 283 "langutils/sc_parser/src/sc_grammar.y"
+#line 286 "langutils/sc_parser/src/sc_grammar.y"
                                       { yylhs.value.as < maybe<NamedIdentifierIndex> > () = yystack_[1].value.as < NamedIdentifierIndex > (); }
-#line 2904 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2907 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 29: // class.slot.opt: OPENSQUARE CLOSESQUARE
-#line 284 "langutils/sc_parser/src/sc_grammar.y"
+#line 287 "langutils/sc_parser/src/sc_grammar.y"
                                  { yylhs.value.as < maybe<NamedIdentifierIndex> > () = cxt.create(Missing{}, yylhs.location); }
-#line 2910 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2913 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 30: // class.extension: ADD CLASSNAME OPENCURLY method.list.opt CLOSECURLY
-#line 289 "langutils/sc_parser/src/sc_grammar.y"
+#line 292 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ClassExtensionIndex > () = cxt.create(ClassExtension{}, yylhs.location, cxt.create(ClassNameIdentifier{}, yystack_[3].location), yystack_[1].value.as < MethodListIndex > ()); }
-#line 2916 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2919 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 31: // members.entry.item: accessor variable_declarations.list.item
-#line 298 "langutils/sc_parser/src/sc_grammar.y"
+#line 301 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareMemberIndex > () = cxt.create(DeclareMember{}, yylhs.location, yystack_[1].value.as < RWAccessorIndex > (), yystack_[0].value.as < DeclareAnyVariableIndex > ()); }
-#line 2922 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2925 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 32: // members.entry.list: members.entry.item
-#line 303 "langutils/sc_parser/src/sc_grammar.y"
+#line 306 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareMemberListIndex > () = cxt.create(DeclareMemberList{}, yylhs.location, yystack_[0].value.as < DeclareMemberIndex > ()); }
-#line 2928 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2931 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 33: // members.entry.list: members.entry.list COMMA members.entry.item
-#line 305 "langutils/sc_parser/src/sc_grammar.y"
+#line 308 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareMemberListIndex > () = cxt.graph->append(yystack_[2].value.as < DeclareMemberListIndex > (), yystack_[0].value.as < DeclareMemberIndex > ()); }
-#line 2934 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2937 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 34: // members.entry: CLASSVAR members.entry.list
-#line 310 "langutils/sc_parser/src/sc_grammar.y"
+#line 313 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyMemberListIndex > () = cxt.graph->cast<DeclareClassMemberList>(yystack_[0].value.as < DeclareMemberListIndex > ()); }
-#line 2940 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2943 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 35: // members.entry: VAR members.entry.list
-#line 312 "langutils/sc_parser/src/sc_grammar.y"
+#line 315 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyMemberListIndex > () = cxt.graph->cast<DeclareMemberList>(yystack_[0].value.as < DeclareMemberListIndex > ()); }
-#line 2946 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2949 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 36: // members.entry: CONST members.entry.list
-#line 314 "langutils/sc_parser/src/sc_grammar.y"
+#line 317 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyMemberListIndex > () = cxt.graph->cast<DeclareConstList>(yystack_[0].value.as < DeclareMemberListIndex > ()); }
-#line 2952 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2955 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 37: // members: members.entry
-#line 319 "langutils/sc_parser/src/sc_grammar.y"
+#line 322 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < BigMemberListIndex > () = cxt.create(BigMemberList{}, yylhs.location, yystack_[0].value.as < DeclareAnyMemberListIndex > ());}
-#line 2958 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2961 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 38: // members: members SEMICOLON members.entry
-#line 321 "langutils/sc_parser/src/sc_grammar.y"
+#line 324 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < BigMemberListIndex > () = cxt.graph->append(yystack_[2].value.as < BigMemberListIndex > (), yystack_[0].value.as < DeclareAnyMemberListIndex > ()); }
-#line 2964 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2967 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 39: // members.opt: %empty
-#line 325 "langutils/sc_parser/src/sc_grammar.y"
+#line 328 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < BigMemberListIndex > () = cxt.create(BigMemberList{}, yylhs.location); }
-#line 2970 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2973 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 40: // members.opt: members semicolon.opt
-#line 326 "langutils/sc_parser/src/sc_grammar.y"
+#line 329 "langutils/sc_parser/src/sc_grammar.y"
                                 { yylhs.value.as < BigMemberListIndex > () = yystack_[1].value.as < BigMemberListIndex > (); }
-#line 2976 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2979 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 41: // method.name: name
-#line 334 "langutils/sc_parser/src/sc_grammar.y"
+#line 337 "langutils/sc_parser/src/sc_grammar.y"
                { yylhs.value.as < SelectorIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 2982 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2985 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 42: // method.name: binary_op.raw
-#line 335 "langutils/sc_parser/src/sc_grammar.y"
+#line 338 "langutils/sc_parser/src/sc_grammar.y"
                         { yylhs.value.as < SelectorIndex > () = yystack_[0].value.as < SelectorIndex > (); }
-#line 2988 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2991 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 43: // method.base: method.name OPENCURLY argument_declarations.opt block.contents semicolon.opt CLOSECURLY
-#line 340 "langutils/sc_parser/src/sc_grammar.y"
+#line 343 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyMethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[5].value.as < SelectorIndex > (), yystack_[3].value.as < DeclareArgumentListIndex > (), cxt.create(Missing{},yystack_[4].location), yystack_[2].value.as < BlockContentsListIndex > ()); }
-#line 2994 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 2997 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 44: // method.base: method.name OPENCURLY argument_declarations.opt CLOSECURLY
-#line 343 "langutils/sc_parser/src/sc_grammar.y"
+#line 346 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyMethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[3].value.as < SelectorIndex > (), yystack_[1].value.as < DeclareArgumentListIndex > (), cxt.create(Missing{},yystack_[2].location), cxt.create(BlockContentsList{}, yystack_[0].location)); }
-#line 3000 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3003 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 45: // method.base: method.name OPENCURLY argument_declarations.opt PRIMITIVENAME semicolon.opt block.contents semicolon.opt CLOSECURLY
-#line 346 "langutils/sc_parser/src/sc_grammar.y"
+#line 349 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyMethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[7].value.as < SelectorIndex > (), yystack_[5].value.as < DeclareArgumentListIndex > (), cxt.create(PrimitiveIdentifier{}, yystack_[4].location), yystack_[2].value.as < BlockContentsListIndex > ()); }
-#line 3006 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3009 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 46: // method.base: method.name OPENCURLY argument_declarations.opt PRIMITIVENAME semicolon.opt CLOSECURLY
-#line 349 "langutils/sc_parser/src/sc_grammar.y"
+#line 352 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyMethodIndex > () = cxt.create(Method{}, yylhs.location, yystack_[5].value.as < SelectorIndex > (), yystack_[3].value.as < DeclareArgumentListIndex > (), cxt.create(PrimitiveIdentifier{}, yystack_[2].location), cxt.create(BlockContentsList{}, yystack_[1].location)); }
-#line 3012 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3015 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 47: // method.base: method.name OPENCURLY error
-#line 352 "langutils/sc_parser/src/sc_grammar.y"
+#line 355 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			error_recovery::method(cxt, yystack_[1].location); // advance over the closing curly of function.
 			yylhs.value.as < AnyMethodIndex > () = cxt.create(Error{}, yylhs.location);
 			yyclearin;
 		}
-#line 3022 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3025 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 48: // method: method.base
-#line 360 "langutils/sc_parser/src/sc_grammar.y"
+#line 363 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < AnyMethodIndex > () = yystack_[0].value.as < AnyMethodIndex > (); }
-#line 3028 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3031 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 49: // method: MULTIPLY method.base
-#line 362 "langutils/sc_parser/src/sc_grammar.y"
+#line 365 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			if (auto c = cxt.graph->as_a<MethodIndex>(yystack_[0].value.as < AnyMethodIndex > ())) {
 				yylhs.value.as < AnyMethodIndex > () = cxt.graph->cast<ClassMethod>(*c);
@@ -3037,930 +3040,930 @@ namespace sc { namespace ast { namespace parser {
 			cxt.graph->location(yystack_[0].value.as < AnyMethodIndex > ()) = yylhs.location; 
 			yylhs.value.as < AnyMethodIndex > () = yystack_[0].value.as < AnyMethodIndex > (); 
 		}
-#line 3041 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3044 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 50: // method.list: method
-#line 373 "langutils/sc_parser/src/sc_grammar.y"
+#line 376 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < MethodListIndex > () = cxt.create(MethodList{}, yylhs.location, yystack_[0].value.as < AnyMethodIndex > ()); }
-#line 3047 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3050 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 51: // method.list: method.list method
-#line 374 "langutils/sc_parser/src/sc_grammar.y"
+#line 377 "langutils/sc_parser/src/sc_grammar.y"
                              { yylhs.value.as < MethodListIndex > () = cxt.graph->append(yystack_[1].value.as < MethodListIndex > (), yylhs.location, yystack_[0].value.as < AnyMethodIndex > ()); }
-#line 3053 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3056 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 52: // method.list.opt: %empty
-#line 378 "langutils/sc_parser/src/sc_grammar.y"
+#line 381 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < MethodListIndex > () = cxt.create(MethodList{}, yylhs.location); }
-#line 3059 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3062 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 53: // method.list.opt: method.list
-#line 379 "langutils/sc_parser/src/sc_grammar.y"
+#line 382 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < MethodListIndex > () = yystack_[0].value.as < MethodListIndex > (); }
-#line 3065 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3068 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 56: // block: block.open argument_declarations.opt block.contents semicolon.opt CLOSECURLY
-#line 391 "langutils/sc_parser/src/sc_grammar.y"
+#line 394 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < BlockIndex > () = cxt.create(BlockNode{}, yylhs.location, yystack_[3].value.as < DeclareArgumentListIndex > (), yystack_[2].value.as < BlockContentsListIndex > ()); }
-#line 3071 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3074 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 57: // block: block.open argument_declarations.opt CLOSECURLY
-#line 393 "langutils/sc_parser/src/sc_grammar.y"
+#line 396 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < BlockIndex > () = cxt.create(BlockNode{}, yylhs.location, yystack_[1].value.as < DeclareArgumentListIndex > (), cxt.create(BlockContentsList{}, yylhs.location)); }
-#line 3077 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3080 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 58: // block.opt_list: %empty
-#line 397 "langutils/sc_parser/src/sc_grammar.y"
+#line 400 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < BlockListIndex > () = cxt.create(BlockList{}, yylhs.location); }
-#line 3083 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3086 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 59: // block.opt_list: block.list
-#line 398 "langutils/sc_parser/src/sc_grammar.y"
+#line 401 "langutils/sc_parser/src/sc_grammar.y"
                      { yylhs.value.as < BlockListIndex > () = yystack_[0].value.as < BlockListIndex > (); }
-#line 3089 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3092 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 60: // block.list: block
-#line 402 "langutils/sc_parser/src/sc_grammar.y"
+#line 405 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < BlockListIndex > () = cxt.create(BlockList{}, yylhs.location, yystack_[0].value.as < BlockIndex > ()); }
-#line 3095 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3098 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 61: // block.list: generator
-#line 403 "langutils/sc_parser/src/sc_grammar.y"
+#line 406 "langutils/sc_parser/src/sc_grammar.y"
                     { yylhs.value.as < BlockListIndex > () = cxt.create(BlockList{}, yylhs.location, yystack_[0].value.as < GeneratorAnyIndex > ()); }
-#line 3101 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3104 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 62: // block.list: block.list block
-#line 404 "langutils/sc_parser/src/sc_grammar.y"
+#line 407 "langutils/sc_parser/src/sc_grammar.y"
                            { yylhs.value.as < BlockListIndex > () = cxt.graph->append(yystack_[1].value.as < BlockListIndex > (), yylhs.location, yystack_[0].value.as < BlockIndex > ()); }
-#line 3107 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3110 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 63: // block.list: block.list generator
-#line 405 "langutils/sc_parser/src/sc_grammar.y"
+#line 408 "langutils/sc_parser/src/sc_grammar.y"
                                { yylhs.value.as < BlockListIndex > () = cxt.graph->append(yystack_[1].value.as < BlockListIndex > (), yylhs.location, yystack_[0].value.as < GeneratorAnyIndex > ()); }
-#line 3113 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3116 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 64: // block.contents: block.contents.item
-#line 409 "langutils/sc_parser/src/sc_grammar.y"
+#line 412 "langutils/sc_parser/src/sc_grammar.y"
                               { yylhs.value.as < BlockContentsListIndex > () = cxt.create(BlockContentsList{}, yylhs.location, yystack_[0].value.as < BlockItemIndex > ()); }
-#line 3119 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3122 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 65: // block.contents: block.contents SEMICOLON block.contents.item
-#line 410 "langutils/sc_parser/src/sc_grammar.y"
+#line 413 "langutils/sc_parser/src/sc_grammar.y"
                                                        { yylhs.value.as < BlockContentsListIndex > () = cxt.graph->append(yystack_[2].value.as < BlockContentsListIndex > (), yylhs.location, yystack_[0].value.as < BlockItemIndex > ()); }
-#line 3125 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3128 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 66: // block.contents: block.contents NONLOCALRETURN expr
-#line 412 "langutils/sc_parser/src/sc_grammar.y"
+#line 415 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto non_local = cxt.create(NonLocalReturnExpr{}, range(yystack_[1].location, yystack_[0].location), yystack_[0].value.as < AnyExprIndex > ());
 			yylhs.value.as < BlockContentsListIndex > () = cxt.graph->append(yystack_[2].value.as < BlockContentsListIndex > (), yylhs.location, non_local); 
 		}
-#line 3134 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3137 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 67: // block.contents: block.contents SEMICOLON NONLOCALRETURN expr
-#line 417 "langutils/sc_parser/src/sc_grammar.y"
+#line 420 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto non_local = cxt.create(NonLocalReturnExpr{}, range(yystack_[1].location, yystack_[0].location), yystack_[0].value.as < AnyExprIndex > ());
 			yylhs.value.as < BlockContentsListIndex > () = cxt.graph->append(yystack_[3].value.as < BlockContentsListIndex > (), yylhs.location, non_local); 
 		}
-#line 3143 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3146 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 68: // block.contents: NONLOCALRETURN expr
-#line 422 "langutils/sc_parser/src/sc_grammar.y"
+#line 425 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto non_local = cxt.create(NonLocalReturnExpr{}, range(yystack_[1].location, yystack_[0].location), yystack_[0].value.as < AnyExprIndex > ());
 			yylhs.value.as < BlockContentsListIndex > () = cxt.create(BlockContentsList{}, yylhs.location, non_local);
 		}
-#line 3152 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3155 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 69: // block.contents.item: expr
-#line 429 "langutils/sc_parser/src/sc_grammar.y"
+#line 432 "langutils/sc_parser/src/sc_grammar.y"
                { yylhs.value.as < BlockItemIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 3158 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3161 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 70: // block.contents.item: variable_declarations
-#line 430 "langutils/sc_parser/src/sc_grammar.y"
+#line 433 "langutils/sc_parser/src/sc_grammar.y"
                                 { yylhs.value.as < BlockItemIndex > () = yystack_[0].value.as < DeclareVariableListIndex > (); }
-#line 3164 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3167 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 71: // adverb: DOT name
-#line 439 "langutils/sc_parser/src/sc_grammar.y"
+#line 442 "langutils/sc_parser/src/sc_grammar.y"
                    { yylhs.value.as < AdverbIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 3170 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3173 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 72: // adverb: DOT integer
-#line 440 "langutils/sc_parser/src/sc_grammar.y"
+#line 443 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < AdverbIndex > () = yystack_[0].value.as < IntLitIndex > (); }
-#line 3176 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3179 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 73: // adverb: DOT OPENPAREN expr_or_seq CLOSEPAREN
-#line 441 "langutils/sc_parser/src/sc_grammar.y"
+#line 444 "langutils/sc_parser/src/sc_grammar.y"
                                                { yylhs.value.as < AdverbIndex > () = cxt.create(AdverbExprNode{}, yylhs.location, yystack_[1].value.as < AnyExprIndex > ());  }
-#line 3182 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3185 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 74: // binary_op.raw: BINOP
-#line 445 "langutils/sc_parser/src/sc_grammar.y"
+#line 448 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3188 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3191 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 75: // binary_op.raw: READWRITEVAR
-#line 446 "langutils/sc_parser/src/sc_grammar.y"
+#line 449 "langutils/sc_parser/src/sc_grammar.y"
                        { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3194 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3197 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 76: // binary_op.raw: LESSTHAN
-#line 447 "langutils/sc_parser/src/sc_grammar.y"
+#line 450 "langutils/sc_parser/src/sc_grammar.y"
                    { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3200 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3203 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 77: // binary_op.raw: GREATERTHAN
-#line 448 "langutils/sc_parser/src/sc_grammar.y"
+#line 451 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3206 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3209 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 78: // binary_op.raw: MINUS
-#line 449 "langutils/sc_parser/src/sc_grammar.y"
+#line 452 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3212 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3215 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 79: // binary_op.raw: MULTIPLY
-#line 450 "langutils/sc_parser/src/sc_grammar.y"
+#line 453 "langutils/sc_parser/src/sc_grammar.y"
                    { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3218 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3221 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 80: // binary_op.raw: ADD
-#line 451 "langutils/sc_parser/src/sc_grammar.y"
+#line 454 "langutils/sc_parser/src/sc_grammar.y"
               { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3224 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3227 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 81: // binary_op.raw: PIPE
-#line 452 "langutils/sc_parser/src/sc_grammar.y"
+#line 455 "langutils/sc_parser/src/sc_grammar.y"
                { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ false }, yylhs.location); }
-#line 3230 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3233 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 82: // binary_op.no_adverb: binary_op.raw
-#line 456 "langutils/sc_parser/src/sc_grammar.y"
+#line 459 "langutils/sc_parser/src/sc_grammar.y"
                           { yylhs.value.as < SelectorIndex > () = yystack_[0].value.as < SelectorIndex > (); }
-#line 3236 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3239 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 83: // binary_op.no_adverb: KEYBINOP
-#line 457 "langutils/sc_parser/src/sc_grammar.y"
+#line 460 "langutils/sc_parser/src/sc_grammar.y"
                    { yylhs.value.as < SelectorIndex > () = cxt.create(SelectorNode{ true }, yylhs.location); }
-#line 3242 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3245 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 84: // binary_op: binary_op.no_adverb adverb
-#line 462 "langutils/sc_parser/src/sc_grammar.y"
+#line 465 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < SelectorMaybeAdverbIndex > () = cxt.create(SelectorWAdverb{}, yylhs.location, yystack_[1].value.as < SelectorIndex > (), yystack_[0].value.as < AdverbIndex > ()); }
-#line 3248 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3251 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 85: // binary_op: binary_op.no_adverb
-#line 464 "langutils/sc_parser/src/sc_grammar.y"
+#line 467 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < SelectorMaybeAdverbIndex > () = yystack_[0].value.as < SelectorIndex > (); }
-#line 3254 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3257 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 86: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN OPENPAREN arguments CLOSEPAREN block.opt_list
-#line 469 "langutils/sc_parser/src/sc_grammar.y"
+#line 472 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(PrefixMessage{}, yylhs.location, yystack_[5].value.as < SelectorIndex > (), yystack_[2].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3260 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3263 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 87: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN OPENPAREN CLOSEPAREN block.list
-#line 472 "langutils/sc_parser/src/sc_grammar.y"
+#line 475 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(PrefixMessage{}, yylhs.location, yystack_[4].value.as < SelectorIndex > (), cxt.create(ArgumentList{}, yystack_[2].location), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3266 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3269 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 88: // msgsend: OPENPAREN binary_op.no_adverb CLOSEPAREN block.list
-#line 475 "langutils/sc_parser/src/sc_grammar.y"
+#line 478 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(PrefixMessage{}, yylhs.location, yystack_[2].value.as < SelectorIndex > (), cxt.create(ArgumentList{}, yystack_[0].location), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3272 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3275 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 89: // msgsend: name OPENPAREN arguments CLOSEPAREN block.opt_list
-#line 479 "langutils/sc_parser/src/sc_grammar.y"
+#line 482 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(PrefixMessage{}, yylhs.location, yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[2].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3278 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3281 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 90: // msgsend: name OPENPAREN CLOSEPAREN block.list
-#line 482 "langutils/sc_parser/src/sc_grammar.y"
+#line 485 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(PrefixMessage{}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), cxt.create(ArgumentList{}, yystack_[2].location), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3284 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3287 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 91: // msgsend: name block.list
-#line 485 "langutils/sc_parser/src/sc_grammar.y"
+#line 488 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(PrefixMessage{}, yylhs.location, yystack_[1].value.as < NamedIdentifierIndex > (), cxt.create(ArgumentList{}, yystack_[0].location), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3290 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3293 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 92: // msgsend: expr DOT name arguments.maybe_paren block.opt_list
-#line 488 "langutils/sc_parser/src/sc_grammar.y"
+#line 491 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(PostfixMessage{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3296 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3299 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 93: // msgsend: expr DOT arguments.paren block.opt_list
-#line 491 "langutils/sc_parser/src/sc_grammar.y"
+#line 494 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(ValueMessage{}, yylhs.location, yystack_[3].value.as < AnyExprIndex > (), yystack_[1].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3302 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3305 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 94: // msgsend: expr DOT OPENPAREN CLOSEPAREN block.opt_list
-#line 494 "langutils/sc_parser/src/sc_grammar.y"
+#line 497 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(ValueMessage{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), cxt.create(ArgumentList{}, yystack_[2].location), yystack_[0].value.as < BlockListIndex > ()); }
-#line 3308 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3311 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 95: // msgsend: CLASSNAME OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
-#line 504 "langutils/sc_parser/src/sc_grammar.y"
+#line 507 "langutils/sc_parser/src/sc_grammar.y"
                 {  yylhs.value.as < AnyExprIndex > () = cxt.create(CollectionNode{}, yylhs.location, cxt.create(ClassNameIdentifier{}, yystack_[4].location), yystack_[2].value.as < ArrayIndex > ()); }
-#line 3314 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3317 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 96: // msgsend: CLASSNAME block.list
-#line 507 "langutils/sc_parser/src/sc_grammar.y"
+#line 510 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto class_name = cxt.create(ClassNameIdentifier{}, yystack_[1].location);
 			yylhs.value.as < AnyExprIndex > () = cxt.create(NewMessage{}, yylhs.location, class_name, cxt.create(ArgumentList{}, yystack_[1].location), yystack_[0].value.as < BlockListIndex > ());
 		}
-#line 3323 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3326 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 97: // msgsend: CLASSNAME arguments.paren block.opt_list
-#line 512 "langutils/sc_parser/src/sc_grammar.y"
+#line 515 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto class_name = cxt.create(ClassNameIdentifier{}, yystack_[2].location);
 			yylhs.value.as < AnyExprIndex > () = cxt.create(NewMessage{}, yylhs.location, class_name, yystack_[1].value.as < ArgumentListIndex > (), yystack_[0].value.as < BlockListIndex > ());
 		}
-#line 3332 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3335 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 98: // msgsend: CLASSNAME OPENPAREN CLOSEPAREN block.opt_list
-#line 518 "langutils/sc_parser/src/sc_grammar.y"
+#line 521 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto class_name = cxt.create(ClassNameIdentifier{}, yystack_[3].location);
 			yylhs.value.as < AnyExprIndex > () = cxt.create(NewMessage{}, yylhs.location, class_name, cxt.create(ArgumentList{}, yystack_[3].location), yystack_[0].value.as < BlockListIndex > ());
 		}
-#line 3341 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3344 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 99: // expr.dotrange: expr DOT OPENSQUARE arguments DOTDOT expr_or_seq CLOSESQUARE
-#line 533 "langutils/sc_parser/src/sc_grammar.y"
+#line 536 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[4].location, yystack_[0].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[3].value.as < ArgumentListIndex > (), yystack_[1].value.as < AnyExprIndex > ());
 			yylhs.value.as < AtMessageIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[6].value.as < AnyExprIndex > (), r);
 		}
-#line 3351 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3354 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 100: // expr.dotrange: expr DOT OPENSQUARE DOTDOT expr_or_seq CLOSESQUARE
-#line 540 "langutils/sc_parser/src/sc_grammar.y"
+#line 543 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[3].location, yystack_[0].location);
 			const auto r = cxt.create(Range{}, loc, cxt.create(ArgumentList{}, yystack_[3].location),  yystack_[1].value.as < AnyExprIndex > ());
 			yylhs.value.as < AtMessageIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[5].value.as < AnyExprIndex > (), r);
 		}
-#line 3361 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3364 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 101: // expr.dotrange: expr DOT OPENSQUARE arguments DOTDOT CLOSESQUARE
-#line 547 "langutils/sc_parser/src/sc_grammar.y"
+#line 550 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[3].location, yystack_[0].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[2].value.as < ArgumentListIndex > (), cxt.create(Missing{}, yystack_[1].location));
 			yylhs.value.as < AtMessageIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[5].value.as < AnyExprIndex > (), r);
 		}
-#line 3371 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3374 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 102: // expr.dotrange.assign: expr DOT OPENSQUARE arguments DOTDOT expr_or_seq CLOSESQUARE EQUALSSIGN expr
-#line 556 "langutils/sc_parser/src/sc_grammar.y"
+#line 559 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[6].location, yystack_[2].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[5].value.as < ArgumentListIndex > (), yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeAssignIndex > () = cxt.create(RangeAssign{}, yylhs.location, yystack_[8].value.as < AnyExprIndex > (), r, yystack_[0].value.as < AnyExprIndex > ());
 		}
-#line 3381 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3384 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 103: // expr.dotrange.assign: expr DOT OPENSQUARE arguments DOTDOT CLOSESQUARE EQUALSSIGN expr
-#line 563 "langutils/sc_parser/src/sc_grammar.y"
+#line 566 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[5].location, yystack_[2].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[4].value.as < ArgumentListIndex > (), cxt.create(Missing{}, yystack_[3].location));
 			yylhs.value.as < RangeAssignIndex > () = cxt.create(RangeAssign{}, yylhs.location, yystack_[7].value.as < AnyExprIndex > (), r, yystack_[0].value.as < AnyExprIndex > ());
 		}
-#line 3391 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3394 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 104: // expr.dotrange.assign: expr DOT OPENSQUARE DOTDOT expr_or_seq CLOSESQUARE EQUALSSIGN expr
-#line 570 "langutils/sc_parser/src/sc_grammar.y"
+#line 573 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[5].location, yystack_[2].location);
 			const auto r = cxt.create(Range{}, loc, cxt.create(ArgumentList{}, yystack_[5].location),  yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeAssignIndex > () = cxt.create(RangeAssign{}, yylhs.location, yystack_[7].value.as < AnyExprIndex > (), r, yystack_[0].value.as < AnyExprIndex > ());
 		}
-#line 3401 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3404 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 105: // expr.base.range: expr.base OPENSQUARE arguments DOTDOT expr_or_seq CLOSESQUARE
-#line 580 "langutils/sc_parser/src/sc_grammar.y"
+#line 583 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[4].location, yystack_[0].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[3].value.as < ArgumentListIndex > (), yystack_[1].value.as < AnyExprIndex > ());
 			yylhs.value.as < AtMessageIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[5].value.as < AnyExprIndex > (), r);
 		}
-#line 3411 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3414 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 106: // expr.base.range: expr.base OPENSQUARE arguments DOTDOT CLOSESQUARE
-#line 586 "langutils/sc_parser/src/sc_grammar.y"
+#line 589 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[3].location, yystack_[0].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[2].value.as < ArgumentListIndex > (), cxt.create(Missing{}, yystack_[0].location));
 			yylhs.value.as < AtMessageIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), r);	
 		}
-#line 3421 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3424 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 107: // expr.base.range: expr.base OPENSQUARE DOTDOT expr_or_seq CLOSESQUARE
-#line 592 "langutils/sc_parser/src/sc_grammar.y"
+#line 595 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[3].location, yystack_[0].location);
 			const auto r = cxt.create(Range{}, loc, cxt.create(ArgumentList{}, yystack_[3].location),  yystack_[1].value.as < AnyExprIndex > ());
 			yylhs.value.as < AtMessageIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), r);	
 		}
-#line 3431 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3434 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 108: // expr.base.range.assign: expr.base OPENSQUARE arguments DOTDOT expr_or_seq CLOSESQUARE EQUALSSIGN expr
-#line 601 "langutils/sc_parser/src/sc_grammar.y"
+#line 604 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[6].location, yystack_[2].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[5].value.as < ArgumentListIndex > (), yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeAssignIndex > () = cxt.create(RangeAssign{}, yylhs.location, yystack_[7].value.as < AnyExprIndex > (), r, yystack_[0].value.as < AnyExprIndex > ());
 		}
-#line 3441 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3444 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 109: // expr.base.range.assign: expr.base OPENSQUARE arguments DOTDOT CLOSESQUARE EQUALSSIGN expr
-#line 607 "langutils/sc_parser/src/sc_grammar.y"
+#line 610 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[5].location, yystack_[2].location);
 			const auto r = cxt.create(Range{}, loc, yystack_[4].value.as < ArgumentListIndex > (), cxt.create(Missing{}, yystack_[3].location));
 			yylhs.value.as < RangeAssignIndex > () = cxt.create(RangeAssign{}, yylhs.location, yystack_[6].value.as < AnyExprIndex > (), r, yystack_[0].value.as < AnyExprIndex > ());
 		}
-#line 3451 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3454 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 110: // expr.base.range.assign: expr.base OPENSQUARE DOTDOT expr_or_seq CLOSESQUARE EQUALSSIGN expr
-#line 613 "langutils/sc_parser/src/sc_grammar.y"
+#line 616 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto loc = range(yystack_[5].location, yystack_[2].location);
 			const auto r = cxt.create(Range{}, loc, cxt.create(ArgumentList{}, yystack_[5].location),  yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeAssignIndex > () = cxt.create(RangeAssign{}, yylhs.location, yystack_[6].value.as < AnyExprIndex > (), r, yystack_[0].value.as < AnyExprIndex > ());
 		}
-#line 3461 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3464 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 111: // range: OPENPAREN expr_or_seq DOTDOT CLOSEPAREN
-#line 622 "langutils/sc_parser/src/sc_grammar.y"
+#line 625 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, yystack_[2].location, yystack_[2].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeIndex > () = cxt.create(Range{}, range(yystack_[3].location, yystack_[0].location), args, cxt.create(Missing{}, yystack_[1].location));
 		}
-#line 3470 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3473 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 112: // range: OPENPAREN expr_or_seq DOTDOT expr_or_seq CLOSEPAREN
-#line 627 "langutils/sc_parser/src/sc_grammar.y"
+#line 630 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, yystack_[3].location, yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeIndex > () = cxt.create(Range{}, range(yystack_[4].location, yystack_[0].location), args, yystack_[1].value.as < AnyExprIndex > ());
 		}
-#line 3479 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3482 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 113: // range: OPENPAREN expr_or_seq COMMA expr_or_seq DOTDOT expr_or_seq CLOSEPAREN
-#line 632 "langutils/sc_parser/src/sc_grammar.y"
+#line 635 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, range(yystack_[5].location, yystack_[3].location), yystack_[5].value.as < AnyExprIndex > (), yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeIndex > () = cxt.create(Range{}, range(yystack_[6].location, yystack_[0].location), args, yystack_[1].value.as < AnyExprIndex > ());
 		}
-#line 3488 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3491 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 114: // range: OPENPAREN expr_or_seq COMMA expr_or_seq DOTDOT CLOSEPAREN
-#line 637 "langutils/sc_parser/src/sc_grammar.y"
+#line 640 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, range(yystack_[4].location, yystack_[2].location), yystack_[4].value.as < AnyExprIndex > (), yystack_[2].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeIndex > () = cxt.create(Range{}, range(yystack_[5].location, yystack_[0].location), args, cxt.create(Missing{}, yystack_[1].location));
 		}
-#line 3497 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3500 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 115: // range: OPENPAREN DOTDOT expr_or_seq CLOSEPAREN
-#line 642 "langutils/sc_parser/src/sc_grammar.y"
+#line 645 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, yystack_[2].location);
 			yylhs.value.as < RangeIndex > () = cxt.create(Range{}, range(yystack_[3].location, yystack_[0].location), args, yystack_[1].value.as < AnyExprIndex > ());
 		}
-#line 3506 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3509 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 116: // range.generator: OPENPAREN COLON expr_or_seq DOTDOT expr_or_seq CLOSEPAREN
-#line 650 "langutils/sc_parser/src/sc_grammar.y"
+#line 653 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, yystack_[3].location, yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeGeneratorIndex > () = cxt.create(RangeGenerator{}, range(yystack_[5].location, yystack_[0].location), args, yystack_[1].value.as < AnyExprIndex > ());
 		}
-#line 3515 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3518 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 117: // range.generator: OPENPAREN COLON expr_or_seq COMMA expr_or_seq DOTDOT expr_or_seq CLOSEPAREN
-#line 655 "langutils/sc_parser/src/sc_grammar.y"
+#line 658 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, range(yystack_[5].location, yystack_[3].location), yystack_[5].value.as < AnyExprIndex > (), yystack_[3].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeGeneratorIndex > () = cxt.create(RangeGenerator{}, range(yystack_[7].location, yystack_[0].location), args, yystack_[1].value.as < AnyExprIndex > ());
 		}
-#line 3524 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3527 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 118: // range.generator: OPENPAREN COLON expr_or_seq COMMA expr_or_seq DOTDOT CLOSEPAREN
-#line 661 "langutils/sc_parser/src/sc_grammar.y"
+#line 664 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, yystack_[4].location, yystack_[4].value.as < AnyExprIndex > (), yystack_[2].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeGeneratorIndex > () = cxt.create(RangeGenerator{}, range(yystack_[6].location, yystack_[0].location), args, cxt.create(Missing{}, yystack_[1].location));
 		}
-#line 3533 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3536 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 119: // range.generator: OPENPAREN COLON DOTDOT expr_or_seq CLOSEPAREN
-#line 666 "langutils/sc_parser/src/sc_grammar.y"
+#line 669 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, yystack_[2].location);
 			yylhs.value.as < RangeGeneratorIndex > () = cxt.create(RangeGenerator{}, range(yystack_[4].location, yystack_[0].location), args, yystack_[1].value.as < AnyExprIndex > ());
 		}
-#line 3542 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3545 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 120: // range.generator: OPENPAREN COLON expr_or_seq DOTDOT CLOSEPAREN
-#line 671 "langutils/sc_parser/src/sc_grammar.y"
+#line 674 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			const auto args = cxt.create(ArgumentList{}, yystack_[2].location, yystack_[2].value.as < AnyExprIndex > ());
 			yylhs.value.as < RangeGeneratorIndex > () = cxt.create(RangeGenerator{}, range(yystack_[4].location, yystack_[0].location), args, cxt.create(Missing{}, yystack_[1].location));
 		}
-#line 3551 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3554 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 121: // expr.base: literal
-#line 684 "langutils/sc_parser/src/sc_grammar.y"
+#line 687 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyPossiblyLiteralIndex > (); }
-#line 3557 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3560 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 122: // expr.base: generator
-#line 687 "langutils/sc_parser/src/sc_grammar.y"
+#line 690 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < GeneratorAnyIndex > (); }
-#line 3563 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3566 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 123: // expr.base: name
-#line 690 "langutils/sc_parser/src/sc_grammar.y"
+#line 693 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 3569 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3572 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 124: // expr.base: CURRYARG
-#line 693 "langutils/sc_parser/src/sc_grammar.y"
+#line 696 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < AnyExprIndex > () = cxt.create(CurryNode{}, yystack_[0].location); }
-#line 3575 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3578 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 125: // expr.base: msgsend
-#line 696 "langutils/sc_parser/src/sc_grammar.y"
+#line 699 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 3581 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3584 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 126: // expr.base: OPENPAREN expr_or_seq CLOSEPAREN
-#line 699 "langutils/sc_parser/src/sc_grammar.y"
+#line 702 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			// A nasty hack because of nil assignment.
 			cxt.graph->register_bracketed_expr(yystack_[1].value.as < AnyExprIndex > ());
 			yylhs.value.as < AnyExprIndex > () = yystack_[1].value.as < AnyExprIndex > ();
 		}
-#line 3591 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3594 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 127: // expr.base: TILDE name
-#line 706 "langutils/sc_parser/src/sc_grammar.y"
+#line 709 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(EnvIdentifierNode{}, yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3597 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3600 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 128: // expr.base: expr.base OPENSQUARE arguments CLOSESQUARE
-#line 709 "langutils/sc_parser/src/sc_grammar.y"
+#line 712 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[3].value.as < AnyExprIndex > (), yystack_[1].value.as < ArgumentListIndex > () ); }
-#line 3603 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3606 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 129: // expr.base: expr.base OPENSQUARE CLOSESQUARE
-#line 712 "langutils/sc_parser/src/sc_grammar.y"
+#line 715 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), cxt.create(ArgumentList{}, yystack_[1].location)); }
-#line 3609 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3612 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 130: // expr.base: expr.base.range
-#line 715 "langutils/sc_parser/src/sc_grammar.y"
+#line 718 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AtMessageIndex > (); }
-#line 3615 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3618 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 131: // expr.base: range
-#line 718 "langutils/sc_parser/src/sc_grammar.y"
+#line 721 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < RangeIndex > (); }
-#line 3621 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3624 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 132: // expr.base: range.generator
-#line 721 "langutils/sc_parser/src/sc_grammar.y"
+#line 724 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < RangeGeneratorIndex > (); }
-#line 3627 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3630 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 133: // expr: expr.base
-#line 726 "langutils/sc_parser/src/sc_grammar.y"
+#line 729 "langutils/sc_parser/src/sc_grammar.y"
                     { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 3633 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3636 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 134: // expr: expr.base.range.assign
-#line 727 "langutils/sc_parser/src/sc_grammar.y"
+#line 730 "langutils/sc_parser/src/sc_grammar.y"
                                  { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < RangeAssignIndex > (); }
-#line 3639 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3642 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 135: // expr: expr.dotrange
-#line 728 "langutils/sc_parser/src/sc_grammar.y"
+#line 731 "langutils/sc_parser/src/sc_grammar.y"
                         { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AtMessageIndex > (); }
-#line 3645 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3648 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 136: // expr: expr.dotrange.assign
-#line 729 "langutils/sc_parser/src/sc_grammar.y"
+#line 732 "langutils/sc_parser/src/sc_grammar.y"
                                { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < RangeAssignIndex > (); }
-#line 3651 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3654 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 137: // expr: expr DOT OPENSQUARE arguments CLOSESQUARE
-#line 732 "langutils/sc_parser/src/sc_grammar.y"
+#line 735 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), yystack_[1].value.as < ArgumentListIndex > () ); }
-#line 3657 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3660 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 138: // expr: expr DOT OPENSQUARE CLOSESQUARE
-#line 735 "langutils/sc_parser/src/sc_grammar.y"
+#line 738 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AtMessage{}, yylhs.location, yystack_[3].value.as < AnyExprIndex > (), cxt.create(ArgumentList{}, yystack_[1].location) ); }
-#line 3663 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3666 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 139: // expr: expr binary_op expr
-#line 738 "langutils/sc_parser/src/sc_grammar.y"
+#line 741 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(BinaryMessage{}, yylhs.location, yystack_[1].value.as < SelectorMaybeAdverbIndex > (), yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3669 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3672 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 140: // expr: expr DOT name EQUALSSIGN expr
-#line 741 "langutils/sc_parser/src/sc_grammar.y"
+#line 744 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(SetterNode{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3675 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3678 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 141: // expr: CLASSNAME
-#line 743 "langutils/sc_parser/src/sc_grammar.y"
+#line 746 "langutils/sc_parser/src/sc_grammar.y"
                     { yylhs.value.as < AnyExprIndex > () = cxt.create(ClassNameIdentifier{}, yylhs.location); }
-#line 3681 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3684 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 142: // expr: BACKTICK expr
-#line 744 "langutils/sc_parser/src/sc_grammar.y"
+#line 747 "langutils/sc_parser/src/sc_grammar.y"
                         { yylhs.value.as < AnyExprIndex > () = cxt.create(ReferenceNode{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3687 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3690 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 143: // expr: name EQUALSSIGN expr
-#line 746 "langutils/sc_parser/src/sc_grammar.y"
+#line 749 "langutils/sc_parser/src/sc_grammar.y"
                                { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentNode{}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3693 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3696 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 144: // expr: TILDE name EQUALSSIGN expr
-#line 749 "langutils/sc_parser/src/sc_grammar.y"
+#line 752 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentNode{AssignmentNode::Target::Environment}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3699 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3702 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 145: // expr: name OPENPAREN arguments CLOSEPAREN EQUALSSIGN expr
-#line 752 "langutils/sc_parser/src/sc_grammar.y"
+#line 755 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(SetterNode{}, yylhs.location, yystack_[3].value.as < ArgumentListIndex > (), yystack_[5].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3705 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3708 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 146: // expr: name.pack EQUALSSIGN expr
-#line 755 "langutils/sc_parser/src/sc_grammar.y"
+#line 758 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(VariablePackAssign{}, yylhs.location, yystack_[2].value.as < NamePackIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3711 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3714 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 147: // expr: name.pack OPENPAREN expr_or_seq CLOSEPAREN
-#line 758 "langutils/sc_parser/src/sc_grammar.y"
+#line 761 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(VariablePackAssign{}, yylhs.location, yystack_[3].value.as < NamePackIndex > (), yystack_[1].value.as < AnyExprIndex > ()); }
-#line 3717 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3720 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 148: // expr: expr.base OPENSQUARE arguments CLOSESQUARE EQUALSSIGN expr
-#line 764 "langutils/sc_parser/src/sc_grammar.y"
+#line 767 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[5].value.as < AnyExprIndex > (), yystack_[3].value.as < ArgumentListIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3723 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3726 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 149: // expr: expr.base OPENSQUARE CLOSESQUARE EQUALSSIGN expr
-#line 767 "langutils/sc_parser/src/sc_grammar.y"
+#line 770 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), cxt.create(ArgumentList{}, yystack_[3].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3729 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3732 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 150: // expr: expr DOT OPENSQUARE arguments CLOSESQUARE EQUALSSIGN expr
-#line 770 "langutils/sc_parser/src/sc_grammar.y"
+#line 773 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[6].value.as < AnyExprIndex > (), yystack_[3].value.as < ArgumentListIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3735 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3738 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 151: // expr: expr DOT OPENSQUARE CLOSESQUARE EQUALSSIGN expr
-#line 773 "langutils/sc_parser/src/sc_grammar.y"
+#line 776 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyExprIndex > () = cxt.create(AssignmentAtNode{}, yylhs.location, yystack_[5].value.as < AnyExprIndex > (), cxt.create(ArgumentList{}, yystack_[3].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3741 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3744 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 152: // expr_or_seq.base: expr
-#line 780 "langutils/sc_parser/src/sc_grammar.y"
+#line 783 "langutils/sc_parser/src/sc_grammar.y"
                { yylhs.value.as < AnyExprIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 3747 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3750 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 153: // expr_or_seq.base: expr_or_seq.base SEMICOLON expr
-#line 781 "langutils/sc_parser/src/sc_grammar.y"
+#line 784 "langutils/sc_parser/src/sc_grammar.y"
                                           { yylhs.value.as < AnyExprIndex > () = cxt.create(ExprSeq{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3753 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3756 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 154: // expr_or_seq: expr_or_seq.base semicolon.opt
-#line 785 "langutils/sc_parser/src/sc_grammar.y"
+#line 788 "langutils/sc_parser/src/sc_grammar.y"
                                        { yylhs.value.as < AnyExprIndex > () = yystack_[1].value.as < AnyExprIndex > (); }
-#line 3759 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3762 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 155: // generator: OPENCURLY COLON expr_or_seq COMMA generator.qual.list comma.opt CLOSECURLY
-#line 794 "langutils/sc_parser/src/sc_grammar.y"
+#line 797 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorAnyIndex > () = cxt.create(GeneratorNode{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), yystack_[2].value.as < GeneratorQualListIndex > ()); }
-#line 3765 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3768 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 156: // generator: OPENCURLY SEMICOLON expr_or_seq COMMA generator.qual.list comma.opt CLOSECURLY
-#line 797 "langutils/sc_parser/src/sc_grammar.y"
+#line 800 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorAnyIndex > () = cxt.create(GeneratorFakeNode{}, yylhs.location, yystack_[4].value.as < AnyExprIndex > (), yystack_[2].value.as < GeneratorQualListIndex > ()); }
-#line 3771 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3774 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 157: // generator.qual.list: generator.qual
-#line 802 "langutils/sc_parser/src/sc_grammar.y"
+#line 805 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualListIndex > () = cxt.create(GeneratorQualList{}, yylhs.location, yystack_[0].value.as < GeneratorQualAnyIndex > ()); }
-#line 3777 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3780 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 158: // generator.qual.list: generator.qual.list COMMA generator.qual
-#line 804 "langutils/sc_parser/src/sc_grammar.y"
+#line 807 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualListIndex > () = cxt.graph->append(yystack_[2].value.as < GeneratorQualListIndex > (), yylhs.location, yystack_[0].value.as < GeneratorQualAnyIndex > ()); }
-#line 3783 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3786 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 159: // generator.qual: name LEFTARROW expr_or_seq
-#line 809 "langutils/sc_parser/src/sc_grammar.y"
+#line 812 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualAnyIndex > () = cxt.create(GeneratorQualAssign{}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), cxt.create(Missing{}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3789 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3792 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 160: // generator.qual: name name LEFTARROW expr_or_seq
-#line 811 "langutils/sc_parser/src/sc_grammar.y"
+#line 814 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualAnyIndex > () = cxt.create(GeneratorQualAssign{}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3795 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3798 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 161: // generator.qual: VAR name EQUALSSIGN expr_or_seq
-#line 813 "langutils/sc_parser/src/sc_grammar.y"
+#line 816 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualAnyIndex > () = cxt.create(GeneratorQualDeclare{}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3801 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3804 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 162: // generator.qual: VAR name OPENPAREN expr_or_seq CLOSEPAREN
-#line 815 "langutils/sc_parser/src/sc_grammar.y"
+#line 818 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualAnyIndex > () = cxt.create(GeneratorQualDeclare{}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ()); }
-#line 3807 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3810 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 163: // generator.qual: expr_or_seq
-#line 817 "langutils/sc_parser/src/sc_grammar.y"
+#line 820 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualAnyIndex > () = cxt.create(GeneratorQualIf{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3813 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3816 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 164: // generator.qual: COLON COLON expr_or_seq
-#line 819 "langutils/sc_parser/src/sc_grammar.y"
+#line 822 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualAnyIndex > () = cxt.create(GeneratorQualSideEffect{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3819 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3822 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 165: // generator.qual: COLON WHILE expr_or_seq
-#line 821 "langutils/sc_parser/src/sc_grammar.y"
+#line 824 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < GeneratorQualAnyIndex > () = cxt.create(GeneratorQualGuard{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 3825 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3828 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 166: // argument_declarations.list: name
-#line 834 "langutils/sc_parser/src/sc_grammar.y"
+#line 837 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3831 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3834 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 167: // argument_declarations.list: name EQUALSSIGN expr
-#line 836 "langutils/sc_parser/src/sc_grammar.y"
+#line 839 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			const auto is_bracketed = cxt.graph->is_bracketed(yystack_[0].value.as < AnyExprIndex > ());
 			yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{!is_bracketed}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ())); 
 		}
-#line 3840 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3843 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 168: // argument_declarations.list: name OPENPAREN expr_or_seq CLOSEPAREN
-#line 841 "langutils/sc_parser/src/sc_grammar.y"
+#line 844 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3846 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3849 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 169: // argument_declarations.list: argument_declarations.list COMMA name
-#line 844 "langutils/sc_parser/src/sc_grammar.y"
+#line 847 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[2].value.as < DeclareArgumentListIndex > (), yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3852 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3855 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 170: // argument_declarations.list: argument_declarations.list COMMA name EQUALSSIGN expr
-#line 847 "langutils/sc_parser/src/sc_grammar.y"
+#line 850 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			const auto is_bracketed = cxt.graph->is_bracketed(yystack_[0].value.as < AnyExprIndex > ());
 			yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[4].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{!is_bracketed}, range(yystack_[2].location, yystack_[0].location), yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()));
 		}
-#line 3861 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3864 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 171: // argument_declarations.list: argument_declarations.list COMMA name OPENPAREN expr_or_seq CLOSEPAREN
-#line 852 "langutils/sc_parser/src/sc_grammar.y"
+#line 855 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append(yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, range(yystack_[3].location, yystack_[0].location), yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3867 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3870 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 172: // argument_declarations.pipelist: name literal
-#line 858 "langutils/sc_parser/src/sc_grammar.y"
+#line 861 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[1].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3873 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3876 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 173: // argument_declarations.pipelist: name
-#line 860 "langutils/sc_parser/src/sc_grammar.y"
+#line 863 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3879 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3882 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 174: // argument_declarations.pipelist: name EQUALSSIGN literal
-#line 862 "langutils/sc_parser/src/sc_grammar.y"
+#line 865 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3885 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3888 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 175: // argument_declarations.pipelist: name OPENPAREN expr_or_seq CLOSEPAREN
-#line 864 "langutils/sc_parser/src/sc_grammar.y"
+#line 867 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3891 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3894 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 176: // argument_declarations.pipelist: name EQUALSSIGN OPENPAREN expr_or_seq CLOSEPAREN
-#line 866 "langutils/sc_parser/src/sc_grammar.y"
+#line 869 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, yylhs.location, yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3897 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3900 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 177: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name literal
-#line 868 "langutils/sc_parser/src/sc_grammar.y"
+#line 871 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[3].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, range(yystack_[1].location, yystack_[0].location), yystack_[1].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3903 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3906 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 178: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name
-#line 870 "langutils/sc_parser/src/sc_grammar.y"
+#line 873 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[2].value.as < DeclareArgumentListIndex > (), yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 3909 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3912 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 179: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name EQUALSSIGN literal
-#line 872 "langutils/sc_parser/src/sc_grammar.y"
+#line 875 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[4].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{true}, range(yystack_[2].location, yystack_[0].location), yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyPossiblyLiteralIndex > ())); }
-#line 3915 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3918 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 180: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name OPENPAREN expr_or_seq CLOSEPAREN
-#line 874 "langutils/sc_parser/src/sc_grammar.y"
+#line 877 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, range(yystack_[3].location, yystack_[0].location), yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3921 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3924 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 181: // argument_declarations.pipelist: argument_declarations.pipelist comma.opt name EQUALSSIGN OPENPAREN expr_or_seq CLOSEPAREN
-#line 876 "langutils/sc_parser/src/sc_grammar.y"
+#line 879 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[6].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentWithDefaultNode{false}, range(yystack_[4].location, yystack_[0].location), yystack_[4].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ())); }
-#line 3927 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3930 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 182: // argument_declarations: ARG SEMICOLON
-#line 880 "langutils/sc_parser/src/sc_grammar.y"
+#line 883 "langutils/sc_parser/src/sc_grammar.y"
                         { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location); }
-#line 3933 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3936 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 183: // argument_declarations: ARG argument_declarations.list comma.opt SEMICOLON
-#line 881 "langutils/sc_parser/src/sc_grammar.y"
+#line 884 "langutils/sc_parser/src/sc_grammar.y"
                                                              { yylhs.value.as < DeclareArgumentListIndex > () = yystack_[2].value.as < DeclareArgumentListIndex > (); }
-#line 3939 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3942 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 184: // argument_declarations: ARG argument_declarations.list ELLIPSIS name SEMICOLON
-#line 883 "langutils/sc_parser/src/sc_grammar.y"
+#line 886 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[3].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3945 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3948 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 185: // argument_declarations: ARG argument_declarations.list ELLIPSIS name COMMA name SEMICOLON
-#line 885 "langutils/sc_parser/src/sc_grammar.y"
+#line 888 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append( yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[3].location, yystack_[3].value.as < NamedIdentifierIndex > ()), cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3951 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3954 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 186: // argument_declarations: ARG ELLIPSIS name SEMICOLON
-#line 887 "langutils/sc_parser/src/sc_grammar.y"
+#line 890 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto arg_list = cxt.create(DeclareArgumentList{}, yylhs.location);
 			yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append(arg_list, yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); 
 		}
-#line 3960 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3963 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 187: // argument_declarations: ARG ELLIPSIS name COMMA name SEMICOLON
-#line 892 "langutils/sc_parser/src/sc_grammar.y"
+#line 895 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			auto arg_list = cxt.create(DeclareArgumentList{}, yylhs.location);
 			yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append(
@@ -3969,44 +3972,44 @@ namespace sc { namespace ast { namespace parser {
 				cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())
 			); 
 		}
-#line 3973 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3976 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 188: // argument_declarations: PIPE PIPE
-#line 901 "langutils/sc_parser/src/sc_grammar.y"
+#line 904 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location); }
-#line 3979 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3982 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 189: // argument_declarations: PIPE argument_declarations.pipelist comma.opt PIPE
-#line 903 "langutils/sc_parser/src/sc_grammar.y"
+#line 906 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = yystack_[2].value.as < DeclareArgumentListIndex > (); }
-#line 3985 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3988 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 190: // argument_declarations: PIPE argument_declarations.pipelist ELLIPSIS name PIPE
-#line 905 "langutils/sc_parser/src/sc_grammar.y"
+#line 908 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append(yystack_[3].value.as < DeclareArgumentListIndex > (), yystack_[3].location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3991 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 3994 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 191: // argument_declarations: PIPE argument_declarations.pipelist ELLIPSIS name COMMA name PIPE
-#line 907 "langutils/sc_parser/src/sc_grammar.y"
+#line 910 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append(yystack_[5].value.as < DeclareArgumentListIndex > (), yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[3].location, yystack_[3].value.as < NamedIdentifierIndex > ()), cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); }
-#line 3997 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4000 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 192: // argument_declarations: PIPE ELLIPSIS name PIPE
-#line 909 "langutils/sc_parser/src/sc_grammar.y"
+#line 912 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			auto arg_list = cxt.create(DeclareArgumentList{}, yylhs.location);
 			yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append(arg_list, yylhs.location, cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())); 
 		}
-#line 4006 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4009 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 193: // argument_declarations: PIPE ELLIPSIS name COMMA name PIPE
-#line 914 "langutils/sc_parser/src/sc_grammar.y"
+#line 917 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			auto arg_list = cxt.create(DeclareArgumentList{}, yylhs.location);
 			yylhs.value.as < DeclareArgumentListIndex > () = cxt.graph->append(
@@ -4015,545 +4018,545 @@ namespace sc { namespace ast { namespace parser {
 				cxt.create(DeclareArgumentVariadicNode{}, yystack_[1].location, yystack_[1].value.as < NamedIdentifierIndex > ())
 			); 
 		}
-#line 4019 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4022 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 194: // argument_declarations.opt: %empty
-#line 925 "langutils/sc_parser/src/sc_grammar.y"
+#line 928 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < DeclareArgumentListIndex > () = cxt.create(DeclareArgumentList{}, yylhs.location); }
-#line 4025 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4028 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 195: // argument_declarations.opt: argument_declarations
-#line 926 "langutils/sc_parser/src/sc_grammar.y"
+#line 929 "langutils/sc_parser/src/sc_grammar.y"
                                 { yylhs.value.as < DeclareArgumentListIndex > () = yystack_[0].value.as < DeclareArgumentListIndex > (); }
-#line 4031 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4034 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 196: // arguments.entries: KEYBINOP expr_or_seq
-#line 931 "langutils/sc_parser/src/sc_grammar.y"
+#line 934 "langutils/sc_parser/src/sc_grammar.y"
                                { yylhs.value.as < ArgumentEntryIndex > () = cxt.create(KwArgNode{}, yylhs.location, cxt.create(KeyBinOp{}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4037 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4040 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 197: // arguments.entries: MULTIPLY expr_or_seq
-#line 932 "langutils/sc_parser/src/sc_grammar.y"
+#line 935 "langutils/sc_parser/src/sc_grammar.y"
                                { yylhs.value.as < ArgumentEntryIndex > () = cxt.create(VariadicArgNode{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4043 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4046 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 198: // arguments.entries: expr_or_seq
-#line 933 "langutils/sc_parser/src/sc_grammar.y"
+#line 936 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < ArgumentEntryIndex > () = yystack_[0].value.as < AnyExprIndex > (); }
-#line 4049 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4052 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 199: // arguments.no_trailing: arguments.entries
-#line 937 "langutils/sc_parser/src/sc_grammar.y"
+#line 940 "langutils/sc_parser/src/sc_grammar.y"
                             {  yylhs.value.as < ArgumentListIndex > () = cxt.create(ArgumentList{}, yylhs.location, yystack_[0].value.as < ArgumentEntryIndex > ()); }
-#line 4055 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4058 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 200: // arguments.no_trailing: arguments.no_trailing COMMA arguments.entries
-#line 938 "langutils/sc_parser/src/sc_grammar.y"
+#line 941 "langutils/sc_parser/src/sc_grammar.y"
                                                         { yylhs.value.as < ArgumentListIndex > () = cxt.graph->append(yystack_[2].value.as < ArgumentListIndex > (), yylhs.location, yystack_[0].value.as < ArgumentEntryIndex > ()); }
-#line 4061 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4064 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 201: // arguments: arguments.no_trailing comma.opt
-#line 941 "langutils/sc_parser/src/sc_grammar.y"
+#line 944 "langutils/sc_parser/src/sc_grammar.y"
                                             { yylhs.value.as < ArgumentListIndex > () = yystack_[1].value.as < ArgumentListIndex > (); }
-#line 4067 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4070 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 202: // arguments.paren: OPENPAREN arguments CLOSEPAREN
-#line 943 "langutils/sc_parser/src/sc_grammar.y"
+#line 946 "langutils/sc_parser/src/sc_grammar.y"
                                                  { yylhs.value.as < ArgumentListIndex > () = yystack_[1].value.as < ArgumentListIndex > (); }
-#line 4073 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4076 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 203: // arguments.maybe_paren: %empty
-#line 946 "langutils/sc_parser/src/sc_grammar.y"
+#line 949 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < ArgumentListIndex > () = cxt.create(ArgumentList{}, yylhs.location); }
-#line 4079 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4082 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 204: // arguments.maybe_paren: OPENPAREN CLOSEPAREN
-#line 948 "langutils/sc_parser/src/sc_grammar.y"
+#line 951 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArgumentListIndex > () = cxt.create(ArgumentList{}, yylhs.location); }
-#line 4085 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4088 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 205: // arguments.maybe_paren: OPENPAREN arguments CLOSEPAREN
-#line 950 "langutils/sc_parser/src/sc_grammar.y"
+#line 953 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArgumentListIndex > () = yystack_[1].value.as < ArgumentListIndex > (); }
-#line 4091 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4094 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 206: // variable_declarations.list.item: name
-#line 959 "langutils/sc_parser/src/sc_grammar.y"
+#line 962 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyVariableIndex > () = yystack_[0].value.as < NamedIdentifierIndex > (); }
-#line 4097 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4100 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 207: // variable_declarations.list.item: name EQUALSSIGN expr
-#line 961 "langutils/sc_parser/src/sc_grammar.y"
+#line 964 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyVariableIndex > () = cxt.create(DeclareVariableWithDefaultNode{}, yylhs.location, yystack_[2].value.as < NamedIdentifierIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4103 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4106 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 208: // variable_declarations.list.item: name OPENPAREN expr_or_seq CLOSEPAREN
-#line 963 "langutils/sc_parser/src/sc_grammar.y"
+#line 966 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyVariableIndex > () = cxt.create(DeclareVariableWithDefaultNode{}, yylhs.location, yystack_[3].value.as < NamedIdentifierIndex > (), yystack_[1].value.as < AnyExprIndex > ()); }
-#line 4109 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4112 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 209: // variable_declarations.list.item: name.pack EQUALSSIGN expr
-#line 965 "langutils/sc_parser/src/sc_grammar.y"
+#line 968 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyVariableIndex > () = cxt.create(VariablePackAssign{}, yylhs.location, yystack_[2].value.as < NamePackIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4115 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4118 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 210: // variable_declarations.list.item: name.pack OPENPAREN expr_or_seq CLOSEPAREN
-#line 967 "langutils/sc_parser/src/sc_grammar.y"
+#line 970 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareAnyVariableIndex > () = cxt.create(VariablePackAssign{}, yylhs.location, yystack_[3].value.as < NamePackIndex > (), yystack_[1].value.as < AnyExprIndex > ()); }
-#line 4121 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4124 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 211: // variable_declarations.list: variable_declarations.list.item
-#line 972 "langutils/sc_parser/src/sc_grammar.y"
+#line 975 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DeclareVariableListIndex > () = cxt.create(DeclareVariableList{}, yylhs.location, yystack_[0].value.as < DeclareAnyVariableIndex > ()); }
-#line 4127 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4130 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 212: // variable_declarations.list: variable_declarations.list COMMA variable_declarations.list.item
-#line 974 "langutils/sc_parser/src/sc_grammar.y"
+#line 977 "langutils/sc_parser/src/sc_grammar.y"
                 {yylhs.value.as < DeclareVariableListIndex > () = cxt.graph->append(yystack_[2].value.as < DeclareVariableListIndex > (), yystack_[0].value.as < DeclareAnyVariableIndex > ()); }
-#line 4133 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4136 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 213: // variable_declarations: VAR variable_declarations.list
-#line 977 "langutils/sc_parser/src/sc_grammar.y"
+#line 980 "langutils/sc_parser/src/sc_grammar.y"
                                                        { yylhs.value.as < DeclareVariableListIndex > () = yystack_[0].value.as < DeclareVariableListIndex > (); }
-#line 4139 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4142 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 214: // literal.terminal: symbol
-#line 985 "langutils/sc_parser/src/sc_grammar.y"
+#line 988 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < AnySymbolIndex > (); }
-#line 4145 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4148 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 215: // literal.terminal: string
-#line 986 "langutils/sc_parser/src/sc_grammar.y"
+#line 989 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < StringLitIndex > (); }
-#line 4151 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4154 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 216: // literal.terminal: integer
-#line 987 "langutils/sc_parser/src/sc_grammar.y"
+#line 990 "langutils/sc_parser/src/sc_grammar.y"
                   { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < IntLitIndex > (); }
-#line 4157 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4160 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 217: // literal.terminal: float
-#line 988 "langutils/sc_parser/src/sc_grammar.y"
+#line 991 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < FloatProducingIndex > (); }
-#line 4163 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4166 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 218: // literal.terminal: boolean
-#line 989 "langutils/sc_parser/src/sc_grammar.y"
+#line 992 "langutils/sc_parser/src/sc_grammar.y"
                   { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < BooleanLitIndex > (); }
-#line 4169 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4172 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 219: // literal.terminal: nil
-#line 990 "langutils/sc_parser/src/sc_grammar.y"
+#line 993 "langutils/sc_parser/src/sc_grammar.y"
               { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < NilLitIndex > (); }
-#line 4175 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4178 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 220: // literal.terminal: ascii
-#line 991 "langutils/sc_parser/src/sc_grammar.y"
+#line 994 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < ASCIIIndex > (); }
-#line 4181 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4184 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 221: // literal.terminal: block
-#line 992 "langutils/sc_parser/src/sc_grammar.y"
+#line 995 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < BlockIndex > (); }
-#line 4187 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4190 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 222: // literal.array.contents: %empty
-#line 997 "langutils/sc_parser/src/sc_grammar.y"
+#line 1000 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location); }
-#line 4193 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4196 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 223: // literal.array.contents: expr_or_seq
-#line 999 "langutils/sc_parser/src/sc_grammar.y"
+#line 1002 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4199 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4202 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 224: // literal.array.contents: expr_or_seq COLON expr_or_seq
-#line 1001 "langutils/sc_parser/src/sc_grammar.y"
+#line 1004 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4205 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4208 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 225: // literal.array.contents: KEYBINOP expr_or_seq
-#line 1003 "langutils/sc_parser/src/sc_grammar.y"
+#line 1006 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArrayIndex > () = cxt.create(ArrayNode{}, yylhs.location, cxt.create(KeyBinOp{}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4211 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4214 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 226: // literal.array.contents: literal.array.contents COMMA expr_or_seq
-#line 1005 "langutils/sc_parser/src/sc_grammar.y"
+#line 1008 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArrayIndex > () = cxt.graph->append(yystack_[2].value.as < ArrayIndex > (), yylhs.location, yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4217 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4220 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 227: // literal.array.contents: literal.array.contents COMMA expr_or_seq COLON expr_or_seq
-#line 1007 "langutils/sc_parser/src/sc_grammar.y"
+#line 1010 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArrayIndex > () = cxt.graph->append(yystack_[4].value.as < ArrayIndex > (), yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4223 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4226 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 228: // literal.array.contents: literal.array.contents COMMA KEYBINOP expr_or_seq
-#line 1009 "langutils/sc_parser/src/sc_grammar.y"
+#line 1012 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < ArrayIndex > () = cxt.graph->append(yystack_[3].value.as < ArrayIndex > (), yylhs.location, cxt.create(KeyBinOp{}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4229 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4232 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 229: // literal.dictionary.entry: expr COLON expr_or_seq
-#line 1017 "langutils/sc_parser/src/sc_grammar.y"
+#line 1020 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DictionaryEntryIndex > () = cxt.create(DictionaryEntryNode{}, yylhs.location, yystack_[2].value.as < AnyExprIndex > (), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4235 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4238 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 230: // literal.dictionary.entry: KEYBINOP expr_or_seq
-#line 1019 "langutils/sc_parser/src/sc_grammar.y"
+#line 1022 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DictionaryEntryIndex > () = cxt.create(DictionaryEntryNode{}, yylhs.location, cxt.create(KeyBinOp{}, yystack_[1].location), yystack_[0].value.as < AnyExprIndex > ()); }
-#line 4241 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4244 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 231: // literal.dictionary.entries: %empty
-#line 1024 "langutils/sc_parser/src/sc_grammar.y"
+#line 1027 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DictionaryIndex > () = cxt.create(DictionaryNode{}, yylhs.location); }
-#line 4247 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4250 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 232: // literal.dictionary.entries: literal.dictionary.entry
-#line 1026 "langutils/sc_parser/src/sc_grammar.y"
+#line 1029 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DictionaryIndex > () = cxt.create(DictionaryNode{}, yylhs.location, yystack_[0].value.as < DictionaryEntryIndex > ()); }
-#line 4253 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4256 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 233: // literal.dictionary.entries: literal.dictionary.entries COMMA literal.dictionary.entry
-#line 1028 "langutils/sc_parser/src/sc_grammar.y"
+#line 1031 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < DictionaryIndex > () = cxt.graph->append(yystack_[2].value.as < DictionaryIndex > (), yylhs.location,  yystack_[0].value.as < DictionaryEntryIndex > ()); }
-#line 4259 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4262 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 234: // literal.dictionary: OPENPAREN literal.dictionary.entries comma.opt CLOSEPAREN
-#line 1033 "langutils/sc_parser/src/sc_grammar.y"
+#line 1036 "langutils/sc_parser/src/sc_grammar.y"
                 { cxt.graph->location(*yystack_[2].value.as < DictionaryIndex > ()) = yylhs.location; yylhs.value.as < DictionaryIndex > () = yystack_[2].value.as < DictionaryIndex > (); }
-#line 4265 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4268 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 235: // literal.array: OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
-#line 1038 "langutils/sc_parser/src/sc_grammar.y"
+#line 1041 "langutils/sc_parser/src/sc_grammar.y"
                 {  cxt.graph->location(*yystack_[2].value.as < ArrayIndex > ()) = yylhs.location; yylhs.value.as < ArrayIndex > () = yystack_[2].value.as < ArrayIndex > (); }
-#line 4271 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4274 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 236: // literal.array: HASH OPENSQUARE literal.array.contents comma.opt CLOSESQUARE
-#line 1040 "langutils/sc_parser/src/sc_grammar.y"
+#line 1043 "langutils/sc_parser/src/sc_grammar.y"
                 {  
 			cxt.graph->payload(yystack_[2].value.as < ArrayIndex > ()).is_immutable = true;
 			cxt.graph->location(*yystack_[2].value.as < ArrayIndex > ()) = yylhs.location;
 			yylhs.value.as < ArrayIndex > () = yystack_[2].value.as < ArrayIndex > ();
 		}
-#line 4281 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4284 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 237: // literal: literal.terminal
-#line 1048 "langutils/sc_parser/src/sc_grammar.y"
+#line 1051 "langutils/sc_parser/src/sc_grammar.y"
                            { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < AnyPossiblyLiteralIndex > (); }
-#line 4287 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4290 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 238: // literal: literal.array
-#line 1049 "langutils/sc_parser/src/sc_grammar.y"
+#line 1052 "langutils/sc_parser/src/sc_grammar.y"
                         { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < ArrayIndex > (); }
-#line 4293 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4296 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 239: // literal: literal.dictionary
-#line 1050 "langutils/sc_parser/src/sc_grammar.y"
+#line 1053 "langutils/sc_parser/src/sc_grammar.y"
                              { yylhs.value.as < AnyPossiblyLiteralIndex > () = yystack_[0].value.as < DictionaryIndex > (); }
-#line 4299 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4302 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 240: // name: NAME
-#line 1058 "langutils/sc_parser/src/sc_grammar.y"
+#line 1061 "langutils/sc_parser/src/sc_grammar.y"
                { yylhs.value.as < NamedIdentifierIndex > () = cxt.create(NamedIdentifier{}, yylhs.location); }
-#line 4305 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4308 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 241: // name: WHILE
-#line 1059 "langutils/sc_parser/src/sc_grammar.y"
+#line 1062 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NamedIdentifierIndex > () = cxt.create(NamedIdentifier{}, yylhs.location); }
-#line 4311 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4314 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 242: // name.list: HASH name
-#line 1065 "langutils/sc_parser/src/sc_grammar.y"
+#line 1068 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NameListIndex > () = cxt.create(NameList{}, yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 4317 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4320 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 243: // name.list: HASH TILDE name
-#line 1067 "langutils/sc_parser/src/sc_grammar.y"
+#line 1070 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NameListIndex > () = cxt.create(NameList{}, yylhs.location, cxt.create(EnvIdentifierNode{}, range(yystack_[1].location, yystack_[0].location), yystack_[0].value.as < NamedIdentifierIndex > ())); }
-#line 4323 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4326 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 244: // name.list: name.list COMMA name
-#line 1069 "langutils/sc_parser/src/sc_grammar.y"
+#line 1072 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NameListIndex > () = cxt.graph->append(yystack_[2].value.as < NameListIndex > (), yylhs.location, yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 4329 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4332 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 245: // name.list: name.list COMMA TILDE name
-#line 1071 "langutils/sc_parser/src/sc_grammar.y"
+#line 1074 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NameListIndex > () = cxt.graph->append(yystack_[3].value.as < NameListIndex > (), yylhs.location, cxt.create(EnvIdentifierNode{}, range(yystack_[1].location, yystack_[0].location), yystack_[0].value.as < NamedIdentifierIndex > ())); }
-#line 4335 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4338 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 246: // name.pack: name.list
-#line 1075 "langutils/sc_parser/src/sc_grammar.y"
+#line 1078 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NamePackIndex > () = cxt.create(NamePack{}, yylhs.location, yystack_[0].value.as < NameListIndex > (), cxt.create(Missing{}, yystack_[0].location)); }
-#line 4341 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4344 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 247: // name.pack: name.list ELLIPSIS name
-#line 1077 "langutils/sc_parser/src/sc_grammar.y"
+#line 1080 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NamePackIndex > () = cxt.create(NamePack{}, yylhs.location, yystack_[2].value.as < NameListIndex > (), yystack_[0].value.as < NamedIdentifierIndex > ()); }
-#line 4347 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4350 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 248: // name.pack: name.list ELLIPSIS TILDE name
-#line 1079 "langutils/sc_parser/src/sc_grammar.y"
+#line 1082 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < NamePackIndex > () = cxt.create(NamePack{}, yylhs.location, yystack_[3].value.as < NameListIndex > (), cxt.create(EnvIdentifierNode{}, range(yystack_[1].location, yystack_[0].location), yystack_[0].value.as < NamedIdentifierIndex > ())); }
-#line 4353 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4356 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 249: // ascii: ASCII
-#line 1089 "langutils/sc_parser/src/sc_grammar.y"
+#line 1092 "langutils/sc_parser/src/sc_grammar.y"
               { yylhs.value.as < ASCIIIndex > () = cxt.create(ASCIINode{}, yylhs.location); }
-#line 4359 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4362 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 250: // nil: NIL
-#line 1091 "langutils/sc_parser/src/sc_grammar.y"
+#line 1094 "langutils/sc_parser/src/sc_grammar.y"
           { yylhs.value.as < NilLitIndex > () = cxt.create(NilNode{}, yylhs.location); }
-#line 4365 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4368 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 251: // boolean: TRUE
-#line 1094 "langutils/sc_parser/src/sc_grammar.y"
+#line 1097 "langutils/sc_parser/src/sc_grammar.y"
                { yylhs.value.as < BooleanLitIndex > () = cxt.create(BooleanNode{true}, yylhs.location); }
-#line 4371 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4374 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 252: // boolean: FALSE
-#line 1095 "langutils/sc_parser/src/sc_grammar.y"
+#line 1098 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < BooleanLitIndex > () = cxt.create(BooleanNode{false}, yylhs.location); }
-#line 4377 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4380 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 253: // symbol: SYMBOL_QUOTE
-#line 1099 "langutils/sc_parser/src/sc_grammar.y"
+#line 1102 "langutils/sc_parser/src/sc_grammar.y"
                        { yylhs.value.as < AnySymbolIndex > () = cxt.create(SymbolQuote{}, yylhs.location); }
-#line 4383 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4386 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 254: // symbol: SYMBOL_SLASH
-#line 1100 "langutils/sc_parser/src/sc_grammar.y"
+#line 1103 "langutils/sc_parser/src/sc_grammar.y"
                        { yylhs.value.as < AnySymbolIndex > () = cxt.create(SymbolSlash{}, yylhs.location); }
-#line 4389 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4392 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 255: // string: STRINGLINE
-#line 1104 "langutils/sc_parser/src/sc_grammar.y"
+#line 1107 "langutils/sc_parser/src/sc_grammar.y"
                      { yylhs.value.as < StringLitIndex > () = cxt.create(StringLineList{}, yylhs.location, cxt.create(StringLineNode{}, yylhs.location)); }
-#line 4395 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4398 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 256: // string: string STRINGLINE
-#line 1105 "langutils/sc_parser/src/sc_grammar.y"
+#line 1108 "langutils/sc_parser/src/sc_grammar.y"
                             { yylhs.value.as < StringLitIndex > () = cxt.graph->append(yystack_[1].value.as < StringLitIndex > (), cxt.create(StringLineNode{}, yystack_[0].location)); }
-#line 4401 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4404 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 257: // integer: INTEGER
-#line 1109 "langutils/sc_parser/src/sc_grammar.y"
+#line 1112 "langutils/sc_parser/src/sc_grammar.y"
                   { yylhs.value.as < IntLitIndex > () = cxt.create(IntNode{}, yylhs.location); }
-#line 4407 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4410 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 258: // integer: INTEGER_RADIX
-#line 1110 "langutils/sc_parser/src/sc_grammar.y"
+#line 1113 "langutils/sc_parser/src/sc_grammar.y"
                         { yylhs.value.as < IntLitIndex > () = cxt.create(IntNode{IntNode::Kind::Radix}, yylhs.location); }
-#line 4413 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4416 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 259: // integer: HEXADECIMAL
-#line 1111 "langutils/sc_parser/src/sc_grammar.y"
+#line 1114 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < IntLitIndex > () = cxt.create(IntNode{IntNode::Kind::Hexadecimal}, yylhs.location); }
-#line 4419 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4422 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 260: // integer: MINUS integer
-#line 1113 "langutils/sc_parser/src/sc_grammar.y"
+#line 1116 "langutils/sc_parser/src/sc_grammar.y"
                 {
 			// Reaches into the previous integer and changes its sign.
 			cxt.graph->payload(yystack_[0].value.as < IntLitIndex > ()).sign = IntNode::Sign::Negative;
 			yylhs.value.as < IntLitIndex > () = yystack_[0].value.as < IntLitIndex > ();
 		}
-#line 4429 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4432 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 261: // float.raw_unsigned: FLOAT
-#line 1121 "langutils/sc_parser/src/sc_grammar.y"
+#line 1124 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{}, yylhs.location); }
-#line 4435 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4438 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 262: // float.raw_unsigned: FLOAT_RADIX
-#line 1122 "langutils/sc_parser/src/sc_grammar.y"
+#line 1125 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{FloatNode::Kind::Radix}, yylhs.location); }
-#line 4441 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4444 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 263: // float.raw_unsigned: FLOAT_EXPONENT
-#line 1123 "langutils/sc_parser/src/sc_grammar.y"
+#line 1126 "langutils/sc_parser/src/sc_grammar.y"
                          { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{FloatNode::Kind::Exponent}, yylhs.location); }
-#line 4447 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4450 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 264: // float.raw_unsigned: FLOAT_INF
-#line 1124 "langutils/sc_parser/src/sc_grammar.y"
+#line 1127 "langutils/sc_parser/src/sc_grammar.y"
                     { yylhs.value.as < FloatLitIndex > () = cxt.create(FloatNode{FloatNode::Kind::Inf}, yylhs.location); }
-#line 4453 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4456 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 265: // float.raw: float.raw_unsigned
-#line 1129 "langutils/sc_parser/src/sc_grammar.y"
+#line 1132 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < FloatLitIndex > () = yystack_[0].value.as < FloatLitIndex > (); }
-#line 4459 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4462 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 266: // float.raw: MINUS float.raw_unsigned
-#line 1131 "langutils/sc_parser/src/sc_grammar.y"
+#line 1134 "langutils/sc_parser/src/sc_grammar.y"
                 { cxt.graph->payload(yystack_[0].value.as < FloatLitIndex > ()).sign = FloatNode::Sign::Negative; yylhs.value.as < FloatLitIndex > () = yystack_[0].value.as < FloatLitIndex > (); }
-#line 4465 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4468 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 267: // accidental.unsigned: ACCIDENTAL_STEPS
-#line 1136 "langutils/sc_parser/src/sc_grammar.y"
+#line 1139 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AccidentalIndex > () = cxt.create(AccidentalNode{AccidentalNode::Kind::Steps}, yylhs.location); }
-#line 4471 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4474 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 268: // accidental.unsigned: ACCIDENTAL_CENTS
-#line 1138 "langutils/sc_parser/src/sc_grammar.y"
+#line 1141 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AccidentalIndex > () = cxt.create(AccidentalNode{AccidentalNode::Kind::Cents}, yylhs.location); }
-#line 4477 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4480 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 269: // accidental: accidental.unsigned
-#line 1143 "langutils/sc_parser/src/sc_grammar.y"
+#line 1146 "langutils/sc_parser/src/sc_grammar.y"
                 { yylhs.value.as < AccidentalIndex > () = yystack_[0].value.as < AccidentalIndex > (); }
-#line 4483 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4486 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 270: // accidental: MINUS accidental.unsigned
-#line 1145 "langutils/sc_parser/src/sc_grammar.y"
+#line 1148 "langutils/sc_parser/src/sc_grammar.y"
                 { cxt.graph->payload(yystack_[0].value.as < AccidentalIndex > ()).sign = AccidentalNode::Sign::Negative; yylhs.value.as < AccidentalIndex > () = yystack_[0].value.as < AccidentalIndex > (); }
-#line 4489 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4492 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 271: // float: float.raw
-#line 1149 "langutils/sc_parser/src/sc_grammar.y"
+#line 1152 "langutils/sc_parser/src/sc_grammar.y"
                     { yylhs.value.as < FloatProducingIndex > () = yystack_[0].value.as < FloatLitIndex > (); }
-#line 4495 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4498 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 272: // float: accidental
-#line 1150 "langutils/sc_parser/src/sc_grammar.y"
+#line 1153 "langutils/sc_parser/src/sc_grammar.y"
                      { yylhs.value.as < FloatProducingIndex > () = yystack_[0].value.as < AccidentalIndex > (); }
-#line 4501 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4504 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 273: // float: float.raw PI
-#line 1151 "langutils/sc_parser/src/sc_grammar.y"
+#line 1154 "langutils/sc_parser/src/sc_grammar.y"
                        { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{}, yylhs.location, yystack_[1].value.as < FloatLitIndex > ()); }
-#line 4507 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4510 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 274: // float: integer PI
-#line 1152 "langutils/sc_parser/src/sc_grammar.y"
+#line 1155 "langutils/sc_parser/src/sc_grammar.y"
                      { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{}, yylhs.location, yystack_[1].value.as < IntLitIndex > ()); }
-#line 4513 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4516 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 275: // float: PI
-#line 1153 "langutils/sc_parser/src/sc_grammar.y"
+#line 1156 "langutils/sc_parser/src/sc_grammar.y"
               { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{}, yylhs.location, cxt.create(Missing{}, yylhs.location)); }
-#line 4519 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4522 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 276: // float: MINUS PI
-#line 1154 "langutils/sc_parser/src/sc_grammar.y"
+#line 1157 "langutils/sc_parser/src/sc_grammar.y"
                    { yylhs.value.as < FloatProducingIndex > () = cxt.create(PiNode{PiNode::Sign::Negative}, yylhs.location, cxt.create(Missing{}, yylhs.location)); }
-#line 4525 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4528 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 277: // accessor: %empty
-#line 1158 "langutils/sc_parser/src/sc_grammar.y"
+#line 1161 "langutils/sc_parser/src/sc_grammar.y"
                  { yylhs.value.as < RWAccessorIndex > () = cxt.create(RWAccessor{ReadWriteAccessor::Private}, yylhs.location); }
-#line 4531 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4534 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 278: // accessor: LESSTHAN
-#line 1159 "langutils/sc_parser/src/sc_grammar.y"
+#line 1162 "langutils/sc_parser/src/sc_grammar.y"
                    { yylhs.value.as < RWAccessorIndex > () = cxt.create(RWAccessor{ReadWriteAccessor::ExternallyReadable}, yylhs.location); }
-#line 4537 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4540 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 279: // accessor: GREATERTHAN
-#line 1160 "langutils/sc_parser/src/sc_grammar.y"
+#line 1163 "langutils/sc_parser/src/sc_grammar.y"
                       { yylhs.value.as < RWAccessorIndex > () = cxt.create(RWAccessor{ReadWriteAccessor::ExternallyWriteable}, yylhs.location); }
-#line 4543 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4546 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
   case 280: // accessor: READWRITEVAR
-#line 1162 "langutils/sc_parser/src/sc_grammar.y"
+#line 1165 "langutils/sc_parser/src/sc_grammar.y"
                 { 
 			yylhs.value.as < RWAccessorIndex > () = cxt.create(RWAccessor{
 				combine<ReadWriteAccessor::ExternallyReadable, ReadWriteAccessor::ExternallyWriteable>()
 			}, yylhs.location); 
 		}
-#line 4553 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4556 "langutils/sc_parser/src/sc_grammar_parser.cpp"
     break;
 
 
-#line 4557 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 4560 "langutils/sc_parser/src/sc_grammar_parser.cpp"
 
             default:
               break;
@@ -5590,33 +5593,33 @@ namespace sc { namespace ast { namespace parser {
   {
        0,   174,   174,   175,   176,   177,   178,   186,   189,   192,
      201,   204,   206,   209,   212,   217,   220,   226,   229,   232,
-     260,   262,   267,   268,   272,   277,   278,   282,   283,   284,
-     288,   297,   302,   304,   309,   311,   313,   318,   320,   325,
-     326,   334,   335,   339,   342,   345,   348,   351,   360,   361,
-     373,   374,   378,   379,   387,   387,   390,   392,   397,   398,
-     402,   403,   404,   405,   409,   410,   411,   416,   421,   429,
-     430,   439,   440,   441,   445,   446,   447,   448,   449,   450,
-     451,   452,   456,   457,   461,   463,   468,   471,   474,   478,
-     481,   484,   487,   490,   493,   503,   506,   511,   517,   532,
-     539,   546,   555,   562,   569,   579,   585,   591,   600,   606,
-     612,   621,   626,   631,   636,   641,   649,   654,   660,   665,
-     670,   683,   686,   689,   692,   695,   698,   705,   708,   711,
-     714,   717,   720,   726,   727,   728,   729,   731,   734,   737,
-     740,   743,   744,   746,   748,   751,   754,   757,   763,   766,
-     769,   772,   780,   781,   785,   793,   796,   801,   803,   808,
-     810,   812,   814,   816,   818,   820,   833,   835,   840,   843,
-     846,   851,   857,   859,   861,   863,   865,   867,   869,   871,
-     873,   875,   880,   881,   882,   884,   886,   891,   900,   902,
-     904,   906,   908,   913,   925,   926,   931,   932,   933,   937,
-     938,   941,   943,   946,   947,   949,   958,   960,   962,   964,
-     966,   971,   973,   977,   985,   986,   987,   988,   989,   990,
-     991,   992,   996,   998,  1000,  1002,  1004,  1006,  1008,  1016,
-    1018,  1023,  1025,  1027,  1032,  1037,  1039,  1048,  1049,  1050,
-    1058,  1059,  1064,  1066,  1068,  1070,  1074,  1076,  1078,  1089,
-    1091,  1094,  1095,  1099,  1100,  1104,  1105,  1109,  1110,  1111,
-    1112,  1121,  1122,  1123,  1124,  1128,  1130,  1135,  1137,  1142,
-    1144,  1149,  1150,  1151,  1152,  1153,  1154,  1158,  1159,  1160,
-    1161,  1173,  1173,  1174,  1174
+     263,   265,   270,   271,   275,   280,   281,   285,   286,   287,
+     291,   300,   305,   307,   312,   314,   316,   321,   323,   328,
+     329,   337,   338,   342,   345,   348,   351,   354,   363,   364,
+     376,   377,   381,   382,   390,   390,   393,   395,   400,   401,
+     405,   406,   407,   408,   412,   413,   414,   419,   424,   432,
+     433,   442,   443,   444,   448,   449,   450,   451,   452,   453,
+     454,   455,   459,   460,   464,   466,   471,   474,   477,   481,
+     484,   487,   490,   493,   496,   506,   509,   514,   520,   535,
+     542,   549,   558,   565,   572,   582,   588,   594,   603,   609,
+     615,   624,   629,   634,   639,   644,   652,   657,   663,   668,
+     673,   686,   689,   692,   695,   698,   701,   708,   711,   714,
+     717,   720,   723,   729,   730,   731,   732,   734,   737,   740,
+     743,   746,   747,   749,   751,   754,   757,   760,   766,   769,
+     772,   775,   783,   784,   788,   796,   799,   804,   806,   811,
+     813,   815,   817,   819,   821,   823,   836,   838,   843,   846,
+     849,   854,   860,   862,   864,   866,   868,   870,   872,   874,
+     876,   878,   883,   884,   885,   887,   889,   894,   903,   905,
+     907,   909,   911,   916,   928,   929,   934,   935,   936,   940,
+     941,   944,   946,   949,   950,   952,   961,   963,   965,   967,
+     969,   974,   976,   980,   988,   989,   990,   991,   992,   993,
+     994,   995,   999,  1001,  1003,  1005,  1007,  1009,  1011,  1019,
+    1021,  1026,  1028,  1030,  1035,  1040,  1042,  1051,  1052,  1053,
+    1061,  1062,  1067,  1069,  1071,  1073,  1077,  1079,  1081,  1092,
+    1094,  1097,  1098,  1102,  1103,  1107,  1108,  1112,  1113,  1114,
+    1115,  1124,  1125,  1126,  1127,  1131,  1133,  1138,  1140,  1145,
+    1147,  1152,  1153,  1154,  1155,  1156,  1157,  1161,  1162,  1163,
+    1164,  1176,  1176,  1177,  1177
   };
 
   void
@@ -5701,7 +5704,7 @@ namespace sc { namespace ast { namespace parser {
 
 #line 7 "langutils/sc_parser/src/sc_grammar.y"
 } } } // sc::ast::parser
-#line 5705 "langutils/sc_parser/src/sc_grammar_parser.cpp"
+#line 5708 "langutils/sc_parser/src/sc_grammar_parser.cpp"
 
-#line 1176 "langutils/sc_parser/src/sc_grammar.y"
+#line 1179 "langutils/sc_parser/src/sc_grammar.y"
 
