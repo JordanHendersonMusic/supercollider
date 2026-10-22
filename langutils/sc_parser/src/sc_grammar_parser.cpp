@@ -3796,9 +3796,13 @@ namespace sc { namespace ast { namespace parser {
 
   case 157: // generator.qual.list: generator.qual.list COMMA generator.qual
 #line 801 "langutils/sc_parser/src/sc_grammar.y"
-                { yylhs.value.as < GeneratorQualListIndex > () = cxt.graph->append(yystack_[2].value.as < GeneratorQualListIndex > (), yystack_[2].location, yystack_[0].value.as < GeneratorQualAnyIndex > ()); }
+  {
+      yylhs.value.as<GeneratorQualListIndex>() =
+          cxt.graph->append(yystack_[2].value.as<GeneratorQualListIndex>(), yylhs.location,
+                            yystack_[0].value.as<GeneratorQualAnyIndex>());
+  }
 #line 3777 "langutils/sc_parser/src/sc_grammar_parser.cpp"
-    break;
+  break;
 
   case 158: // generator.qual: name LEFTARROW expr_or_seq
 #line 806 "langutils/sc_parser/src/sc_grammar.y"

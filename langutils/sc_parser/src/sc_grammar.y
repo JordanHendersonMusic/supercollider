@@ -798,7 +798,7 @@ generator.qual.list
 	: generator.qual[item]
 		{ $$ = cxt.create(GeneratorQualList{}, @$, $item); }
 	| generator.qual.list[list] COMMA generator.qual[item]
-		{ $$ = cxt.graph->append($list, @list, $item); }
+		{ $$ = cxt.graph->append($list, @$, $item); }
 	;
 
 generator.qual
