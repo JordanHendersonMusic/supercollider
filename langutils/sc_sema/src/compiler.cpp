@@ -503,12 +503,24 @@ std::vector<sc::diag::Diagnostic> IRCompiler::compile_class_library( //
                 SCClass class_node { name };
                 if (auto slot = decl.slot_def()) {
                     const auto [n, i] = *slot;
-                    if (n == ctx.common_symbols.slot) {
-                        // already a slot
-                    } else if (n == ctx.common_symbols.float_) {
-                        class_node.memory_layout = SCClass::MemoryLayout::Float;
-                    } else if (n == ctx.common_symbols.int_) {
-                        class_node.memory_layout = SCClass::MemoryLayout::Int;
+                    const auto& s = ctx.common_symbols;
+                    using Layout = SCClass::MemoryLayout;
+                    if (n == s.slot) {
+                        class_node.memory_layout = Layout::Slot;
+                    } else if (n == s.double_) {
+                        class_node.memory_layout = Layout::Double;
+                    } else if (n == s.float_) {
+                        class_node.memory_layout = Layout::Float;
+                    } else if (n == s.int32) {
+                        class_node.memory_layout = Layout::Int32;
+                    } else if (n == s.int16) {
+                        class_node.memory_layout = Layout::Int16;
+                    } else if (n == s.int8) {
+                        class_node.memory_layout = Layout::Int8;
+                    } else if (n == s.char_) {
+                        class_node.memory_layout = Layout::Char;
+                    } else if (n == s.symbol) {
+                        class_node.memory_layout = Layout::Symbol;
                     } else {
                         assert(false); // should be guarded in the declaration phase.
                         decl.poison();
