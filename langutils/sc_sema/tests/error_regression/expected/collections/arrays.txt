@@ -61,7 +61,7 @@ SCClass (1:1): Arrays
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Not a constant
-|  |  |  collections/arrays.sc:9:39
+|  |  |  collections/arrays.sc:9:35
 |  |  |      7 │     nested_not_constant { ^[1, [2.foo]] }
 |  |  |      8 │     immutable { ^#[1, name, \symbol] }
 |  |  |      9 │     immutable_not_literal { ^#[1, 2.foo] }

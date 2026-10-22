@@ -50,7 +50,7 @@ SCClass (1:1): Messages
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Message has no receiver
-|  |  |  messages/messages.sc:7:37
+|  |  |  messages/messages.sc:7:27
 |  |  |      5 │     postfix_variadic { ^1.foo(2, *3) }
 |  |  |      6 │     prefix { ^foo(1, 2) }
 |  |  |      7 │     prefix_no_receiver { ^foo(bar: 1) }

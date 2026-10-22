@@ -89,7 +89,7 @@ SCClass (1:1): Ranges
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Range has no end
-|  |  |  ranges/ranges.sc:13:22
+|  |  |  ranges/ranges.sc:13:18
 |  |  |     11 │     not_constant { ^(1..2.foo) }
 |  |  |     12 │     too_large { ^(1..2000) }
 |  |  |     13 │     unbounded { ^(1..) }
@@ -110,7 +110,7 @@ SCClass (1:1): Ranges
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Range has no end
-|  |  |  ranges/ranges.sc:14:30
+|  |  |  ranges/ranges.sc:14:23
 |  |  |     12 │     too_large { ^(1..2000) }
 |  |  |     13 │     unbounded { ^(1..) }
 |  |  |     14 │     unbounded_step { ^(1, 3..) }

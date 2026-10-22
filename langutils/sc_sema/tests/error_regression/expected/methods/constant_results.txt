@@ -174,7 +174,7 @@ SCClass (1:1): ConstantResults
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variable not defined
-|  |  |  methods/constant_results.sc:28:41
+|  |  |  methods/constant_results.sc:28:24
 |  |  |     26 │     method_non_constant_item { instance_var; ^1 }
 |  |  |     27 │     method_primitive { _Primitive; ^1 }
 |  |  |     28 │     method_poisoned { ^undefined_variable }

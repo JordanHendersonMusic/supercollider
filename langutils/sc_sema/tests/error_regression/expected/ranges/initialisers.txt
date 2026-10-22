@@ -8,7 +8,7 @@ SCClass (1:1): RangeInitialisers
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Not a constant
-|  ranges/initialisers.sc:9:30
+|  ranges/initialisers.sc:9:23
 |      7 │     var nested = [(1..2), (a: (3..4))];
 |      8 │     var immutable = #[(1..2)];
 |      9 │     var float_range = (1.0..3);
@@ -22,7 +22,7 @@ SCClass (1:1): RangeInitialisers
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Range has no end
-|  ranges/initialisers.sc:10:25
+|  ranges/initialisers.sc:10:21
 |      8 │     var immutable = #[(1..2)];
 |      9 │     var float_range = (1.0..3);
 |     10 │     var unbounded = (1..);
@@ -36,7 +36,7 @@ SCClass (1:1): RangeInitialisers
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Not a constant
-|  ranges/initialisers.sc:11:32
+|  ranges/initialisers.sc:11:28
 |      9 │     var float_range = (1.0..3);
 |     10 │     var unbounded = (1..);
 |     11 │     var not_constant = (1..2.foo);
@@ -49,7 +49,7 @@ SCClass (1:1): RangeInitialisers
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Not a constant
-|  ranges/initialisers.sc:12:29
+|  ranges/initialisers.sc:12:21
 |     10 │     var unbounded = (1..);
 |     11 │     var not_constant = (1..2.foo);
 |     12 │     var too_large = (1..2000);

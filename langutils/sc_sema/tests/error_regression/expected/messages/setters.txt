@@ -72,7 +72,7 @@ SCClass (1:1): Setters
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Message has no receiver
-|  |  |  messages/setters.sc:12:42
+|  |  |  messages/setters.sc:12:30
 |  |  |     10 │     functional_receiver_only { foo(x) = 2 }
 |  |  |     11 │     functional_keyword { foo(x, b: 1) = 2 }
 |  |  |     12 │     functional_no_receiver { foo(b: 1) = 2 }
@@ -89,7 +89,7 @@ SCClass (1:1): Setters
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/setters.sc:13:35
+|  |  |  messages/setters.sc:13:34
 |  |  |     11 │     functional_keyword { foo(x, b: 1) = 2 }
 |  |  |     12 │     functional_no_receiver { foo(b: 1) = 2 }
 |  |  |     13 │     functional_variadic { foo(x, *x) = 2 }
@@ -120,7 +120,7 @@ SCClass (1:1): Setters
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Message has no receiver
-|  |  |  messages/setters.sc:14:46
+|  |  |  messages/setters.sc:14:36
 |  |  |     12 │     functional_no_receiver { foo(b: 1) = 2 }
 |  |  |     13 │     functional_variadic { foo(x, *x) = 2 }
 |  |  |     14 │     functional_variadic_receiver { foo(*x) = 2 }
@@ -136,7 +136,7 @@ SCClass (1:1): Setters
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/setters.sc:15:54
+|  |  |  messages/setters.sc:15:53
 |  |  |     13 │     functional_variadic { foo(x, *x) = 2 }
 |  |  |     14 │     functional_variadic_receiver { foo(*x) = 2 }
 |  |  |     15 │     functional_variadic_after_arguments { foo(x, 1, *x) = 2 }

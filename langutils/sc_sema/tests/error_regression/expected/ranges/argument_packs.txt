@@ -35,7 +35,7 @@ SCClass (1:1): RangeArgumentPacks
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Too many arguments in range
-|  |  |  ranges/argument_packs.sc:5:52
+|  |  |  ranges/argument_packs.sc:5:49
 |  |  |      3 │ 
 |  |  |      4 │     three_arguments { ^instance_var[1, 2, 3..5] }
 |  |  |      5 │     four_arguments_no_end { ^instance_var[1, 2, 3, 4..] }

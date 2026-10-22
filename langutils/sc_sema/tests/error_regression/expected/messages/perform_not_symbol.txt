@@ -31,7 +31,7 @@ SCClass (1:1): PerformNotSymbol
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Perform selector is not a symbol
-|  |  |  messages/perform_not_symbol.sc:3:26
+|  |  |  messages/perform_not_symbol.sc:3:24
 |  |  |      1 │ PerformNotSymbol {
 |  |  |      2 │     integer { ^1.perform(2) }
 |  |  |      3 │     float { ^1.perform(2.5, 3) }
@@ -53,7 +53,7 @@ SCClass (1:1): PerformNotSymbol
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Perform selector is not a symbol
-|  |  |  messages/perform_not_symbol.sc:4:29
+|  |  |  messages/perform_not_symbol.sc:4:25
 |  |  |      2 │     integer { ^1.perform(2) }
 |  |  |      3 │     float { ^1.perform(2.5, 3) }
 |  |  |      4 │     string { ^1.perform("foo") }
@@ -74,7 +74,7 @@ SCClass (1:1): PerformNotSymbol
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Perform selector is not a symbol
-|  |  |  messages/perform_not_symbol.sc:5:41
+|  |  |  messages/perform_not_symbol.sc:5:36
 |  |  |      3 │     float { ^1.perform(2.5, 3) }
 |  |  |      4 │     string { ^1.perform("foo") }
 |  |  |      5 │     string_with_quote { ^1.perform("it's") }
@@ -95,7 +95,7 @@ SCClass (1:1): PerformNotSymbol
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Perform selector is not a symbol
-|  |  |  messages/perform_not_symbol.sc:6:24
+|  |  |  messages/perform_not_symbol.sc:6:23
 |  |  |      4 │     string { ^1.perform("foo") }
 |  |  |      5 │     string_with_quote { ^1.perform("it's") }
 |  |  |      6 │     char { ^1.perform($a) }
@@ -116,7 +116,7 @@ SCClass (1:1): PerformNotSymbol
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Perform selector is not a symbol
-|  |  |  messages/perform_not_symbol.sc:7:29
+|  |  |  messages/perform_not_symbol.sc:7:26
 |  |  |      5 │     string_with_quote { ^1.perform("it's") }
 |  |  |      6 │     char { ^1.perform($a) }
 |  |  |      7 │     boolean { ^1.perform(true) }
@@ -137,7 +137,7 @@ SCClass (1:1): PerformNotSymbol
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Perform selector is not a symbol
-|  |  |  messages/perform_not_symbol.sc:8:33
+|  |  |  messages/perform_not_symbol.sc:8:31
 |  |  |      6 │     char { ^1.perform($a) }
 |  |  |      7 │     boolean { ^1.perform(true) }
 |  |  |      8 │     nil_selector { ^1.perform(nil) }
@@ -158,7 +158,7 @@ SCClass (1:1): PerformNotSymbol
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Perform selector is not a symbol
-|  |  |  messages/perform_not_symbol.sc:9:34
+|  |  |  messages/perform_not_symbol.sc:9:29
 |  |  |      7 │     boolean { ^1.perform(true) }
 |  |  |      8 │     nil_selector { ^1.perform(nil) }
 |  |  |      9 │     class_name { ^1.perform(Object) }

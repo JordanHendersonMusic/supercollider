@@ -24,7 +24,7 @@ SCClass (1:1): Foo
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variable not defined
-|  |  |  variables/assignment.sc:8:36
+|  |  |  variables/assignment.sc:8:24
 |  |  |      6 │     assign_class { class_var = 2.0 }
 |  |  |      7 │     assign_env { ~env_var = 3 }
 |  |  |      8 │     assign_undefined { undefined_var = 4 }
@@ -54,7 +54,7 @@ SCClass (1:1): Meta_Foo
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variable not defined
-|  |  |  variables/assignment.sc:12:48
+|  |  |  variables/assignment.sc:12:37
 |  |  |     10 │ 
 |  |  |     11 │     *class_method_assign_class { class_var = 6 }
 |  |  |     12 │     *class_method_assign_instance { instance_var = 7 }

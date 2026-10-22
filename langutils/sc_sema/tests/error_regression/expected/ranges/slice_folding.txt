@@ -8,7 +8,7 @@ SCClass (1:1): SliceFolding
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Not a constant
-|  ranges/slice_folding.sc:7:36
+|  ranges/slice_folding.sc:7:32
 |      5 │     var initial_array_3 = [1, 2, 3][-10..];
 |      6 │     var initial_string = "hello"[..1];
 |      7 │     var initial_not_constant = 1.foo[1..2];

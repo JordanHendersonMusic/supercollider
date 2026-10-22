@@ -21,7 +21,7 @@ SCClass (1:1): VariadicOrder
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/variadic_order.sc:5:30
+|  |  |  messages/variadic_order.sc:5:29
 |  |  |      3 │ 
 |  |  |      4 │     variadic_last { ^1.foo(2, *3) }
 |  |  |      5 │     variadic_first { ^1.foo(*2, 3) }
@@ -53,7 +53,7 @@ SCClass (1:1): VariadicOrder
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/variadic_order.sc:6:25
+|  |  |  messages/variadic_order.sc:6:24
 |  |  |      4 │     variadic_last { ^1.foo(2, *3) }
 |  |  |      5 │     variadic_first { ^1.foo(*2, 3) }
 |  |  |      6 │     two_after { ^1.foo(*2, 3, 4) }
@@ -96,7 +96,7 @@ SCClass (1:1): VariadicOrder
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/variadic_order.sc:8:23
+|  |  |  messages/variadic_order.sc:8:22
 |  |  |      6 │     two_after { ^1.foo(*2, 3, 4) }
 |  |  |      7 │     keyword_after { ^1.foo(*2, bar: 3) }
 |  |  |      8 │     prefix { ^foo(1, *2, 3) }
@@ -128,7 +128,7 @@ SCClass (1:1): VariadicOrder
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/variadic_order.sc:9:38
+|  |  |  messages/variadic_order.sc:9:37
 |  |  |      7 │     keyword_after { ^1.foo(*2, bar: 3) }
 |  |  |      8 │     prefix { ^foo(1, *2, 3) }
 |  |  |      9 │     prefix_variadic_receiver { ^foo(*1, 2) }
@@ -158,7 +158,7 @@ SCClass (1:1): VariadicOrder
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/variadic_order.sc:10:27
+|  |  |  messages/variadic_order.sc:10:26
 |  |  |      8 │     prefix { ^foo(1, *2, 3) }
 |  |  |      9 │     prefix_variadic_receiver { ^foo(*1, 2) }
 |  |  |     10 │     array_after { ^1.foo(*2, [3]) }
@@ -167,7 +167,7 @@ SCClass (1:1): VariadicOrder
 |  |  |     12 │     put_variadic_keyword { instance_var[*0, b: 1] = 2 }
 |  |  |     13 │     after_errors { ^5 }
 |  |  |
-|  |  |  messages/variadic_order.sc:10:32
+|  |  |  messages/variadic_order.sc:10:30
 |  |  |      8 │     prefix { ^foo(1, *2, 3) }
 |  |  |      9 │     prefix_variadic_receiver { ^foo(*1, 2) }
 |  |  |     10 │     array_after { ^1.foo(*2, [3]) }
@@ -191,7 +191,7 @@ SCClass (1:1): VariadicOrder
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/variadic_order.sc:11:34
+|  |  |  messages/variadic_order.sc:11:33
 |  |  |      9 │     prefix_variadic_receiver { ^foo(*1, 2) }
 |  |  |     10 │     array_after { ^1.foo(*2, [3]) }
 |  |  |     11 │     put_variadic { instance_var[*0] = 1 }
@@ -222,7 +222,7 @@ SCClass (1:1): VariadicOrder
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variadic argument is not last
-|  |  |  messages/variadic_order.sc:12:42
+|  |  |  messages/variadic_order.sc:12:41
 |  |  |     10 │     array_after { ^1.foo(*2, [3]) }
 |  |  |     11 │     put_variadic { instance_var[*0] = 1 }
 |  |  |     12 │     put_variadic_keyword { instance_var[*0, b: 1] = 2 }

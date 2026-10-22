@@ -251,7 +251,7 @@ SCClass (1:1): Generators
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Range has no end
-|  |  |  generators/generators.sc:19:43
+|  |  |  generators/generators.sc:19:39
 |  |  |     17 │     unbounded_source { ^{: x, x <- (1..) } }
 |  |  |     18 │     unbounded_source_step { ^{: x, x <- (1, 3..) } }
 |  |  |     19 │     unbounded_range_outside { var x = (1..); ^x }

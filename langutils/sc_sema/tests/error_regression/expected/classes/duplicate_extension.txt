@@ -53,14 +53,14 @@ SCClass (23:1): Foo
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Duplicate extention.
-|  |  |  classes/duplicate_extension.sc:26:7
+|  |  |  classes/duplicate_extension.sc:26:5
 |  |  |     24 │ 
 |  |  |     25 │ +Foo {
 |  |  |     26 │     bar {} 
 |  |  |        ┆     ^^^ Overrideen here...
 |  |  |     27 │ }
 |  |  |
-|  |  |  classes/duplicate_extension.sc:20:7
+|  |  |  classes/duplicate_extension.sc:20:5
 |  |  |     18 │ 
 |  |  |     19 │ +Foo {
 |  |  |     20 │     bar {} 

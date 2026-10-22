@@ -11,7 +11,7 @@ SCClass (1:1): EventKeyWithoutValue
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Warning: Event key without a value
-|  |  |  collections/event_odd_elements.sc:2:34
+|  |  |  collections/event_odd_elements.sc:2:33
 |  |  |      1 │ EventKeyWithoutValue {
 |  |  |      2 │     odd_constant { ^Event[a: 1, \b] }
 |  |  |        ┆                                 ^^ this key has no value.
@@ -31,7 +31,7 @@ SCClass (1:1): EventKeyWithoutValue
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Warning: Event key without a value
-|  |  |  collections/event_odd_elements.sc:3:42
+|  |  |  collections/event_odd_elements.sc:3:41
 |  |  |      1 │ EventKeyWithoutValue {
 |  |  |      2 │     odd_constant { ^Event[a: 1, \b] }
 |  |  |      3 │     odd_not_constant { ^Event[a: 1.foo, \b] }
@@ -53,7 +53,7 @@ SCClass (1:1): EventKeyWithoutValue
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Warning: Event key without a value
-|  |  |  collections/event_odd_elements.sc:4:22
+|  |  |  collections/event_odd_elements.sc:4:21
 |  |  |      2 │     odd_constant { ^Event[a: 1, \b] }
 |  |  |      3 │     odd_not_constant { ^Event[a: 1.foo, \b] }
 |  |  |      4 │     single { ^Event[\a] }

@@ -98,7 +98,7 @@ SCClass (1:1): PackAssign
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variable not defined
-|  |  |  variables/pack_assignment.sc:12:43
+|  |  |  variables/pack_assignment.sc:12:35
 |  |  |     10 │     assign_parenthesised { var a, b; #a, b ([1, 2]); ^b }
 |  |  |     11 │     assign_result { var a, b; ^#a, b = [1, 2] }
 |  |  |     12 │     assign_undefined { var a; #a, undefined = [1, 2] }
@@ -234,7 +234,7 @@ SCClass (1:1): PackAssign
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Environment variable declared
-|  |  |  variables/pack_assignment.sc:23:36
+|  |  |  variables/pack_assignment.sc:23:31
 |  |  |     21 │     declare_mutable_element { var #a, b = [[1], 2]; ^[a, b] }
 |  |  |     22 │     declare_assigned_later { var #a, b = [1, 2]; a = 3; ^a }
 |  |  |     23 │     declare_environment { var #a, ~b = [1, 2]; ^a }

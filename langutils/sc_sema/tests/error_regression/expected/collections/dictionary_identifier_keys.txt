@@ -24,7 +24,7 @@ SCClass (1:1): IdentifierKeys
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Error: Variable not defined
-|  |  |  collections/dictionary_identifier_keys.sc:7:46
+|  |  |  collections/dictionary_identifier_keys.sc:7:34
 |  |  |      5 │     identifier_key { ^(instance_var : 1) }
 |  |  |      6 │     keyword_key { ^(instance_var: 1) }
 |  |  |      7 │     identifier_key_undefined { ^(undefined_var : 1) }
@@ -54,7 +54,7 @@ SCClass (11:1): Initialisers
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Not a constant
-|  collections/dictionary_identifier_keys.sc:20:41
+|  collections/dictionary_identifier_keys.sc:20:37
 |     18 │     var instance_array = #[x, y];
 |     19 │     var identifier_key_const = (const_key : 1);
 |     20 │     var identifier_key_not_const = (other : 1);
@@ -67,7 +67,7 @@ SCClass (11:1): Initialisers
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Not a constant
-|  collections/dictionary_identifier_keys.sc:21:38
+|  collections/dictionary_identifier_keys.sc:21:34
 |     19 │     var identifier_key_const = (const_key : 1);
 |     20 │     var identifier_key_not_const = (other : 1);
 |     21 │     var value_not_constant = (a: 1.foo);

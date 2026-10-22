@@ -8,7 +8,7 @@ SCClass (1:1): Dup1
 |
 |  ──────────────────────────────────────────────────────────────────────────────────
 |  Error: Duplicate member in class
-|  classes/duplicate_members.sc:2:9
+|  classes/duplicate_members.sc:2:8
 |      1 │ Dup1 {
 |      2 │     var a, a;
 |        ┆        ^^ 
@@ -16,7 +16,7 @@ SCClass (1:1): Dup1
 |      4 │ 
 |      5 │ Dup2B {
 |
-|  classes/duplicate_members.sc:2:12
+|  classes/duplicate_members.sc:2:11
 |      1 │ Dup1 {
 |      2 │     var a, a;
 |        ┆           ^^ 

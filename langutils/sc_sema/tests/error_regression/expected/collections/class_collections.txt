@@ -47,7 +47,7 @@ SCClass (3:1): Collections
 |  |  |
 |  |  |  ──────────────────────────────────────────────────────────────────────────────────
 |  |  |  Warning: Event key without a value
-|  |  |  collections/class_collections.sc:9:31
+|  |  |  collections/class_collections.sc:9:30
 |  |  |      7 │     array_nested { ^Array[[1], Array[2]] }
 |  |  |      8 │     event_constant { ^Event[a: 1, b: 2] }
 |  |  |      9 │     event_odd { ^Event[a: 1, \b] }
