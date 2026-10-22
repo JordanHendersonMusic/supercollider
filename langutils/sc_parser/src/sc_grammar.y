@@ -200,6 +200,9 @@ file_as_func
 region.item
 	: expr
 		{ $$ = $expr; } 
+	// Parsed so it can be reported as a return in interpreted code, rather than an unexpected token.
+	| NONLOCALRETURN expr
+		{ $$ = cxt.create(NonLocalReturnExpr{}, range(@NONLOCALRETURN, @expr), $expr); }
 	| OPENPAREN argument_declarations[args] block.contents[contents] semicolon.opt CLOSEPAREN 
 		{ $$ = cxt.create(ImmediatelyEvaluatedBlock{}, @$, $args, $contents); }
 
