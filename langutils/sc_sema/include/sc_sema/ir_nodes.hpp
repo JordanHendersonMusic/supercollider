@@ -253,10 +253,12 @@ struct SCMethod : priv::Node<SCMethod_I(SCArgumentDeclareList_I positional_argum
     static constexpr auto type_name { "SCMethod" };
     std::optional<Locatable<SymSCPrimitive>> primitive;
     bool poisoned { false };
+    // Can differ from its class's, when it is in an extension.
+    ast::LanguageVersion version;
     // What calling the method returns, when it is known and has no effects. Only set without arguments, as their values
     // aren't known until the method is called. Callers can't rely on it unless they know which method is dispatched.
     OptionalConstExprIndex constant_result {};
-    SCMethod(std::optional<Locatable<SymSCPrimitive>> p): primitive(p) {}
+    SCMethod(std::optional<Locatable<SymSCPrimitive>> p, ast::LanguageVersion v): primitive(p), version(v) {}
 };
 struct SCFunction : priv::Node<SCFunction_I(SCArgumentDeclareList_I positional_arguments,
                                             SCArgumentDeclareList_I variadic_arguments, SCBody_I body)> {
@@ -282,6 +284,9 @@ struct SCRegionList : priv::List<SCRegionList_I, SCRegion_I> {
 struct SCInterpreted : priv::Node<SCInterpreted_I(join<SCFunction_I, SCRegionList_I> code)> {
     static constexpr auto type_name { "SCInterpreted" };
     bool poisoned { false };
+    // Given when it is compiled, see IRCompiler::compile_interpreted.
+    ast::LanguageVersion version;
+    SCInterpreted(ast::LanguageVersion v): version(v) {}
 };
 
 struct SCMethodList : priv::List<SCMethodList_I, SCMethod_I> {
@@ -315,6 +320,8 @@ struct SCClass : priv::Node<SCClass_I(SCMemberList_I members, SCMethodList_I met
     SymSCClassName name;
     MemoryLayout memory_layout { MemoryLayout::NotIndexed };
     std::optional<SymSCClassName> meta_class {};
+    // Of its own declaration, its extension methods have their own, see SCMethod::version.
+    ast::LanguageVersion version { ast::LanguageVersion::Legacy };
     SCClass(SymSCClassName n): name(n) {}
 };
 
