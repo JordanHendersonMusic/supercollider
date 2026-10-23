@@ -291,7 +291,9 @@ bool declare_variable(BodyContext& b, ast::NamedIdentifierIndex name_i, std::opt
         return true;
     }
     // Compiled before the variable is declared, a function in it can still refer to it, see Expr::initialising.
-    b.expr.initialising.push_back({ name, b.expr.scope.size() - 1, location_of(b.ir, g, whole), true });
+    Expr::Initialising variable { name, b.expr.scope.size() - 1, location_of(b.ir, g, whole) };
+    variable.in_frame = true;
+    b.expr.initialising.push_back(variable);
     const auto value_r = b.expr(*value);
     b.expr.initialising.pop_back();
     // Legacy code only knows a literal, as the old compiler computed any other initial value when the code ran.
@@ -312,10 +314,13 @@ bool declare_pack(BodyContext& b, ast::VariablePackAssignIndex pack) {
     // Compiled before the variables are declared, a function in it can still refer to them, see Expr::initialising.
     const auto initialising = b.expr.initialising.size();
     const auto mark_initialising = [&](ast::Index target) {
-        if (const auto name = g.as_a<ast::NamedIdentifierIndex>(target))
-            b.expr.initialising.push_back(
-                { b.ctx.symbol_table.get_identifier(std::string { get_string_view(g, *name) }), b.expr.scope.size() - 1,
-                  location_of(b.ir, g, { **name }), true });
+        const auto name = g.as_a<ast::NamedIdentifierIndex>(target);
+        if (!name)
+            return;
+        Expr::Initialising variable { b.ctx.symbol_table.get_identifier(std::string { get_string_view(g, *name) }),
+                                      b.expr.scope.size() - 1, location_of(b.ir, g, { **name }) };
+        variable.in_frame = true;
+        b.expr.initialising.push_back(variable);
     };
     for (auto it = g.children(list).iter(); it; ++it)
         mark_initialising({ **it });
@@ -429,8 +434,11 @@ void declare_frame(Expr& expr, IRGraph& ir, const std::shared_ptr<const ast::AST
     const auto& g = *ast_graph;
     // The locations are those the declarations get, so a read before one refers to the same place.
     const auto later = [&](ast::NamedIdentifierIndex name, ast::Index whole) {
-        expr.initialising.push_back({ ctx.symbol_table.get_identifier(std::string { get_string_view(g, name) }),
-                                      expr.scope.size() - 1, location_of(ir, g, whole), true, true });
+        Expr::Initialising variable { ctx.symbol_table.get_identifier(std::string { get_string_view(g, name) }),
+                                      expr.scope.size() - 1, location_of(ir, g, whole) };
+        variable.in_frame = true;
+        variable.later = true;
+        expr.initialising.push_back(variable);
     };
 
     for (auto it = g.children(args).iter(); it; ++it) {

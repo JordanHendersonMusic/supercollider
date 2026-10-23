@@ -42,8 +42,9 @@ void declare_arguments(Expr& expr, IRGraph& ir, const std::shared_ptr<const ast:
                     const auto sym = ctx.symbol_table.get_identifier(ast_graph->string(name));
                     // Compiled before this argument is declared, a function in it can still refer to it, see
                     // Expr::initialising.
-                    expr.initialising.push_back(
-                        { sym, expr.scope.size() - 1, location_of(ir, *ast_graph, { *i }), true });
+                    Expr::Initialising variable { sym, expr.scope.size() - 1, location_of(ir, *ast_graph, { *i }) };
+                    variable.in_frame = true;
+                    expr.initialising.push_back(variable);
                     const auto default_r = expr(ast::AnyExprIndex { default_i });
                     expr.initialising.pop_back();
                     const auto arg = ir.create(SCArgumentDeclare { sym,
