@@ -176,10 +176,11 @@ struct SCPackDeclare : priv::Node<SCPackDeclare_I(SCAnyExpr_I value, SCPackTarge
 // Generators, `{: value, qualifiers }`. Each qualifier nests inside the previous one, as blocks did in the old
 // compiler, but they are kept in a flat list in the order they are written. Lowering them, e.g., into a Routine, can
 // rebuild the nesting.
+// Each qualifier is a block. The variables it declares are a new binding EACH time it iterates.
 ////////////////////////////////////////////////////////////////////////////////
 
 // `x <- source` or `x i <- source`, iterates source with do (forSeries for a range), declaring the element, and the
-// index when given. source can be an unbounded range, e.g., `x <- (1..)`.
+// index when given, each a new binding per element. source can be an unbounded range, e.g., `x <- (1..)`.
 struct SCGenQualIterate : priv::Node<SCGenQualIterate_I(SCAnyExpr_I source)> {
     static constexpr auto type_name { "SCGenQualIterate" };
     Locatable<SymSCIdentifier> element;
@@ -187,7 +188,7 @@ struct SCGenQualIterate : priv::Node<SCGenQualIterate_I(SCAnyExpr_I source)> {
     SCGenQualIterate(Locatable<SymSCIdentifier> e, std::optional<Locatable<SymSCIdentifier>> i): element(e), index(i) {}
 };
 
-// `var x = value`, declares x for the qualifiers after it.
+// `var x = value`, declares x for the qualifiers after it, a new binding each time it runs.
 struct SCGenQualDeclare : priv::Node<SCGenQualDeclare_I(SCAnyExpr_I value)> {
     static constexpr auto type_name { "SCGenQualDeclare" };
     Locatable<SymSCIdentifier> name;
