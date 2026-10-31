@@ -29,6 +29,7 @@
 #include "PyrSched.h"
 #include "SCBase.h"
 #include "SC_StringBuffer.h"
+#include "sc_diagnostic/style.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -82,6 +83,8 @@ SC_LanguageClient::SC_LanguageClient(const std::string& name) {
 
     unlockInstance();
 }
+
+const sc::diag::Style& SC_LanguageClient::diagnosticStyle() const { return sc::diag::plain_style(); }
 
 SC_LanguageClient::~SC_LanguageClient() {
     lockInstance();

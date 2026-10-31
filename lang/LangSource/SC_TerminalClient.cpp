@@ -28,8 +28,10 @@
 
 #include "SC_CLIOptions.hpp"
 #include "SC_LanguageClient.h"
+#include "sc_diagnostic/style.hpp"
 
 #include <cstdlib>
+#include <string_view>
 #include <charconv>
 
 #ifdef SC_QT
@@ -43,6 +45,10 @@
 
 #ifdef __APPLE__
 #    include "../../common/SC_Apple.hpp"
+#endif
+
+#ifndef _WIN32
+#    include <unistd.h>
 #endif
 
 #ifdef HAVE_READLINE
@@ -96,6 +102,23 @@ void SC_TerminalClient::postError(const char* str, size_t len) {
 }
 
 void SC_TerminalClient::flush() { fflush(gPostDest); }
+
+// Colour only on Linux and macOS, when the post output is a terminal that hasn't opted out (https://no-color.org).
+// Decided once, so it never reads the environment while the language thread is changing it with String:setenv.
+const sc::diag::Style& SC_TerminalClient::diagnosticStyle() const {
+    static const sc::diag::Style& style = []() -> const sc::diag::Style& {
+#ifndef _WIN32
+        static const sc::diag::AnsiStyle ansi;
+        const auto* term = std::getenv("TERM");
+        const auto* no_color = std::getenv("NO_COLOR");
+        const auto is_terminal = isatty(fileno(gPostDest)) && term && std::string_view { term } != "dumb";
+        if (is_terminal && !(no_color && *no_color))
+            return ansi;
+#endif
+        return sc::diag::plain_style();
+    }();
+    return style;
+}
 
 int SC_TerminalClient::run(int argc, char** argv) {
     Options& opt = mOptions;

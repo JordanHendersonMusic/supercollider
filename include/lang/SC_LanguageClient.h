@@ -31,6 +31,10 @@
 #include <cstdarg>
 #include <string>
 
+namespace sc::diag {
+class Style;
+}
+
 // =====================================================================
 // SC_LanguageClient - abstract sclang client.
 // =====================================================================
@@ -153,6 +157,9 @@ public:
     // flush post buffer contents to screen.
     //     only called from the main language thread.
     virtual void flush() = 0;
+
+    // How compiler diagnostics are decorated when posted. Plain unless the client knows the output is a terminal.
+    virtual const sc::diag::Style& diagnosticStyle() const;
 
     // AppClock driver
     //    to be called from client mainloop.
