@@ -4,12 +4,10 @@
 #include <type_traits>
 
 namespace sc::lex {
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TokenType
-// An enum covering all the types of things the lexer sees.
-// These are defined in range, DO NOT CHANGE THE RANGE DELIMITERS, just insert new cases inbetween them.
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/// @brief Every kind of token the lexer produces, including whitespace, comments, and errors.
+///
+/// Related types are grouped in ranges delimited by `START_OF_*` and `END_OF_*`, which the `is_*` functions test.
+/// Do not change the delimiters, insert new cases between them.
 // clang-format off
 enum struct TokenType : unsigned int {
     EndOfFile = 0,
@@ -24,7 +22,7 @@ enum struct TokenType : unsigned int {
         START_OF_LITERAL_INTS = START_OF_LITERALS,
             Integer = START_OF_LITERAL_INTS,
             IntegerRadix,
-            Hexidecimal,
+            Hexadecimal,
         END_OF_LITERAL_INTS,
 
         START_OF_LITERAL_FLOATS = END_OF_LITERAL_INTS,
@@ -133,6 +131,7 @@ enum struct TokenType : unsigned int {
     START_OF_COMMENTS = END_OF_WHITESPACE,
         Comment = START_OF_COMMENTS,
         MultilineComment,
+        VersionComment, // `//# VERSION 3.16`, the lexer doesn't check the version.
     END_OF_COMMENTS,
 
     // errors
@@ -157,73 +156,93 @@ enum struct TokenType : unsigned int {
 };
 // clang-format on
 
+/// @brief Whether @p t equals any of @p args.
+/// @param t The token type to test.
+/// @param args One or more token types to compare against.
 template <typename... ARGS> [[nodiscard]] constexpr inline bool matches(TokenType t, ARGS... args) {
     static_assert((std::is_same_v<TokenType, ARGS> && ...));
     return ((t == args) || ...);
 }
 
+/// @brief Whether @p t is an error token, including user defined error codes.
 [[nodiscard]] constexpr inline bool is_error(TokenType t) {
     return TokenType::START_OF_ERRORS <= t && t < TokenType::END_OF_ERRORS;
 }
 
+/// @brief Whether @p t is any literal: number, accidental, symbol, character, boolean, nil, or string.
 [[nodiscard]] constexpr inline bool is_literal(TokenType t) {
     return TokenType::START_OF_LITERALS <= t && t < TokenType::END_OF_LITERALS;
 }
 
+/// @brief Whether @p t is a space, new line, or tab.
 [[nodiscard]] constexpr inline bool is_whitespace(TokenType t) {
     return TokenType::START_OF_WHITESPACE <= t && t < TokenType::END_OF_WHITESPACE;
 }
 
+/// @brief Whether @p t is a line, multiline, or version comment.
 [[nodiscard]] constexpr inline bool is_comment(TokenType t) {
     return TokenType::START_OF_COMMENTS <= t && t < TokenType::END_OF_COMMENTS;
 }
 
+/// @brief Whether @p t is a name, class name, or primitive name.
 [[nodiscard]] constexpr inline bool is_identifier(TokenType t) {
     return TokenType::START_OF_IDENTIFIERS <= t && t < TokenType::END_OF_IDENTIFIERS;
 }
 
+/// @brief Whether @p t is `while`, `var`, `arg`, `classvar`, or `const`.
 [[nodiscard]] constexpr inline bool is_keyword(TokenType t) {
     return TokenType::START_OF_KEYWORDS <= t && t < TokenType::END_OF_KEYWORDS;
 }
 
+/// @brief Whether @p t is an integer literal: decimal, radix, or hexadecimal.
 [[nodiscard]] constexpr inline bool is_integer(TokenType t) {
     return TokenType::START_OF_LITERAL_INTS <= t && t < TokenType::END_OF_LITERAL_INTS;
 }
 
+/// @brief Whether @p t is punctuation that can also be part of a binary operator, such as `|`, `-`, or `<`.
+///
+/// The lexer cannot decide on its own whether these are operators, so the parser resolves them.
 [[nodiscard]] constexpr inline bool is_ambiguous_punctuation(TokenType t) {
     return TokenType::START_OF_AMBIGUOUS_PUNCTUATION <= t && t < TokenType::END_OF_AMBIGUOUS_PUNCTUATION;
 }
 
-// Also includes constants pi and inf
+/// @brief Whether @p t is a float literal, including the constants `pi` and `inf`.
 [[nodiscard]] constexpr inline bool is_float(TokenType t) {
     return TokenType::START_OF_LITERAL_FLOATS <= t && t < TokenType::END_OF_LITERAL_FLOATS;
 }
 
+/// @brief Whether @p t is an accidental literal, in steps or in cents.
 [[nodiscard]] constexpr inline bool is_accidental(TokenType t) {
     return TokenType::START_OF_LITERAL_ACCIDENTALS <= t && t < TokenType::END_OF_LITERAL_ACCIDENTALS;
 }
 
+/// @brief Whether @p t is a symbol literal, either `\\symbol` or `'symbol'`.
 [[nodiscard]] constexpr inline bool is_symbol(TokenType t) {
     return TokenType::START_OF_LITERAL_SYMBOLS <= t && t < TokenType::END_OF_LITERAL_SYMBOLS;
 }
 
+/// @brief Whether @p t is `true` or `false`.
 [[nodiscard]] constexpr inline bool is_boolean(TokenType t) {
     return TokenType::START_OF_LITERAL_BOOLEAN <= t && t < TokenType::END_OF_LITERAL_BOOLEAN;
 }
 
+/// @brief Whether @p t is any opening or closing bracket.
 [[nodiscard]] constexpr inline bool is_bracket(TokenType t) {
     return TokenType::START_OF_BRACKETS <= t && t < TokenType::END_OF_BRACKETS;
 }
 
+/// @brief Whether @p t is an opening bracket.
 [[nodiscard]] constexpr inline bool is_open_bracket(TokenType t) {
     return TokenType::START_OF_OPEN_BRACKETS <= t && t < TokenType::END_OF_OPEN_BRACKETS;
 }
 
+/// @brief Whether @p t is a closing bracket.
 [[nodiscard]] constexpr inline bool is_close_bracket(TokenType t) {
     return TokenType::START_OF_CLOSE_BRACKETS <= t && t < TokenType::END_OF_CLOSE_BRACKETS;
 }
 
-// Requires 't' be a closing bracket.
+/// @brief The half open range `[begin, end)` of opening bracket types that match a closing bracket.
+/// @param t Must be a closing bracket.
 [[nodiscard]] constexpr inline std::tuple<TokenType, TokenType> get_opening_brackets(TokenType t) {
     if (t == TokenType::CloseParen)
         return { TokenType::START_OF_HAS_CLOSING_PAREN, TokenType::END_OF_HAS_CLOSING_PAREN };
@@ -233,7 +252,8 @@ template <typename... ARGS> [[nodiscard]] constexpr inline bool matches(TokenTyp
         return { TokenType::START_OF_HAS_CLOSING_CURLY, TokenType::END_OF_HAS_CLOSING_CURLY };
 }
 
-// Requires 't' be an opening bracket.
+/// @brief The closing bracket that matches an opening bracket.
+/// @param t Must be an opening bracket.
 [[nodiscard]] constexpr inline TokenType get_closing_bracket(TokenType t) {
     if (TokenType::START_OF_HAS_CLOSING_PAREN <= t && t < TokenType::END_OF_HAS_CLOSING_PAREN)
         return TokenType::CloseParen;
@@ -244,6 +264,7 @@ template <typename... ARGS> [[nodiscard]] constexpr inline bool matches(TokenTyp
 }
 
 
-// Will return "Unknown token" if t is not known.
+/// @brief A readable name for the token type.
+/// @return The name, or `"Unknown token"` if @p t is not known.
 [[nodiscard]] const char* to_string(TokenType t) noexcept;
 }
