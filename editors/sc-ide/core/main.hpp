@@ -36,6 +36,7 @@
 namespace ScIDE {
 
 class SessionManager;
+class LspClient;
 
 // scide instances have a LocalServer. when called with an argument, it will try to reconnect
 // to the instance with the lowest number.
@@ -76,6 +77,7 @@ public:
     static SessionManager* sessionManager() { return instance()->mSessionManager; }
     static DocumentManager* documentManager() { return instance()->mDocManager; }
     static Settings::Manager* settings() { return instance()->mSettings; }
+    static LspClient* lspClient() { return instance()->mLspClient; }
 
     static void evaluateCode(QString const& text, bool silent = false, const QString* filePath = nullptr,
                              int lineNumber = 0, int column = 0) {
@@ -127,6 +129,7 @@ private:
     ScServer* mScServer;
     DocumentManager* mDocManager;
     SessionManager* mSessionManager;
+    LspClient* mLspClient;
 };
 
 }

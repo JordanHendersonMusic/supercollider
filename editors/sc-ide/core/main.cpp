@@ -19,6 +19,9 @@
 */
 
 #include "main.hpp"
+#include "lsp_client.hpp"
+
+#include <QTimer>
 #include "settings/manager.hpp"
 #include "session_manager.hpp"
 #include "util/standard_dirs.hpp"
@@ -132,7 +135,8 @@ Main::Main(void):
     mScProcess(new ScProcess(mSettings, this)),
     mScServer(new ScServer(mScProcess, mSettings, this)),
     mDocManager(new DocumentManager(this, mSettings)),
-    mSessionManager(new SessionManager(mDocManager, this)) {
+    mSessionManager(new SessionManager(mDocManager, this)),
+    mLspClient(new LspClient(mDocManager, mSettings, this)) {
     new SyntaxHighlighterGlobals(this, mSettings);
 
 #ifdef Q_OS_MAC
@@ -140,6 +144,8 @@ Main::Main(void):
 #endif
 
     connect(mScProcess, &ScProcess::response, mDocManager, &DocumentManager::handleScLangMessage);
+    connect(this, &Main::applySettingsRequest, mLspClient, &LspClient::applySettings);
+    QTimer::singleShot(0, mLspClient, &LspClient::start);
 
     qApp->installEventFilter(this);
     qApp->installNativeEventFilter(this);
@@ -149,6 +155,7 @@ void Main::quit() {
     mSessionManager->saveSession();
     storeSettings();
     mScProcess->stopLanguage();
+    mLspClient->stop();
     QApplication::quit();
 }
 

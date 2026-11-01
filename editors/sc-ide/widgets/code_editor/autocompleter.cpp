@@ -24,6 +24,10 @@
 #include "sc_editor.hpp"
 #include "tokens.hpp"
 #include "../../core/sc_introspection.hpp"
+#include "../../core/lsp_client.hpp"
+
+#include <QJsonArray>
+#include <QJsonObject>
 #include "../../core/sc_process.hpp"
 #include "../../core/main.hpp"
 #include "../../core/util/standard_dirs.hpp"
@@ -167,6 +171,10 @@ private:
     QColor mHighlightColor;
 };
 
+namespace {
+bool isWordChar(QChar c) { return c.isLetterOrNumber() || c == '_'; }
+}
+
 AutoCompleter::AutoCompleter(ScCodeEditor* editor): QObject(editor), mEditor(editor) {
     mCompletion.on = false;
     mEditor->installEventFilter(this);
@@ -278,6 +286,17 @@ void AutoCompleter::onContentsChange(int pos, int removed, int added) {
     if (mCompletion.on) {
         if (pos < mCompletion.contextPos) {
             quitCompletion("context changed");
+        } else if (mCompletion.type == LspCompletion && pos <= mCompletion.pos + mCompletion.len) {
+            // The word being completed, which for a symbol starts after its backslash.
+            const QTextBlock block(document()->findBlock(mCompletion.pos));
+            const QString line = block.text();
+            int end = mCompletion.pos - block.position();
+            while (end < line.size() && isWordChar(line[end]))
+                ++end;
+            mCompletion.len = end + block.position() - mCompletion.pos;
+            mCompletion.text = line.mid(mCompletion.pos - block.position(), mCompletion.len);
+            if (!mCompletion.menu.isNull())
+                updateCompletionMenu(false);
         } else if (pos <= mCompletion.pos + mCompletion.len) {
             QTextBlock block(document()->findBlock(mCompletion.pos));
             TokenIterator it(block, mCompletion.pos - block.position());
@@ -320,6 +339,9 @@ void AutoCompleter::triggerCompletion(bool forceShow) {
         updateCompletionMenu(forceShow);
         return;
     }
+
+    if (triggerLspCompletion(forceShow))
+        return;
 
     QTextCursor cursor(mEditor->textCursor());
     const int cursorPos = cursor.positionInBlock();
@@ -410,6 +432,85 @@ void AutoCompleter::triggerCompletion(bool forceShow) {
 
     if (mCompletion.menu.isNull())
         mCompletion.on = false;
+}
+
+bool AutoCompleter::triggerLspCompletion(bool forceShow) {
+    LspClient* lsp = Main::lspClient();
+    if (!lsp->isReady())
+        return false;
+    const QTextCursor cursor(mEditor->textCursor());
+    const QString line = cursor.block().text();
+    const int end = cursor.positionInBlock();
+    int start = end;
+    while (start > 0 && isWordChar(line[start - 1]))
+        --start;
+    const QChar before = start > 0 ? line[start - 1] : QChar();
+    const int length = end - start;
+    const bool symbol = before == '\\';
+    const bool introspection = Main::scProcess()->introspection().introspectionAvailable();
+    // sclang's introspection completes classes and methods better, with their help, when it is there.
+    if (!symbol && introspection)
+        return false;
+    if (!forceShow) {
+        if (symbol ? length < 1 : (before == '.' ? false : length < 3))
+            return true;
+        if (!symbol && before != '.' && length > 0 && !line[start].isUpper() && before != '~')
+            return true; // lower case words are left alone unless asked for
+    }
+    if (length > 0 && line[start].isDigit())
+        return true;
+
+    const int request = ++mLspRequest;
+    const int wordStart = cursor.block().position() + start;
+    QPointer<AutoCompleter> self(this);
+    lsp->requestAt("textDocument/completion", mEditor->document(), cursor.position(),
+                   [self, request, wordStart, forceShow](const QJsonValue& result) {
+                       if (!self || request != self->mLspRequest || self->mCompletion.on)
+                           return;
+                       const QJsonArray items = result.toObject()["items"].toArray();
+                       if (items.isEmpty())
+                           return;
+                       const int cursorPos = self->mEditor->textCursor().position();
+                       if (cursorPos < wordStart)
+                           return;
+                       // The word may have grown while waiting.
+                       const QTextBlock block = self->document()->findBlock(wordStart);
+                       const QString line = block.text();
+                       int wordEnd = wordStart - block.position();
+                       while (wordEnd < line.size() && isWordChar(line[wordEnd]))
+                           ++wordEnd;
+                       wordEnd += block.position();
+                       if (cursorPos > wordEnd)
+                           return;
+
+                       auto* menu = new CompletionMenu(self->mEditor);
+                       menu->setCompletionRole(CompletionMenu::CompletionRole);
+                       for (const auto& value : items) {
+                           const QJsonObject item = value.toObject();
+                           const QString label = item["label"].toString();
+                           auto* entry = new QStandardItem(label);
+                           const QString insert = item["textEdit"].toObject()["newText"].toString();
+                           entry->setData(insert.isEmpty() ? label : insert, CompletionMenu::CompletionRole);
+                           if (!item["detail"].toString().isEmpty())
+                               entry->setToolTip(item["detail"].toString());
+                           menu->addItem(entry);
+                       }
+                       menu->adapt();
+
+                       auto& c = self->mCompletion;
+                       c.on = true;
+                       c.type = LspCompletion;
+                       c.pos = wordStart;
+                       c.len = wordEnd - wordStart;
+                       c.contextPos = wordStart;
+                       c.text = self->document()->toPlainText().mid(wordStart, cursorPos - wordStart);
+                       c.base = c.text;
+                       c.menu = menu;
+                       connect(menu, &CompletionMenu::finished, self, &AutoCompleter::onCompletionMenuFinished);
+                       menu->popup(self->globalCursorRect(wordStart).adjusted(0, -5, 0, 5));
+                       self->updateCompletionMenu(forceShow);
+                   });
+    return true;
 }
 
 void AutoCompleter::quitCompletion(const QString& reason) {

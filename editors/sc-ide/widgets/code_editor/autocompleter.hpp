@@ -76,7 +76,7 @@ private:
         bool suppressed;
     };
 
-    enum CompletionType { ClassCompletion, ClassMethodCompletion, MethodCompletion, InvalidCompletion };
+    enum CompletionType { ClassCompletion, ClassMethodCompletion, MethodCompletion, LspCompletion, InvalidCompletion };
 
     struct CompletionDescription {
         bool on;
@@ -104,6 +104,8 @@ private:
 
     // completion
 
+    // Asks the language server, for symbols, and when sclang's introspection isn't there. False if it doesn't.
+    bool triggerLspCompletion(bool forceShow);
     void quitCompletion(const QString& reason = QString());
     void showCompletionMenu(bool forceShow);
     void updateCompletionMenu(bool forceShow);
@@ -146,6 +148,7 @@ private:
     ScCodeEditor* mEditor;
     CompletionDescription mCompletion;
     MethodCallContext mMethodCall;
+    int mLspRequest = 0;
 };
 
 } // namespace ScIDE

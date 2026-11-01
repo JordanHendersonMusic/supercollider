@@ -72,6 +72,7 @@ set ( ide_moc_hdr
     core/main.hpp
     core/sig_mux.hpp
     core/sc_process.hpp
+    core/lsp_client.hpp
     core/sc_server.hpp
     core/doc_manager.hpp
     core/settings/manager.hpp
@@ -121,6 +122,7 @@ set ( ide_src
     core/sig_mux.cpp
     core/doc_manager.cpp
     core/sc_process.cpp
+    core/lsp_client.cpp
     core/sc_server.cpp
     core/sc_introspection.cpp
     core/sc_lexer.cpp
@@ -315,6 +317,11 @@ target_include_directories(libscide PUBLIC
 add_executable( SuperCollider MACOSX_BUNDLE core/main_function.cpp ${RES_FILES} ${AdditionalBundleSources} ${translations})
 
 set_target_properties(libscide PROPERTIES PREFIX "")
+
+# The language server the IDE starts, see core/lsp_client.cpp.
+if(TARGET sc_lsp)
+    add_dependencies(SuperCollider sc_lsp)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(libscide PRIVATE "-Wreorder")

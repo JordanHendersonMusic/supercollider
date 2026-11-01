@@ -56,6 +56,12 @@ void Manager::initDefaults() {
 
     setDefault("postWindow/scrollback", 1000);
 
+    // The language server, langutils/sc_lsp. An empty path looks beside the IDE, then in PATH.
+    beginGroup("lsp");
+    setDefault("enabled", true);
+    setDefault("path", "");
+    endGroup();
+
     beginGroup("editor");
 
     setDefault("spaceIndent", false);

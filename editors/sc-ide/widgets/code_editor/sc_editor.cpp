@@ -25,6 +25,7 @@
 #include "../util/gui_utilities.hpp"
 #include "../../core/main.hpp"
 #include "../../core/doc_manager.hpp"
+#include "../../core/lsp_client.hpp"
 #include "../../core/settings/manager.hpp"
 #include "../../core/settings/theme.hpp"
 #include <qtextcursor.h>
@@ -36,6 +37,15 @@
 #include "QtCollider/hacks/hacks_qt.hpp"
 
 #include <QKeyEvent>
+#include <QCursor>
+#include <QFileInfo>
+#include <QHelpEvent>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QMenu>
+#include <QPointer>
+#include <QRegularExpression>
+#include <QToolTip>
 #include <QStack>
 #include <QMimeData>
 #include <QUrl>
@@ -56,7 +66,13 @@ ScCodeEditor::ScCodeEditor(Document* doc, QWidget* parent):
 
     mAutoCompleter->documentChanged(textDocument());
 
+    connect(Main::lspClient(), &LspClient::diagnosticsChanged, this, [this](Document* d) {
+        if (d == mDoc)
+            updateDiagnostics();
+    });
+
     applySettings(Main::settings());
+    updateDiagnostics();
 }
 
 void ScCodeEditor::applySettings(Settings::Manager* settings) {
@@ -92,11 +108,146 @@ bool ScCodeEditor::event(QEvent* e) {
         }
         break;
     }
+    case QEvent::ToolTip: {
+        auto* help = static_cast<QHelpEvent*>(e);
+        showToolTip(viewport()->mapFromGlobal(help->globalPos()), help->globalPos());
+        return true;
+    }
     default:
         break;
     }
 
     return GenericCodeEditor::event(e);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// The language server
+////////////////////////////////////////////////////////////////////////////////
+
+void ScCodeEditor::updateDiagnostics() {
+    mDiagnosticSelections.clear();
+    for (const auto& d : Main::lspClient()->diagnostics(mDoc)) {
+        QTextEdit::ExtraSelection selection;
+        selection.cursor = QTextCursor(textDocument());
+        int start = d.start;
+        int end = d.end;
+        // An empty range, e.g., at the end of the file, still needs a character to underline.
+        if (end <= start) {
+            end = start + 1;
+            if (end >= textDocument()->characterCount())
+                start = qMax(0, start - 1);
+        }
+        selection.cursor.setPosition(start);
+        selection.cursor.setPosition(qMin(end, textDocument()->characterCount() - 1), QTextCursor::KeepAnchor);
+        selection.format.setUnderlineStyle(d.severity <= 2 ? QTextCharFormat::WaveUnderline : QTextCharFormat::DotLine);
+        selection.format.setUnderlineColor(d.severity == 1       ? QColor(220, 40, 40)
+                                               : d.severity == 2 ? QColor(220, 150, 0)
+                                                                 : QColor(70, 130, 220));
+        mDiagnosticSelections.append(selection);
+    }
+    updateExtraSelections();
+}
+
+namespace {
+// The hover's markdown as rich text: code blocks in <pre>, the rest as paragraphs.
+QString hoverHtml(const QString& markdown) {
+    QString html;
+    bool code = false;
+    for (const QString& line : markdown.split('\n')) {
+        if (line.startsWith("```")) {
+            html += code ? "</pre>" : "<pre>";
+            code = !code;
+            continue;
+        }
+        QString escaped = line.toHtmlEscaped();
+        if (!code)
+            escaped.replace(QRegularExpression("`([^`]*)`"), "<code>\\1</code>");
+        html += code ? escaped + "\n" : (escaped.isEmpty() ? QString() : "<p>" + escaped + "</p>");
+    }
+    return html;
+}
+}
+
+void ScCodeEditor::showToolTip(const QPoint& viewportPos, const QPoint& globalPos) {
+    const QTextCursor cursor = cursorForPosition(viewportPos);
+    const int pos = cursor.position();
+    // Only over text, not past the end of a line.
+    const QRect rect = cursorRect(cursor);
+    if (qAbs(rect.center().x() - viewportPos.x()) > fontMetrics().averageCharWidth() * 2
+        && cursor.positionInBlock() == cursor.block().length() - 1) {
+        QToolTip::hideText();
+        return;
+    }
+    QStringList messages;
+    for (const auto& d : Main::lspClient()->diagnostics(mDoc))
+        if (pos >= d.start && pos <= qMax(d.end, d.start + 1))
+            messages << d.message.toHtmlEscaped().replace('\n', "<br>");
+    if (!messages.isEmpty()) {
+        QToolTip::showText(globalPos, "<p>" + messages.join("</p><p>") + "</p>", this);
+        return;
+    }
+    if (!Main::lspClient()->isReady()) {
+        QToolTip::hideText();
+        return;
+    }
+    const int request = ++mHoverRequest;
+    QPointer<ScCodeEditor> self(this);
+    Main::lspClient()->requestAt("textDocument/hover", mDoc, pos, [self, request, globalPos](const QJsonValue& r) {
+        if (!self || request != self->mHoverRequest)
+            return;
+        const QString markdown = r.toObject()["contents"].toObject()["value"].toString();
+        // Only if the mouse is still there.
+        if (markdown.isEmpty() || (QCursor::pos() - globalPos).manhattanLength() > 8) {
+            QToolTip::hideText();
+            return;
+        }
+        QToolTip::showText(globalPos, hoverHtml(markdown), self);
+    });
+}
+
+bool ScCodeEditor::openLocations(const QString& method, bool definition) {
+    LspClient* lsp = Main::lspClient();
+    if (!lsp->isReady())
+        return false;
+    QPointer<ScCodeEditor> self(this);
+    const QString symbol = symbolUnderCursor();
+    QJsonObject extra;
+    if (!definition)
+        extra["context"] = QJsonObject { { "includeDeclaration", false } };
+    lsp->requestAt(
+        method, mDoc, textCursor().position(),
+        [self, symbol, definition](const QJsonValue& result) {
+            if (!self)
+                return;
+            const QJsonArray found = result.toArray();
+            LspClient* lsp = Main::lspClient();
+            if (found.isEmpty()) {
+                // Fall back on sclang's introspection, which knows the running library.
+                if (definition)
+                    Main::openDefinition(symbol, self);
+                else
+                    Main::findReferences(symbol, self);
+                return;
+            }
+            if (found.size() == 1) {
+                LspClient::open(lsp->location(found.first()));
+                return;
+            }
+            QMenu menu(self);
+            constexpr int shown = 40;
+            for (int i = 0; i < found.size() && i < shown; ++i) {
+                const auto l = lsp->location(found[i]);
+                const QString name = l.document ? l.document->title() : QFileInfo(l.path).fileName();
+                QAction* action = menu.addAction(QStringLiteral("%1:%2").arg(name).arg(l.line + 1));
+                action->setToolTip(l.path);
+                QObject::connect(action, &QAction::triggered, [l] { LspClient::open(l); });
+            }
+            if (found.size() > shown)
+                menu.addAction(QObject::tr("%1 more not shown").arg(found.size() - shown))->setEnabled(false);
+            menu.exec(self->viewport()->mapToGlobal(self->cursorRect().bottomLeft()));
+        },
+        extra);
+    return true;
 }
 
 void ScCodeEditor::keyPressEvent(QKeyEvent* e) {
@@ -585,6 +736,7 @@ int ScCodeEditor::indentedStartOfLine(const QTextBlock& b) {
 
 void ScCodeEditor::updateExtraSelections() {
     QList<QTextEdit::ExtraSelection> selections;
+    selections.append(mDiagnosticSelections);
     selections.append(mBracketSelections);
     selections.append(mSearchSelections);
     setExtraSelections(selections);
@@ -1197,11 +1349,17 @@ void ScCodeEditor::gotoPreviousRegion() {
 
 bool ScCodeEditor::openDocumentation() { return Main::openDocumentation(symbolUnderCursor()); }
 
-void ScCodeEditor::openDefinition() { Main::openDefinition(symbolUnderCursor(), this); }
+void ScCodeEditor::openDefinition() {
+    if (!openLocations("textDocument/definition", true))
+        Main::openDefinition(symbolUnderCursor(), this);
+}
 
 void ScCodeEditor::openCommandLine() { Main::openCommandLine(symbolUnderCursor()); }
 
-void ScCodeEditor::findReferences() { Main::findReferences(symbolUnderCursor(), this); }
+void ScCodeEditor::findReferences() {
+    if (!openLocations("textDocument/references", false))
+        Main::findReferences(symbolUnderCursor(), this);
+}
 
 // zero indexed.
 int cursorLineNumber(QTextCursor cursor) {

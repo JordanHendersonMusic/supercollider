@@ -91,6 +91,7 @@ protected:
 
 private slots:
     void matchBrackets();
+    void updateDiagnostics();
 
 private:
     QTextCursor cursorAt(const TokenIterator, int offset = 0);
@@ -102,6 +103,10 @@ private:
 
     void updateExtraSelections() override;
     void indentCurrentRegion() override;
+    // A tooltip at a position: the diagnostics there, or the language server's hover.
+    void showToolTip(const QPoint& viewportPos, const QPoint& globalPos);
+    // Asks the language server, showing a menu when it gives several places. False when it isn't running.
+    bool openLocations(const QString& method, bool definition);
 
     void toggleCommentSingleLine(QTextCursor);
     void toggleCommentSingleLine();
@@ -161,7 +166,11 @@ private:
     bool mHighlightBracketContents;
 
     QList<QTextEdit::ExtraSelection> mBracketSelections;
+    // The language server's diagnostics, as wavy underlines.
+    QList<QTextEdit::ExtraSelection> mDiagnosticSelections;
     bool mMouseBracketMatch;
+    // Which hover request is the latest, so an older answer isn't shown.
+    int mHoverRequest = 0;
 
     class AutoCompleter* mAutoCompleter;
 };
