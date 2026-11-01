@@ -92,6 +92,8 @@ struct CompletionItem {
     std::string documentation;
     std::string insert; ///< Empty to insert the label.
     std::uint8_t rank { 5 }; ///< Lower sorts first.
+    std::optional<Range> replace; ///< Replaces more than Completions::replace, e.g. the `.` before a binary operator.
+    std::string filter; ///< Empty to filter by the label.
 };
 
 /// @brief Completions at a position.

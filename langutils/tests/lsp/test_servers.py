@@ -149,6 +149,13 @@ class LspTest(unittest.TestCase):
         self.assertTrue(any(d.startswith('Float:') or d.startswith('SimpleNumber:') for d in floor), floor)
         self.assertTrue(any(d.startswith('Array:reverse') for d in
                             [i.get('detail', '') for i in self.items('(1..4).reve')]))
+        # A binary operator replaces the `.`, as `1.+ 2` doesn't parse.
+        plus = [i for i in self.items('x = 1.') if i['label'] == '+']
+        self.assertEqual([(i['textEdit']['newText'], i['textEdit']['range']['start']['character'], i['filterText'])
+                          for i in plus], [(' + ', 5, '.+')])
+        plus = [i for i in self.items('x = 1 .') if i['label'] == '+']
+        self.assertEqual([i['textEdit']['newText'] for i in plus], ['+ '])
+        self.assertNotIn('filterText', [i for i in self.items('x = 1.') if i['label'] == 'abs'][0])
         # In a string or a comment.
         self.assertEqual(self.items('"SinO'), [])
         self.assertEqual(self.items('/* SinO'), [])

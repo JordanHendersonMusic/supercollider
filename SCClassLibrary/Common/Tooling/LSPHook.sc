@@ -17,6 +17,7 @@
 // Evaluating code for sc_mcp's evaluate tool is refused unless allowEval is true, and sc_mcp was started with
 // --allow-eval. Every evaluation is posted first.
 
+//# VERSION 3.16
 LSPHook {
 	classvar <>allowEval = false, <>enabled = true, <>maxResults = 500;
 	classvar responders;
@@ -62,20 +63,20 @@ LSPHook {
 	}
 
 	*prCall { |msg, addr|
-		var id = msg[1], hook = msg[2].asSymbol.asClass, selector = msg[3].asSymbol, context, result, failed;
+		var id = msg[1], hook = msg[2].asSymbol.asClass, selector = msg[3].asSymbol;
 		if(this.prAnswers(addr).not) { ^this };
 		if(hook.isNil or: { this.hooks.includes(hook).not }) {
 			^this.prReply(addr, id, "error", "% isn't a hook".format(msg[2]));
 		};
-		context = ();
+		var context = ();
 		msg.copyToEnd(4).pairsDo { |key, value|
 			context[key.asSymbol] = if(value.isKindOf(Symbol)) { value.asString } { value };
 		};
 		#[\receiver, \selector, \keyword].do { |key|
 			context[key] !? { context[key] = context[key].asSymbol };
 		};
-		failed = false;
-		result = try { hook.perform(selector, context) } { |error| failed = true; error.errorString };
+		var failed = false;
+		var result = try { hook.perform(selector, context) } { |error| failed = true; error.errorString };
 		if(failed) { ^this.prReply(addr, id, "error", result) };
 		if(result.isKindOf(Collection) and: { result.isKindOf(String).not }) {
 			result = result.asArray.keep(maxResults);
@@ -84,15 +85,15 @@ LSPHook {
 	}
 
 	*prEval { |msg, addr|
-		var id = msg[1], code = msg[2].asString, function, result, failed = false;
+		var id = msg[1], code = msg[2].asString, failed = false;
 		if(this.prAnswers(addr).not) { ^this };
 		if(allowEval.not) {
 			^this.prReply(addr, id, "error", "sclang doesn't allow it, set LSPHook.allowEval = true to allow it");
 		};
 		"LSPHook: evaluating code from sc_mcp:\n%\n".postf(code);
-		function = code.compile;
+		var function = code.compile;
 		if(function.isNil) { ^this.prReply(addr, id, "error", "The code doesn't compile, see the post window.") };
-		result = try { function.value } { |error| failed = true; error.errorString };
+		var result = try { function.value } { |error| failed = true; error.errorString };
 		if(failed) { ^this.prReply(addr, id, "error", result) };
 		result = result.asCompileString;
 		if(result.size > 8000) { result = result.keep(8000) ++ " ..." };

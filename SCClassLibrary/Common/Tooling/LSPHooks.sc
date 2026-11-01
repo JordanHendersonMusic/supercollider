@@ -1,3 +1,4 @@
+//# VERSION 3.16
 // The hooks the class library comes with, see LSPHook.
 
 // SynthDef names, for Synth(\..., \instrument, \..., and Pmono(\...
@@ -17,13 +18,12 @@ SynthDefNameHook : LSPHook {
 // Event keys, for the keys of a Pbind and its kin.
 EventKeyHook : LSPHook {
 	*completeSymbol { |context|
-		var first, keys;
-		first = switch(context[\receiver],
+		var first = switch(context[\receiver],
 			\Pbind, 0, \Pmono, 1, \PmonoArtic, 1, \Pbindef, 1, \Pbindf, 1,
 			nil
 		);
 		if(first.isNil or: { context[\argument] < first } or: { (context[\argument] - first).odd }) { ^nil };
-		keys = Set.new;
+		var keys = Set.new;
 		Event.partialEvents.do { |event| keys.addAll(event.keys) };
 		keys.addAll(#[\instrument, \dur, \legato, \sustain, \amp, \freq, \note, \degree, \midinote, \octave, \scale,
 			\root, \out, \pan, \group, \addAction, \type, \strum, \stretch, \tempo, \lag, \timingOffset]);
@@ -34,9 +34,8 @@ EventKeyHook : LSPHook {
 // Names already in use, for Ndef(\..., Pdef(\..., Tdef(\..., Pdefn(\... and Fdef(\...
 ProxyNameHook : LSPHook {
 	*completeSymbol { |context|
-		var names;
 		if(context[\argument] != 0) { ^nil };
-		names = switch(context[\receiver],
+		var names = switch(context[\receiver],
 			\Ndef, { Ndef.all.values.collect { |space| space.envir.keys.asArray }.flat },
 			\Pdef, { Pdef.all.keys.asArray },
 			\Pbindef, { Pdef.all.keys.asArray },

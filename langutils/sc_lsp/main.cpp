@@ -569,8 +569,10 @@ private:
             if (!c.documentation.empty())
                 item["documentation"] = c.documentation;
             item["sortText"] = std::to_string(c.rank) + c.label;
+            if (!c.filter.empty())
+                item["filterText"] = c.filter;
             Json edit = Json::object();
-            edit["range"] = range_json(*doc, result.replace);
+            edit["range"] = range_json(*doc, c.replace ? *c.replace : result.replace);
             edit["newText"] = c.insert.empty() ? c.label : c.insert;
             item["textEdit"] = std::move(edit);
             items.push_back(std::move(item));

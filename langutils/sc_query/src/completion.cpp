@@ -521,6 +521,7 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
                 return;
             add({ name, CompletionKind::Symbol, std::move(detail), {}, {}, rank });
         };
+        bool hooks_suceeded = false;
         if (hooks) {
             const auto call = call_at(b, cursor->start, library.get());
             SymbolContext context;
@@ -530,13 +531,17 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
             context.previous = call.previous;
             context.keyword = call.keyword;
             context.prefix = prefix;
-            for (const auto& c : hooks->complete_symbol(*library, context))
+            for (const auto& c : hooks->complete_symbol(*library, context)) {
                 symbol(c.label, c.detail.empty() ? c.hook : c.detail, 0);
+                hooks_suceeded = true;
+            }
         }
-        for (const auto& name : written_in(document, cursor->start).symbols)
-            symbol(name, "in this document", 1);
-        for (const auto& name : library->symbols())
-            symbol(name, {}, 2);
+        if (!hooks_suceeded) {
+            for (const auto& name : written_in(document, cursor->start).symbols)
+                symbol(name, "in this document", 1);
+            for (const auto& name : library->symbols())
+                symbol(name, {}, 2);
+        }
         return out;
     }
 
@@ -557,17 +562,30 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
         if (!receiver.class_name.empty())
             c = library->find_class(receiver.class_name);
         if (c) {
+            // A binary operator replaces the `.`, as `1.+ 2` doesn't parse. Editors only take a range on one line.
+            const auto dot = b.tokens[*cursor->previous].begin();
+            const auto dot_position = end_of(b.read(0, dot));
+            const Range from_dot { { dot_position.line_number, dot_position.codepoint_in_line }, p };
+            const auto spaced = dot > 0 && std::isspace(static_cast<unsigned char>(b.text()[dot - 1])) != 0;
+            const std::string typed { b.text().substr(dot) };
             for (const auto m : library->responds_to(*c, receiver.class_side)) {
                 const auto& info = library->get(m);
                 if (!starts_with_ignoring_case(info.selector, prefix) || info.selector.back() == '_')
                     continue;
                 const bool own = info.owner == *c;
-                add({ info.selector,
-                      CompletionKind::Method,
-                      library->signature(m),
-                      Library::where(info.location),
-                      {},
-                      static_cast<std::uint8_t>(own ? 0 : 1) });
+                CompletionItem item { info.selector,
+                                      CompletionKind::Method,
+                                      library->signature(m),
+                                      Library::where(info.location),
+                                      {},
+                                      static_cast<std::uint8_t>(own ? 0 : 1) };
+                const auto first = static_cast<unsigned char>(info.selector.front());
+                if (std::isalpha(first) == 0 && first != '_' && from_dot.begin.line == p.line) {
+                    item.insert = (spaced ? "" : " ") + info.selector + " ";
+                    item.replace = from_dot;
+                    item.filter = typed + info.selector;
+                }
+                add(std::move(item));
             }
             return out;
         }
