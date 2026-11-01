@@ -2,6 +2,7 @@
 // the last compile only for the locals in scope.
 
 #include "sc_query/queries.hpp"
+#include "internal.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -212,6 +213,115 @@ Receiver receiver_before(std::string_view text, std::size_t end, int depth) {
     return {};
 }
 
+// The start of a quoted string or symbol whose closing quote is at @p close, or npos.
+std::size_t quote_start(std::string_view text, std::size_t close) {
+    const char q = text[close];
+    for (std::size_t i = close; i > 0;) {
+        --i;
+        if (text[i] != q)
+            continue;
+        std::size_t backslashes = 0;
+        while (i >= backslashes + 1 && text[i - backslashes - 1] == '\\')
+            ++backslashes;
+        if (backslashes % 2 == 0)
+            return i;
+    }
+    return std::string_view::npos;
+}
+
+// The opening bracket of the one closed at @p close, skipping strings, symbols and characters, or npos.
+std::size_t bracket_start(std::string_view text, std::size_t close) {
+    std::string opens;
+    for (std::size_t i = close + 1; i > 0;) {
+        const char c = text[--i];
+        if (i > 0 && text[i - 1] == '$' && (i < 2 || text[i - 2] != '$'))
+            continue; // `$(`
+        if (c == '"' || c == '\'') {
+            i = quote_start(text, i);
+            if (i == std::string_view::npos)
+                return i;
+            continue;
+        }
+        if (c == ')' || c == ']' || c == '}') {
+            opens.push_back(c == ')' ? '(' : c == ']' ? '[' : '{');
+        } else if (c == '(' || c == '[' || c == '{') {
+            if (opens.empty() || opens.back() != c)
+                return std::string_view::npos;
+            opens.pop_back();
+            if (opens.empty())
+                return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
+// The start of the receiver of a message whose `.` is at @p end: a literal, a name, or a bracketed expression, and any
+// messages, calls and indexing after it, e.g., `[1, 2]`, `Set[1]`, `(1..4)` or `a.b(1)[0]`. npos if there isn't one.
+std::size_t expression_start(std::string_view text, std::size_t end) {
+    constexpr auto none = std::string_view::npos;
+    end = skip_space_back(text, end);
+    std::size_t start = none;
+    while (end > 0) {
+        const char c = text[end - 1];
+        std::size_t s;
+        if (c == ')' || c == ']' || c == '}') {
+            s = bracket_start(text, end - 1);
+            if (s == none)
+                return none;
+            if (s > 0 && text[s - 1] == '#')
+                --s;
+        } else if (c == '"' || c == '\'') {
+            s = quote_start(text, end - 1);
+            if (s == none)
+                return none;
+        } else if (word_char(c)) {
+            s = word_start(text, end);
+            // `1.5`
+            if (std::isdigit(static_cast<unsigned char>(text[s])) && s >= 2 && text[s - 1] == '.'
+                && std::isdigit(static_cast<unsigned char>(text[s - 2])))
+                s = word_start(text, s - 1);
+            if (s > 0 && (text[s - 1] == '\\' || text[s - 1] == '$' || text[s - 1] == '~'))
+                --s;
+        } else {
+            return start;
+        }
+        start = s;
+        // `a.b`, but not `1..4`
+        if (s > 0 && text[s - 1] == '.' && (s < 2 || text[s - 2] != '.')) {
+            end = s - 1;
+            continue;
+        }
+        // `Set[1]`, `f.(1)`, `a.b(1)[0]`: what is called or indexed comes right before.
+        if (c == ')' || c == ']' || c == '}') {
+            const auto before = skip_space_back(text, s);
+            if (before > 0) {
+                const char b = text[before - 1];
+                if (word_char(b) || b == ')' || b == ']' || b == '}') {
+                    end = before;
+                    continue;
+                }
+            }
+        }
+        return start;
+    }
+    return start;
+}
+
+// The receiver ending at @p end: as receiver_before() reads it, or else compiled.
+Receiver receiver_of(Library& library, std::string_view text, std::size_t end) {
+    if (auto r = receiver_before(text, end); !r.class_name.empty())
+        return r;
+    const auto e = skip_space_back(text, end);
+    const auto b = expression_start(text, e);
+    constexpr std::size_t largest { 20000 };
+    if (b == std::string_view::npos || b >= e || e - b > largest)
+        return {};
+    const auto [c, class_side] = compiled_class(library, text.substr(b, e - b));
+    if (!c)
+        return {};
+    return { library.get(*c).name, class_side };
+}
+
 // The call the cursor is an argument of, from the innermost open bracket.
 struct Call {
     bool found { false };
@@ -224,7 +334,7 @@ struct Call {
     bool function_call { false }; // `foo(a, b)`, which is `a.foo(b)`
 };
 
-Call call_at(std::string_view text, const Scan& s, std::size_t cursor) {
+Call call_at(std::string_view text, const Scan& s, std::size_t cursor, Library* library) {
     Call call;
     if (s.frames.empty() || s.frames.back().open != '(')
         return call;
@@ -249,7 +359,7 @@ Call call_at(std::string_view text, const Scan& s, std::size_t cursor) {
         return call;
     if (start > 0 && text[start - 1] == '.') {
         call.selector = std::string { word };
-        call.receiver = receiver_before(text, start - 1);
+        call.receiver = library ? receiver_of(*library, text, start - 1) : receiver_before(text, start - 1);
     } else if (is_class_name(word)) {
         call.selector = "new";
         call.receiver = { std::string { word }, true };
@@ -365,7 +475,7 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
             add({ name, CompletionKind::Symbol, std::move(detail), {}, {}, rank });
         };
         if (hooks) {
-            const auto call = call_at(text, s, quoted ? s.quote : start - 1);
+            const auto call = call_at(text, s, quoted ? s.quote : start - 1, library.get());
             SymbolContext context;
             context.receiver = call.receiver.class_name;
             context.selector = call.selector;
@@ -395,7 +505,7 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
 
     // Messages: `x.na`.
     if (marker == '.') {
-        const auto receiver = receiver_before(text, start - 1);
+        const auto receiver = receiver_of(*library, text, start - 1);
         std::optional<ClassId> c;
         if (!receiver.class_name.empty())
             c = library->find_class(receiver.class_name);
@@ -433,7 +543,7 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
 
     if (prefix.empty() && !quoted) {
         // Only keyword arguments are offered before anything is typed.
-        const auto call = call_at(text, s, cursor);
+        const auto call = call_at(text, s, cursor, library.get());
         if (call.found && !call.selector.empty() && call.keyword.empty())
             for (const auto m : methods_for(*library, call.receiver, call.selector)) {
                 for (const auto& a : library->get(m).arguments)
@@ -463,7 +573,7 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
     }
 
     // Names: keyword arguments of the call, locals in scope, the class's variables, keywords.
-    const auto call = call_at(text, s, start);
+    const auto call = call_at(text, s, start, library.get());
     if (call.found && !call.selector.empty() && call.keyword.empty()) {
         for (const auto m : methods_for(*library, call.receiver, call.selector)) {
             for (const auto& a : library->get(m).arguments)
@@ -516,7 +626,7 @@ std::optional<SignatureHelp> signature_help(const Document& document, Position p
     const auto s = scan(text, cursor);
     if (s.state != Scan::State::Code)
         return std::nullopt;
-    const auto call = call_at(text, s, cursor);
+    const auto call = call_at(text, s, cursor, library.get());
     if (!call.found || call.selector.empty())
         return std::nullopt;
     auto methods = methods_for(*library, call.receiver, call.selector);

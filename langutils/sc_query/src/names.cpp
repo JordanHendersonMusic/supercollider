@@ -5,16 +5,138 @@
 
 #include "sc_compiler/details/class_library_internals.hpp"
 #include "sc_compiler/sc_compiler.hpp"
+#include "sc_diagnostic/sc_diagnostic.hpp"
 #include "sc_sema/context.hpp"
 #include "sc_sema/ir.hpp"
 #include "sc_sema/symbol_table.hpp"
+#include "sc_source/normalise_source.hpp"
 #include "sc_source/text_info.hpp"
 
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <stdexcept>
+#include <type_traits>
+#include <variant>
 
 namespace sc::query {
+
+////////////////////////////////////////////////////////////////////////////////
+// Expression classes
+////////////////////////////////////////////////////////////////////////////////
+
+std::pair<std::optional<ClassId>, bool> constant_class(const Library& library, const ir::ConstExpression& c) {
+    const auto& internals = *library.compiled().internals;
+    const auto named = [&](std::string_view n) { return std::make_pair(library.find_class(n), false); };
+    return c.visit([&](const auto& v) -> std::pair<std::optional<ClassId>, bool> {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, ir::SymSCClassName>)
+            return { library.find_class(internals.symbols(v)), !internals.symbols.is_meta(v) };
+        else if constexpr (std::is_same_v<T, std::int32_t>)
+            return named("Integer");
+        else if constexpr (std::is_same_v<T, double>)
+            return named("Float");
+        else if constexpr (std::is_same_v<T, char>)
+            return named("Char");
+        else if constexpr (std::is_same_v<T, bool>)
+            return named(v ? "True" : "False");
+        else if constexpr (std::is_same_v<T, ir::Nil>)
+            return named("Nil");
+        else if constexpr (std::is_same_v<T, ir::SymSCSymbol>)
+            return named("Symbol");
+        else if constexpr (std::is_same_v<T, ir::SymSCString>)
+            return named("String");
+        else if constexpr (std::is_same_v<T, ir::ConstExprEvent>)
+            return named("Event");
+        else if constexpr (std::is_same_v<T, ir::ConstExprDoubleArray>)
+            return named("DoubleArray");
+        else if constexpr (std::is_same_v<T, ir::ConstExprFloatArray>)
+            return named("FloatArray");
+        else if constexpr (std::is_same_v<T, ir::ConstExprInt32Array>)
+            return named("Int32Array");
+        else if constexpr (std::is_same_v<T, ir::ConstExprInt16Array>)
+            return named("Int16Array");
+        else if constexpr (std::is_same_v<T, ir::ConstExprInt8Array>)
+            return named("Int8Array");
+        else if constexpr (std::is_same_v<T, ir::ConstExprSymbolArray>)
+            return named("SymbolArray");
+        else
+            return named("Array");
+    });
+}
+
+std::pair<std::optional<ClassId>, bool> expression_class(const Library& library, const ir::IRGraph& g,
+                                                         ir::NodeIndex e) {
+    const auto& internals = *library.compiled().internals;
+    const auto& constants = ir::constant_table(*internals.ctx);
+    const auto named = [&](std::string_view n) { return std::make_pair(library.find_class(n), false); };
+    if (const auto lit = g.as_a<ir::SCLiteral_I>(e))
+        return constant_class(library, constants(g.payload(*lit).index));
+    if (const auto coll = g.as_a<ir::SCCollection_I>(e))
+        return named(internals.symbols(*g.payload(*coll).collection_class));
+    if (g.is_a<ir::SCRange_I>(e))
+        return named("Array");
+    if (g.is_a<ir::SCFunction_I>(e))
+        return named("Function");
+    if (const auto assign = g.as_a<ir::SCAssign_I>(e)) {
+        const auto [value] = g.children(*assign);
+        return expression_class(library, g, ir::NodeIndex { *value });
+    }
+    // `Foo.new`, and the other `new` methods, are guessed to make an instance of Foo.
+    if (const auto message = g.as_a<ir::SCMessage_I>(e)) {
+        const auto selector = internals.symbols(*g.payload(*message).selector);
+        const auto [inner, p, k, v, a] = g.children(*message);
+        const auto [cls, class_side] = expression_class(library, g, ir::NodeIndex { *inner });
+        if (cls && class_side && selector.substr(0, 3) == "new")
+            return { cls, false };
+    }
+    return { std::nullopt, false };
+}
+
+std::pair<std::optional<ClassId>, bool> compiled_class(Library& library, std::string_view code) {
+    std::shared_ptr<const src::TextInfo> text;
+    try {
+        text = std::make_shared<const src::TextInfo>(src::NormalisedSource { std::string { code } },
+                                                     src::FileCodeLocation {}, std::nullopt, src::TextKind::ScdFile);
+    } catch (const std::length_error&) { return { std::nullopt, false }; }
+    auto parsed = compiler::parse_interpreted(text);
+    if (!parsed.ast)
+        return { std::nullopt, false };
+    for (const auto& d : parsed.diagnostics)
+        if (d.severity() == diag::Severity::Error)
+            return { std::nullopt, false };
+    const auto ir =
+        compiler::compile_interpreted_ir(library.compiled(), std::move(parsed), library.config().interpreted_version);
+    if (!ir.graph)
+        return { std::nullopt, false };
+    for (const auto& d : ir.diagnostics)
+        if (d.severity() == diag::Severity::Error)
+            return { std::nullopt, false };
+    const auto& g = *ir.graph;
+    const auto root = g.root();
+    if (!root || !std::holds_alternative<ir::SCInterpreted_I>(*root))
+        return { std::nullopt, false };
+    const auto [code_node] = g.children(std::get<ir::SCInterpreted_I>(*root));
+    const auto regions = g.as_a<ir::SCRegionList_I>(ir::NodeIndex { *code_node });
+    if (!regions)
+        return { std::nullopt, false };
+    // What sema folded, e.g., `(1 + 2)`, then the last expression of the last region.
+    if (const auto& constant = g.payload(*regions).constant_result)
+        return constant_class(library, ir::constant_table(*library.compiled().internals->ctx)(*constant));
+    std::optional<ir::NodeIndex> last_region;
+    for (auto it = g.children(*regions).iter(); it; ++it)
+        last_region = ir::NodeIndex { **it };
+    if (!last_region)
+        return { std::nullopt, false };
+    const auto [function] = g.children(*g.as_a<ir::SCRegion_I>(*last_region));
+    const auto [p, v, body] = g.children(function);
+    std::optional<ir::NodeIndex> last;
+    for (auto it = g.children(body).iter(); it; ++it)
+        last = ir::NodeIndex { **it };
+    if (!last)
+        return { std::nullopt, false };
+    return expression_class(library, g, *last);
+}
 
 namespace {
 
@@ -53,45 +175,8 @@ struct Collector {
         return { t && t->file_path ? *t->file_path : std::filesystem::path {}, to_range(ir::IRGraph::range(l)) };
     }
 
-    // The class of a literal or collection receiver, and whether it is the class itself.
     std::pair<std::optional<ClassId>, bool> receiver_class(ir::NodeIndex receiver) const {
-        const auto& constants = ir::constant_table(*internals().ctx);
-        const auto named = [&](std::string_view n) { return std::make_pair(library.find_class(n), false); };
-        if (const auto lit = g.as_a<ir::SCLiteral_I>(receiver)) {
-            const auto& c = constants(g.payload(*lit).index);
-            if (const auto* cls = c.get_if<ir::SymSCClassName>())
-                return { library.find_class(name(*cls)), !internals().symbols.is_meta(*cls) };
-            if (c.get_if<std::int32_t>())
-                return named("Integer");
-            if (c.get_if<double>())
-                return named("Float");
-            if (c.get_if<char>())
-                return named("Char");
-            if (const auto* b = c.get_if<bool>())
-                return named(*b ? "True" : "False");
-            if (c.get_if<ir::Nil>())
-                return named("Nil");
-            if (c.get_if<ir::SymSCSymbol>())
-                return named("Symbol");
-            if (c.get_if<ir::SymSCString>())
-                return named("String");
-            if (c.get_if<ir::ConstExprEvent>())
-                return named("Event");
-            return named("Array");
-        }
-        if (const auto coll = g.as_a<ir::SCCollection_I>(receiver))
-            return named(name(*g.payload(*coll).collection_class));
-        if (g.as_a<ir::SCFunction_I>(receiver))
-            return named("Function");
-        // `Foo.new`, and the other `new` methods, are guessed to make an instance of Foo.
-        if (const auto message = g.as_a<ir::SCMessage_I>(receiver)) {
-            const auto selector = name(*g.payload(*message).selector);
-            const auto [inner, p, k, v, a] = g.children(*message);
-            const auto [cls, class_side] = receiver_class(ir::NodeIndex { *inner });
-            if (cls && class_side && selector.rfind("new", 0) == 0)
-                return { cls, false };
-        }
-        return { std::nullopt, false };
+        return expression_class(library, g, receiver);
     }
 
     void add(Occurrence o) { out.occurrences.push_back(std::move(o)); }

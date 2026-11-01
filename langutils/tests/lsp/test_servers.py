@@ -121,6 +121,26 @@ class LspTest(unittest.TestCase):
         self.change('// SinO')
         self.assertEqual(self.labels(0, 7), [])
 
+    def test_compiled_receivers(self):
+        # Receivers the text alone doesn't give, compiled to find their class.
+        cases = [
+            ('[1].reve', 'Array:reverse'), ('[1, 2] .reve', 'Array:reverse'), ('#[1, \\a].reve', 'Array:reverse'),
+            ('Set[1, 2].remo', 'Set:remove'), ('FloatArray[1, 2].archiveAsC', 'RawArray:archiveAsCompileString'),
+            ('(1..4).reve', 'Array:reverse'), ('(1 + 2).isPrim', 'Integer:isPrime'),
+            ('(a: 1).isRe', 'Event:isRest'), ('[1, "]"].reve', 'Array:reverse'),
+            ('x = [1].reve', 'Array:reverse'), ('[[1]].first.reve', None), ('{ 1 }.valu', 'Function:value'),
+        ]
+        self.open('')
+        for text, detail in cases:
+            self.change(text)
+            r = self.c.request('textDocument/completion', self.at(0, len(text)))
+            details = [i.get('detail', '') for i in r['items']]
+            if detail:
+                self.assertTrue(any(d.startswith(detail) for d in details), (text, details[:5]))
+        self.change('[1, 2].at(')
+        r = self.c.request('textDocument/signatureHelp', self.at(0, 10))
+        self.assertIn('at(index)', r['signatures'][0]['label'])
+
     def test_signature_help(self):
         self.open('SinOsc.ar(440, ')
         r = self.c.request('textDocument/signatureHelp', self.at(0, 15))
