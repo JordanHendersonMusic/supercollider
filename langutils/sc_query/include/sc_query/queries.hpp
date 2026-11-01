@@ -136,6 +136,10 @@ struct SymbolInfo {
 [[nodiscard]] std::vector<SymbolInfo> workspace_symbols(const Library& library, std::string_view query,
                                                         std::size_t limit = 200);
 
+/// @brief Each top-level statement of interpreted code, in order, including any brackets around it, e.g.,
+/// `( "hi".postln )`, which is what an editor evaluates. From the last analyse(), empty for a class file.
+[[nodiscard]] std::vector<Range> regions(const Document& document);
+
 /// @brief The tools' own hints: sends of a selector that no class implements, which fail unless the receiver handles
 /// them in doesNotUnderstand, as an Event does. Only for a compile of the document's current text.
 [[nodiscard]] std::vector<DiagnosticInfo> lint(const Document& document);

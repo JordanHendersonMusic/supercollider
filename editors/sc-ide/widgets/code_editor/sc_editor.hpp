@@ -21,10 +21,12 @@
 #pragma once
 
 #include "editor.hpp"
+#include "../../core/lsp_client.hpp"
 #include "tokens.hpp"
 #include "../core/settings/theme.hpp"
 
 #include <QTextBlock>
+#include <functional>
 #include <utility>
 
 namespace ScIDE {
@@ -47,11 +49,9 @@ public:
     static TokenIterator previousOpeningBracket(TokenIterator it);
     static TokenIterator nextClosingBracket(TokenIterator it);
     static void matchBracket(const TokenIterator& bracket, BracketPair& match);
-    static void nextBracketPair(const TokenIterator& startIt, BracketPair& bracketPair);
 
 public:
     ScCodeEditor(Document*, QWidget* parent = 0);
-    QTextCursor currentRegion();
     void blinkCode(const QTextCursor& c);
     bool spaceIndent() { return mSpaceIndent; }
 
@@ -96,13 +96,19 @@ private slots:
 private:
     QTextCursor cursorAt(const TokenIterator, int offset = 0);
     QTextCursor selectionForPosition(int position);
-    QTextCursor regionAroundCursor(const QTextCursor&);
+    // Calls back with the language server's regions of the current text, or none without it, see
+    // LspClient::currentRegions.
+    void withRegions(std::function<void(const QList<LspClient::Region>&)>, bool retried = false);
+    // Calls back with the region the cursor is in, null if it isn't in one.
+    void withCurrentRegion(std::function<void(const QTextCursor&)>);
+    void evaluateCursor(const QTextCursor&);
     QTextCursor blockAroundCursor(const QTextCursor&);
     void moveToNextToken(QTextCursor&, QTextCursor::MoveMode);
     void moveToPreviousToken(QTextCursor&, QTextCursor::MoveMode);
 
     void updateExtraSelections() override;
-    void indentCurrentRegion() override;
+    // A bar beside each region, stronger for the one the cursor is in.
+    void paintLineIndicatorExtras(QPainter&, const QRect&) override;
     // A tooltip at a position: the diagnostics there, or the language server's hover.
     void showToolTip(const QPoint& viewportPos, const QPoint& globalPos);
     // Asks the language server, showing a menu when it gives several places. False when it isn't running.

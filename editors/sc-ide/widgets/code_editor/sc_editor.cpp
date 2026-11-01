@@ -43,6 +43,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QMenu>
+#include <QPainter>
 #include <QPointer>
 #include <QRegularExpression>
 #include <QToolTip>
@@ -51,6 +52,11 @@
 #include <QUrl>
 
 namespace ScIDE {
+
+namespace {
+// The width left of the line numbers for the region bars.
+constexpr int regionBarMargin = 5;
+}
 
 ScCodeEditor::ScCodeEditor(Document* doc, QWidget* parent):
     GenericCodeEditor(doc, parent),
@@ -70,6 +76,12 @@ ScCodeEditor::ScCodeEditor(Document* doc, QWidget* parent):
         if (d == mDoc)
             updateDiagnostics();
     });
+    mLineIndicator->setLeftMargin(regionBarMargin);
+    connect(Main::lspClient(), &LspClient::regionsChanged, this, [this](Document* d) {
+        if (d == mDoc)
+            mLineIndicator->update();
+    });
+    connect(this, &ScCodeEditor::cursorPositionChanged, mLineIndicator, [this] { mLineIndicator->update(); });
 
     applySettings(Main::settings());
     updateDiagnostics();
@@ -742,8 +754,6 @@ void ScCodeEditor::updateExtraSelections() {
     setExtraSelections(selections);
 }
 
-void ScCodeEditor::indentCurrentRegion() { indent(currentRegion()); }
-
 void ScCodeEditor::indent(EditBlockMode editBlockMode) { indent(textCursor(), editBlockMode); }
 
 void ScCodeEditor::indent(const QTextCursor& selection, EditBlockMode editBlockMode) {
@@ -1163,18 +1173,6 @@ void ScCodeEditor::matchBracket(const TokenIterator& bracket, BracketPair& match
     }
 }
 
-void ScCodeEditor::nextBracketPair(const TokenIterator& startIt, BracketPair& bracketPair) {
-    TokenIterator it(startIt);
-    while (it.isValid()) {
-        if (it->type == Token::OpeningBracket) {
-            matchBracket(it, bracketPair);
-            return;
-        }
-        ++it;
-    }
-    bracketPair = BracketPair();
-}
-
 void ScCodeEditor::gotoNextBlock() {
     QTextCursor cursor = textCursor();
 
@@ -1233,118 +1231,115 @@ void ScCodeEditor::selectBlockAroundCursor() {
         setTextCursor(block_cursor);
 }
 
-inline static bool tokenMaybeRegionStart(const TokenIterator& it) {
-    Q_ASSERT(it.isValid());
-    return (it->character == '(' && it->positionInBlock == 0);
-}
-
-inline static bool tokenMaybeRegionEnd(const TokenIterator& it) {
-    Q_ASSERT(it.isValid());
-    if (it->character != ')')
-        return false;
-    TokenIterator next_it = it.next();
-    return (!next_it.isValid() || next_it.block() != it.block() || next_it->character == ';');
-}
-
-static bool bracketPairDefinesRegion(const BracketPair& bracketPair) {
-    Q_ASSERT(bracketPair.first.isValid());
-    Q_ASSERT(bracketPair.second.isValid());
-
-    if (!tokenMaybeRegionStart(bracketPair.first) || !tokenMaybeRegionEnd(bracketPair.second))
-        return false;
-
-    return true;
-}
-
-QTextCursor ScCodeEditor::regionAroundCursor(const QTextCursor& cursor) {
-    int cursorPosition = cursor.position();
-
-    BracketPair bracketPair;
-    TokenIterator it = TokenIterator::rightOf(textDocument()->begin(), 0);
-    while (it.isValid()) {
-        nextBracketPair(it, bracketPair);
-        if (bracketPair.first.isValid() && bracketPair.first.position() < cursorPosition) {
-            if (bracketPair.second.isValid() && bracketPair.second.position() >= cursorPosition
-                && bracketPairDefinesRegion(bracketPair)) {
-                QTextCursor regionCursor(QPlainTextEdit::document());
-                regionCursor.setPosition(bracketPair.first.position());
-                regionCursor.setPosition(bracketPair.second.position() + 1, QTextCursor::KeepAnchor);
-                return regionCursor;
-            }
-        } else {
-            break;
+// The regions come from the language server, see LspClient::currentRegions. Without it, there are none.
+void ScCodeEditor::withRegions(std::function<void(const QList<LspClient::Region>&)> then, bool retried) {
+    static bool noted = false;
+    QPointer<ScCodeEditor> self(this);
+    Main::lspClient()->currentRegions(mDoc, [self, then, retried](const QList<LspClient::Region>& regions, bool ok) {
+        if (!self)
+            return;
+        if (ok) {
+            then(regions);
+            return;
         }
-
-        it = bracketPair.second;
-    }
-
-    return QTextCursor();
+        // The text changed while the server answered, so ask about the new text.
+        if (!retried && Main::lspClient()->hasRegions()) {
+            self->withRegions(then, true);
+            return;
+        }
+        if (!noted) {
+            QString note = tr("Regions need the language server, sc_lsp. Without it, evaluating uses the line.\n");
+            Main::scProcess()->post(note);
+        }
+        noted = true;
+        then({});
+    });
 }
 
-QTextCursor ScCodeEditor::currentRegion() {
-    QTextCursor cursor = textCursor();
-    QTextBlock block = cursor.block();
-    int positionInBlock = cursor.positionInBlock();
+void ScCodeEditor::withCurrentRegion(std::function<void(const QTextCursor&)> then) {
+    const int position = textCursor().position();
+    QPointer<ScCodeEditor> self(this);
+    withRegions([self, position, then](const QList<LspClient::Region>& regions) {
+        // A cursor just before or after a region is in it.
+        for (const auto& r : regions) {
+            if (r.start <= position && position <= r.end) {
+                QTextCursor region(self->textDocument());
+                region.setPosition(r.start);
+                region.setPosition(r.end, QTextCursor::KeepAnchor);
+                then(region);
+                return;
+            }
+        }
+        then(QTextCursor());
+    });
+}
 
-    if (TokenIterator(block, positionInBlock - 1).type() == Token::ClosingBracket)
-        cursor.movePosition(QTextCursor::PreviousCharacter);
-    else if (TokenIterator(block, positionInBlock).type() == Token::OpeningBracket)
-        cursor.movePosition(QTextCursor::NextCharacter);
-
-    return regionAroundCursor(cursor);
+void ScCodeEditor::paintLineIndicatorExtras(QPainter& p, const QRect& rect) {
+    // The last regions published, which can be a little older than the text, so positions are kept in it.
+    const auto regions = Main::lspClient()->regions(mDoc);
+    if (regions.isEmpty())
+        return;
+    QTextDocument* doc = textDocument();
+    const int last = qMax(0, doc->characterCount() - 1);
+    const int position = textCursor().position();
+    const QPalette palette = mLineIndicator->palette();
+    QColor other = palette.color(QPalette::ButtonText);
+    other.setAlpha(60);
+    const QColor current = palette.color(QPalette::Highlight);
+    const QPointF offset = contentOffset();
+    for (const auto& r : regions) {
+        const QTextBlock first = doc->findBlock(qMin(r.start, last));
+        const QTextBlock end = doc->findBlock(qMin(r.end, last));
+        if (!first.isValid() || !end.isValid())
+            continue;
+        const qreal top = blockBoundingGeometry(first).translated(offset).top();
+        if (top > rect.bottom())
+            break; // in order
+        const qreal bottom = blockBoundingGeometry(end).translated(offset).bottom();
+        if (bottom < rect.top())
+            continue;
+        const bool here = r.start <= position && position <= r.end;
+        p.fillRect(QRectF(1, top + 1, regionBarMargin - 2, bottom - top - 2), here ? current : other);
+    }
 }
 
 void ScCodeEditor::selectCurrentRegion() {
-    QTextCursor selectedRegionCursor = currentRegion();
-    if (!selectedRegionCursor.isNull() && selectedRegionCursor.hasSelection())
-        setTextCursor(selectedRegionCursor);
+    withCurrentRegion([this](const QTextCursor& region) {
+        if (!region.isNull() && region.hasSelection())
+            setTextCursor(region);
+    });
 }
 
 void ScCodeEditor::gotoNextRegion() {
-    QTextCursor cursor = textCursor();
-    int cursorPosition = cursor.position();
-
-    BracketPair bracketPair;
-    TokenIterator it = TokenIterator::rightOf(textDocument()->begin(), 0);
-    while (it.isValid()) {
-        nextBracketPair(it, bracketPair);
-        if (bracketPair.first.isValid() && bracketPair.second.isValid() && bracketPair.first.position() > cursorPosition
-            && bracketPairDefinesRegion(bracketPair)) {
-            setTextCursor(cursorAt(bracketPair.first));
-            return;
+    withRegions([this](const QList<LspClient::Region>& regions) {
+        QTextCursor cursor = textCursor();
+        const int position = cursor.position();
+        for (const auto& r : regions) {
+            if (r.start > position) {
+                cursor.setPosition(r.start);
+                setTextCursor(cursor);
+                return;
+            }
         }
-        it = bracketPair.second;
-    }
-
-    cursor.movePosition(QTextCursor::End);
-    setTextCursor(cursor);
+        cursor.movePosition(QTextCursor::End);
+        setTextCursor(cursor);
+    });
 }
 
 void ScCodeEditor::gotoPreviousRegion() {
-    QTextCursor cursor = textCursor();
-    int cursorPosition = cursor.position();
-
-    BracketPair prevBracketPair;
-    BracketPair bracketPair;
-    TokenIterator it = TokenIterator::rightOf(textDocument()->begin(), 0);
-    while (it.isValid()) {
-        nextBracketPair(it, bracketPair);
-        if (!bracketPair.second.isValid() || bracketPair.second.position() >= cursorPosition - 1) {
-            break;
+    withRegions([this](const QList<LspClient::Region>& regions) {
+        QTextCursor cursor = textCursor();
+        const int position = cursor.position();
+        for (auto it = regions.rbegin(); it != regions.rend(); ++it) {
+            if (it->end < position) {
+                cursor.setPosition(it->end);
+                setTextCursor(cursor);
+                return;
+            }
         }
-        if (bracketPairDefinesRegion(bracketPair)) {
-            prevBracketPair = bracketPair;
-        }
-        it = bracketPair.second;
-    }
-
-    if (prevBracketPair.first.isValid() && prevBracketPair.second.isValid()) {
-        setTextCursor(cursorAt(prevBracketPair.second, 1));
-        return;
-    }
-
-    cursor.movePosition(QTextCursor::Start);
-    setTextCursor(cursor);
+        cursor.movePosition(QTextCursor::Start);
+        setTextCursor(cursor);
+    });
 }
 
 bool ScCodeEditor::openDocumentation() { return Main::openDocumentation(symbolUnderCursor()); }
@@ -1421,8 +1416,6 @@ void ScCodeEditor::evaluateLine() {
 }
 
 void ScCodeEditor::evaluateRegion() {
-    QString text;
-
 #ifdef SC_USE_QTWEBENGINE
     HelpBrowserDocklet* help = MainWindow::instance()->helpBrowserDocklet();
     if (help && help->browser()->helpBrowserHasFocus()) {
@@ -1432,30 +1425,31 @@ void ScCodeEditor::evaluateRegion() {
 #endif // SC_USE_QTWEBENGINE
 
     // Try current selection
-    QTextCursor cursor = textCursor();
-    if (cursor.hasSelection())
-        text = cursor.selectedText();
-    else {
-        // If no selection, try current region
-        cursor = currentRegion();
-        if (!cursor.isNull()) {
-            text = cursor.selectedText();
-        } else {
-            // If no current region, try current line
-            cursor = textCursor();
-            text = cursor.block().text();
-            if (mStepForwardEvaluation) {
-                QTextCursor newCursor = cursor;
-                newCursor.movePosition(QTextCursor::NextBlock);
-                newCursor.setVerticalMovementX(cursor.verticalMovementX());
-                setTextCursor(newCursor);
-            }
-            // Adjust cursor for code blinking:
-            cursor.movePosition(QTextCursor::StartOfBlock);
-            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-        }
+    if (textCursor().hasSelection()) {
+        evaluateCursor(textCursor());
+        return;
     }
+    // If no selection, try current region, then current line
+    withCurrentRegion([this](const QTextCursor& region) {
+        if (!region.isNull()) {
+            evaluateCursor(region);
+            return;
+        }
+        QTextCursor cursor = textCursor();
+        if (mStepForwardEvaluation) {
+            QTextCursor newCursor = cursor;
+            newCursor.movePosition(QTextCursor::NextBlock);
+            newCursor.setVerticalMovementX(cursor.verticalMovementX());
+            setTextCursor(newCursor);
+        }
+        cursor.movePosition(QTextCursor::StartOfBlock);
+        cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+        evaluateCursor(cursor);
+    });
+}
 
+void ScCodeEditor::evaluateCursor(const QTextCursor& cursor) {
+    QString text = cursor.selectedText();
     if (text.isEmpty())
         return;
 

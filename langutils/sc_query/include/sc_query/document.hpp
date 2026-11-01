@@ -78,6 +78,9 @@ public:
     [[nodiscard]] const std::shared_ptr<Library>& library() const { return m_library; }
     /// @brief The last analysed text.
     [[nodiscard]] const std::shared_ptr<const src::TextInfo>& text_info() const { return m_text_info; }
+    /// @brief The last analysed text's parse, null when it couldn't be parsed, or for a class file the library compiled
+    /// with this text.
+    [[nodiscard]] const std::shared_ptr<const ast::ASTGraph>& ast() const { return m_ast; }
     /// @brief The interpreted code's graph, null for a class file, or when it couldn't be compiled. Kept from the last
     /// compile that made one, so it can be older than the text.
     [[nodiscard]] const std::shared_ptr<const ir::IRGraph>& graph() const { return m_graph; }

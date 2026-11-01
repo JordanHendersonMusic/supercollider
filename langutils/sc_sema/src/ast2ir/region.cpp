@@ -26,7 +26,7 @@ Return<SCInterpreted_I> Interpreted::operator()(ast::RegionListIndex i) {
     // An empty region is nil.
     OptionalConstExprIndex result = ctx.constant_table.register_constexpr({ Nil {} });
     for (auto it = ast_graph->children(i).iter(); it; ++it) {
-        const ast::RegionItemIndex item = *it;
+        const auto [item] = ast_graph->children(ast::RegionIndex { *it });
         // The parser has reported it.
         if (ast_graph->as_a<ast::ErrorIndex>(item)) {
             result = {};

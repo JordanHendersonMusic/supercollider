@@ -18,6 +18,10 @@ installed beside it and the default Extensions directories. Other options: `excl
 - Completion of classes, messages, keyword arguments, locals, environment variables, and symbols. Symbol completion
   asks the running sclang's hooks, e.g. SynthDef names after `\instrument`.
 - `sclang/status`, a custom request: the library and hook connection.
+- Regions, for an editor's evaluate and its gutter: each top-level statement of an `.scd` document, with any brackets
+  around it. Sent after each analysis as the `sclang/publishRegions` notification, `{uri, version, regions: [Range]}`,
+  and answered for the latest text by the `sclang/regions` request, `{textDocument: {uri}}` -> `{version, regions}`.
+  Advertised as `capabilities.experimental.regions`.
 
 Tests: `langutils/tests/lsp/test_servers.py` (ctest `langutils.servers`), and `typing_stress.py`, which types files
 into the server a few characters at a time.

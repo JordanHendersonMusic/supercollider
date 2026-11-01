@@ -340,7 +340,9 @@ using FileAsFunctionIndex = TypedIndex<NodeFlag::FileAsFunction>;
 
 /// @brief One item of interpreted code: an expression, an immediately evaluated block, or an error.
 using RegionItemIndex = join<ErrorIndex, AnyExprIndex, ImmediatelyEvaluatedBlockIndex>;
-/// @brief Interpreted code: a list of its items.
+/// @brief One item of interpreted code, including any brackets around it, e.g., `( "hi".postln )`.
+using RegionIndex = TypedIndex<NodeFlag::Region>;
+/// @brief Interpreted code: a list of its regions.
 using RegionListIndex = TypedIndex<NodeFlag::RegionList>;
 
 /// @brief What the parser can produce at the root of the graph.

@@ -130,6 +130,7 @@ enum struct NodeFlag {
 
     FileAsFunction,
 
+    Region,
     RegionList,
 
     COUNT

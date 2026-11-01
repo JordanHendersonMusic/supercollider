@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <limits>
 #include <set>
 
 namespace sc::query {
@@ -483,6 +484,41 @@ bool takes_an_argument(const Library& library, MethodId m) {
     const auto& info = library.get(m);
     return !info.arguments.empty() || !info.variadic.empty();
 }
+
+// How far up the hierarchy from the receiver a method is defined, the order Library::responds_to walks it in, so
+// the many methods of Object sort last.
+class Distance {
+public:
+    Distance(const Library& library, ClassId receiver, bool class_side):
+        m_library(library),
+        m_class_side(class_side),
+        m_chain(library.superclasses(receiver)) {
+        if (class_side)
+            if (const auto klass = library.find_class("Class"))
+                m_class_chain = library.superclasses(*klass);
+    }
+
+    [[nodiscard]] std::uint8_t operator()(MethodId m) const {
+        const auto& info = m_library.get(m);
+        std::size_t d = m_chain.size() + m_class_chain.size();
+        if (info.class_method == m_class_side)
+            d = steps_to(m_chain, info.owner);
+        else if (const auto steps = steps_to(m_class_chain, info.owner); steps < m_class_chain.size())
+            d = m_chain.size() + steps;
+        return static_cast<std::uint8_t>(std::min<std::size_t>(d, std::numeric_limits<std::uint8_t>::max()));
+    }
+
+private:
+    // How many classes up the chain @p c is, the chain's size when it isn't in it.
+    static std::size_t steps_to(const std::vector<ClassId>& chain, ClassId c) {
+        return static_cast<std::size_t>(std::find(chain.begin(), chain.end(), c) - chain.begin());
+    }
+
+    const Library& m_library;
+    bool m_class_side;
+    std::vector<ClassId> m_chain;
+    std::vector<ClassId> m_class_chain;
+};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -562,6 +598,7 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
         if (!receiver.class_name.empty())
             c = library->find_class(receiver.class_name);
         if (c) {
+            const Distance distance(*library, *c, receiver.class_side);
             // A binary operator replaces the `.`, as `1.+ 2` doesn't parse. Editors only take a range on one line.
             const auto dot = b.tokens[*cursor->previous].begin();
             const auto dot_position = end_of(b.read(0, dot));
@@ -572,13 +609,10 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
                 const auto& info = library->get(m);
                 if (!starts_with_ignoring_case(info.selector, prefix) || info.selector.back() == '_')
                     continue;
-                const bool own = info.owner == *c;
-                CompletionItem item { info.selector,
-                                      CompletionKind::Method,
-                                      library->signature(m),
-                                      Library::where(info.location),
-                                      {},
-                                      static_cast<std::uint8_t>(own ? 0 : 1) };
+                CompletionItem item {
+                    info.selector, CompletionKind::Method, library->signature(m), Library::where(info.location), {},
+                    distance(m)
+                };
                 const auto first = static_cast<unsigned char>(info.selector.front());
                 if (std::isalpha(first) == 0 && first != '_' && from_dot.begin.line == p.line) {
                     item.insert = (spaced ? "" : " ") + info.selector + " ";
@@ -657,12 +691,13 @@ Completions complete(const Document& document, Position p, HookHost* hooks) {
             add({ selector + ":", CompletionKind::Method, std::move(detail), std::move(where), selector + ": ", rank });
         };
         if (c) {
+            const Distance distance(*library, *c, receiver.class_side);
             for (const auto m : library->responds_to(*c, receiver.class_side)) {
                 const auto& info = library->get(m);
                 if (!starts_with_ignoring_case(info.selector, prefix) || info.selector.back() == '_'
                     || !takes_an_argument(*library, m))
                     continue;
-                keyword(info.selector, library->signature(m), Library::where(info.location), info.owner == *c ? 0 : 1);
+                keyword(info.selector, library->signature(m), Library::where(info.location), distance(m));
             }
             return out;
         }

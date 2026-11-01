@@ -26,6 +26,8 @@
 #include <QList>
 #include <QRegularExpression>
 
+class QPainter;
+
 namespace ScIDE {
 
 namespace Settings {
@@ -114,10 +116,11 @@ protected slots:
 protected:
     void resizeEvent(QResizeEvent*) override;
     void paintLineIndicator(QPaintEvent*);
+    // Draws over the line numbers, in the indicator's left margin, before an inactive editor is faded.
+    virtual void paintLineIndicatorExtras(QPainter&, const QRect&) {}
     void paintEvent(QPaintEvent*) override;
     virtual void updateExtraSelections();
     void updateCurrentLineHighlighting();
-    virtual void indentCurrentRegion() {}
 
     void zoomFont(int steps);
     void zoomFont(float scaler);

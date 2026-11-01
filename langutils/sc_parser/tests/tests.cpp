@@ -540,6 +540,29 @@ BOOST_AUTO_TEST_CASE(closed_blocks) {
                boost::test_tools::per_element());
 }
 
+// Each item of interpreted code is a region whose range is the whole item: the brackets of `( "hi".postln )`, which
+// the expression's range doesn't include, and an error recovered at its matching bracket.
+BOOST_AUTO_TEST_CASE(region_ranges) {
+    const std::string src = "(\nvar a = 1;\na\n);\n1 + 2;\n( \"hi\".postln );\n(1 + 2).postln;\n( var b = ; b )\n";
+    auto text_info = std::make_shared<sc::src::TextInfo>(sc::src::NormalisedSource(src), sc::src::FileCodeLocation {},
+                                                         "test_file", sc::src::TextKind::ScdFile);
+    auto [graph, result] = P::parse(text_info);
+    BOOST_TEST_REQUIRE(graph);
+    const auto root = graph->root();
+    BOOST_TEST_REQUIRE(root.has_value());
+    BOOST_TEST_REQUIRE(std::holds_alternative<P::RegionListIndex>(*root));
+
+    std::vector<std::string> regions;
+    for (auto it = graph->children(std::get<P::RegionListIndex>(*root)).iter(); it; ++it) {
+        const auto& loc = graph->location({ *P::RegionIndex { *it } });
+        regions.push_back(src.substr(loc.begin.absolute, loc.end.absolute - loc.begin.absolute));
+    }
+    BOOST_TEST(regions
+                   == (std::vector<std::string> { "(\nvar a = 1;\na\n)", "1 + 2", "( \"hi\".postln )", "(1 + 2).postln",
+                                                  "( var b = ; b )" }),
+               boost::test_tools::per_element());
+}
+
 // The VM's interpreted code is one function, as the old grammar's cmdlinecode: a body, or a body with variables in
 // brackets, whose variables are the function's own, and arguments, e.g., an scd file loaded with arguments. Without
 // regions, a missing semicolon is an error.

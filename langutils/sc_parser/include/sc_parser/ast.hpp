@@ -121,6 +121,7 @@ using NodeCollectionHelper = sc::util::typed_graph::TypedGraphHelper< //
     MethodList, //
     ClassOrExtensionList, //
     FileAsFunction, //
+    Region, //
     RegionList, //
     Error //
     >;

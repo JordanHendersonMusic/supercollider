@@ -152,6 +152,8 @@ private:
                 return m_transport.respond(id, on_workspace_symbol(params));
             if (method == "sclang/status")
                 return m_transport.respond(id, on_status());
+            if (method == "sclang/regions")
+                return m_transport.respond(id, on_regions(params));
             m_transport.respond_error(id, rpc::error_code::method_not_found, "Unknown method " + method);
         } catch (const std::exception& e) {
             log("error handling " + method + ": " + e.what());
@@ -205,6 +207,9 @@ private:
         caps["referencesProvider"] = true;
         caps["documentSymbolProvider"] = true;
         caps["workspaceSymbolProvider"] = true;
+        Json experimental = Json::object();
+        experimental["regions"] = true;
+        caps["experimental"] = experimental;
         Json completion = Json::object();
         completion["triggerCharacters"] = Json { Json::Array { ".", "\\", "~", "'" } };
         completion["resolveProvider"] = false;
@@ -326,6 +331,7 @@ private:
         auto& doc = *fnd->second.document;
         doc.analyse(m_library);
         publish(uri, fnd->second);
+        publish_regions(uri, fnd->second);
     }
 
     void publish(const std::string& uri, const Open& open) {
@@ -354,6 +360,25 @@ private:
         p["version"] = open.version;
         p["diagnostics"] = std::move(list);
         m_transport.notify("textDocument/publishDiagnostics", p);
+    }
+
+    // The document's regions, sent with each analysis, so an editor can show them without asking.
+    void publish_regions(const std::string& uri, const Open& open) {
+        if (open.document->kind() != DocumentKind::Interpreted)
+            return;
+        Json p = regions_json(open);
+        p["uri"] = uri;
+        m_transport.notify("sclang/publishRegions", p);
+    }
+
+    Json regions_json(const Open& open) const {
+        Json list = Json::array();
+        for (const auto& r : regions(*open.document))
+            list.push_back(range_json(*open.document, r));
+        Json out = Json::object();
+        out["version"] = open.version;
+        out["regions"] = std::move(list);
+        return out;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -568,7 +593,9 @@ private:
                 item["detail"] = c.detail;
             if (!c.documentation.empty())
                 item["documentation"] = c.documentation;
-            item["sortText"] = std::to_string(c.rank) + c.label;
+            // Padded, as the rank can be more than one digit.
+            auto rank = std::to_string(c.rank);
+            item["sortText"] = std::string(3 - rank.size(), '0') + rank + c.label;
             if (!c.filter.empty())
                 item["filterText"] = c.filter;
             Json edit = Json::object();
@@ -671,6 +698,13 @@ private:
             out.push_back(std::move(item));
         }
         return out;
+    }
+
+    // The regions of the document's latest text, for an editor that needs them before the next sclang/publishRegions.
+    Json on_regions(const Json& params) {
+        if (!fresh(params))
+            return {};
+        return regions_json(*find(params));
     }
 
     Json on_status() {

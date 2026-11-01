@@ -81,6 +81,7 @@ void Document::analyse(const std::shared_ptr<Library>& library) {
     m_stale = false;
     m_library = library;
     m_diagnostics.clear();
+    m_ast.reset();
     const auto path = m_path.empty() ? std::optional<std::filesystem::path> {} : std::optional { m_path };
     try {
         m_text_info = std::make_shared<const src::TextInfo>(

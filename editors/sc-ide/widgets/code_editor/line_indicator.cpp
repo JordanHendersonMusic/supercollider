@@ -81,7 +81,12 @@ int LineIndicator::widthForLineCount(int lineCount) {
         ++digits;
     }
 
-    return 6 + fontMetrics().horizontalAdvance('9') * digits;
+    return mLeftMargin + 6 + fontMetrics().horizontalAdvance('9') * digits;
 }
 
 void LineIndicator::setHideLineIndicator(bool hide) { hideLineIndicator = hide; }
+
+void LineIndicator::setLeftMargin(int margin) {
+    mLeftMargin = margin;
+    setLineCount(mLineCount);
+}

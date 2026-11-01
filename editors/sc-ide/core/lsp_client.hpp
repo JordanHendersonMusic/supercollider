@@ -63,7 +63,14 @@ public:
         int endLine;
         int endCharacter;
     };
+    // A top-level statement of an scd document, with any brackets around it, as sc_lsp's sclang/regions.
+    struct Region {
+        int start; // character positions in the document
+        int end;
+    };
     using Callback = std::function<void(const QJsonValue& result)>;
+    // Called with the regions of the document's current text, or with ok false when they couldn't be had.
+    using RegionsCallback = std::function<void(const QList<Region>& regions, bool ok)>;
 
     LspClient(DocumentManager*, Settings::Manager*, QObject* parent);
     ~LspClient();
@@ -77,6 +84,16 @@ public:
     void requestAt(const QString& method, Document*, int position, Callback, QJsonObject extra = {});
     QList<Diagnostic> diagnostics(Document*) const;
 
+    // Whether the server is running and gives regions.
+    bool hasRegions() const { return mReady && mHasRegions; }
+    // The last regions the server published, which can be a little older than the text, e.g., for drawing.
+    QList<Region> regions(Document*) const;
+    // Whether regions() are of the document's current text.
+    bool regionsCurrent(Document*) const;
+    // The regions of the document's current text: straight away when regions() are current, otherwise once the
+    // server answers. Fails if the text changes before then, or there is no server.
+    void currentRegions(Document*, RegionsCallback);
+
     // Turns a location in a result into one the IDE can open.
     Location location(const QJsonValue&) const;
     // Opens a location, as go to definition does.
@@ -86,6 +103,7 @@ public:
 
 signals:
     void diagnosticsChanged(Document*);
+    void regionsChanged(Document*);
     void readyChanged(bool);
 
 public slots:
@@ -105,6 +123,8 @@ private:
         QString uri;
         int version = 0;
         bool dirty = false;
+        QList<Region> regions;
+        int regionsVersion = -1; // the version regions are of
     };
 
     QString serverPath() const;
@@ -120,6 +140,8 @@ private:
     QString uriFor(Document*) const;
     Document* documentFor(const QString& uri) const;
     void post(const QString&);
+    QList<Region> toRegions(Document*, const QJsonValue& ranges) const;
+    void setRegions(Document*, const QJsonObject& published);
 
     DocumentManager* mDocManager;
     Settings::Manager* mSettings;
@@ -130,6 +152,7 @@ private:
     bool mReady = false;
     bool mStopping = false;
     bool mEnabled = true;
+    bool mHasRegions = false;
     QHash<Document*, Tracked> mDocuments;
     QHash<QString, QList<Diagnostic>> mDiagnostics; // by uri
     QTimer mChangeTimer;

@@ -55,6 +55,7 @@
     RangeGeneratorIndex v_RangeGeneratorIndex;
     RangeIndex v_RangeIndex;
     RegionItemIndex v_RegionItemIndex;
+    RegionIndex v_RegionIndex;
     RegionListIndex v_RegionListIndex;
     SelectorIndex v_SelectorIndex;
     SelectorMaybeAdverbIndex v_SelectorMaybeAdverbIndex;
@@ -130,12 +131,11 @@ using namespace sc::ast;
 // argument_declarations.opt.
 %precedence EMPTY_ARGUMENTS
 %precedence error
-%left  <v_LexerToken> COLON
-%right <v_LexerToken> EQUALSSIGN
+%token <v_LexerToken> COLON
+%precedence <v_LexerToken> EQUALSSIGN
 %left  <v_LexerToken> BINOP KEYBINOP MINUS LESSTHAN GREATERTHAN MULTIPLY ADD PIPE READWRITEVAR
-%left  <v_LexerToken> DOT
-%right <v_LexerToken> BACKTICK
-%right <v_LexerToken> UMINUS
+%precedence <v_LexerToken> DOT
+%precedence <v_LexerToken> BACKTICK
 
 ////////////////////////////////////////////////////////////////////////////////
 // types
@@ -144,7 +144,8 @@ using namespace sc::ast;
 %type <v_GoIndex> go
 
 %type <v_RegionListIndex> region
-%type <v_RegionItemIndex> region.item 
+%type <v_RegionIndex> region.item
+%type <v_RegionItemIndex> region.contents
 
 %type <v_ClassOrExtensionListIndex> classOrExtList.list
 %type <v_ClassOrExtensionIndex> classOrExtList.item
@@ -300,7 +301,20 @@ interpreted_function
 // region
 ////////////////////////////////////////////////////////////////////////////////
 
+// The range of a region is the whole item, so it includes the brackets of `( "hi".postln )`.
 region.item
+	: region.contents[contents]
+		{
+			// Error recovery can skip to a matching bracket, past the end bison knows of.
+			auto whole = @$;
+			const auto inner = cxt.graph->location(Index { *$contents });
+			if (whole.end < inner.end)
+				whole.end = inner.end;
+			$$ = cxt.create(Region{}, whole, $contents);
+		}
+	;
+
+region.contents
 	: expr
 		{ $$ = $expr; } 
 	// Parsed so it can be reported as a return in interpreted code, rather than an unexpected token.
@@ -323,7 +337,7 @@ region
 	| INTERPRET error
 		{
 			error_recovery::expr(cxt);
-			$$ = cxt.create(RegionList{}, @$, cxt.create_error(@$, @error));
+			$$ = cxt.create(RegionList{}, @$, cxt.create(Region{}, @$, cxt.create_error(@$, @error)));
 		}
 
 	| region[r] SEMICOLON region.item[item]
@@ -336,7 +350,7 @@ region
 		{
 			// A missing semicolon between lines is inserted by the lexer, see yylex.
 			error_recovery::expr(cxt);
-			$$ = cxt.graph->append($r, cxt.create_error(@e, @e, Index { *$r }));
+			$$ = cxt.graph->append($r, cxt.create(Region{}, @e, cxt.create_error(@e, @e, Index { *$r })));
 			yyclearin;
 		}
 	;
@@ -1294,7 +1308,7 @@ integer.unsigned
 
 integer
 	: integer.unsigned { $$ = $1; }
-	| MINUS integer.unsigned %prec UMINUS
+	| MINUS integer.unsigned
 		{ cxt.graph->payload($2).sign = IntNode::Sign::Negative; $$ = $2; }
 	;
 
@@ -1308,7 +1322,7 @@ float.raw_unsigned
 float.raw	
 	: float.raw_unsigned 
 		{ $$ = $1; }
-	| MINUS float.raw_unsigned %prec UMINUS 
+	| MINUS float.raw_unsigned 
 		{ cxt.graph->payload($2).sign = FloatNode::Sign::Negative; $$ = $2; }
 	;
 
@@ -1322,7 +1336,7 @@ accidental.unsigned
 accidental  
 	: accidental.unsigned 
 		{ $$ = $1; }
-	| MINUS accidental.unsigned %prec UMINUS 
+	| MINUS accidental.unsigned 
 		{ cxt.graph->payload($2).sign = AccidentalNode::Sign::Negative; $$ = $2; }
 	;
 

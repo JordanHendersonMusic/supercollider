@@ -45,7 +45,7 @@
 #ifndef YY_YY_LANGUTILS_SC_PARSER_SRC_SC_GRAMMAR_PARSER_HPP_INCLUDED
 # define YY_YY_LANGUTILS_SC_PARSER_SRC_SC_GRAMMAR_PARSER_HPP_INCLUDED
 // "%code requires" blocks.
-#line 80 "langutils/sc_parser/src/sc_grammar.y"
+#line 81 "langutils/sc_parser/src/sc_grammar.y"
 
 
 #include "parser_context.hpp"
@@ -187,7 +187,7 @@
 # define YYDEBUG 0
 #endif
 
-#line 68 "langutils/sc_parser/src/sc_grammar.y"
+#line 69 "langutils/sc_parser/src/sc_grammar.y"
 namespace sc { namespace ast { namespace parser {
 #line 193 "langutils/sc_parser/src/sc_grammar_parser.hpp"
 
@@ -257,6 +257,7 @@ namespace sc { namespace ast { namespace parser {
     RangeGeneratorIndex v_RangeGeneratorIndex;
     RangeIndex v_RangeIndex;
     RegionItemIndex v_RegionItemIndex;
+    RegionIndex v_RegionIndex;
     RegionListIndex v_RegionListIndex;
     SelectorIndex v_SelectorIndex;
     SelectorMaybeAdverbIndex v_SelectorMaybeAdverbIndex;
@@ -266,7 +267,7 @@ namespace sc { namespace ast { namespace parser {
     maybe<NamedIdentifierIndex> v_maybe_NamedIdentifierIndex;
     value_type() {}
 
-#line 270 "langutils/sc_parser/src/sc_grammar_parser.hpp"
+#line 271 "langutils/sc_parser/src/sc_grammar_parser.hpp"
 
     };
 #endif
@@ -362,8 +363,7 @@ namespace sc { namespace ast { namespace parser {
     TOKEN_PIPE = 314,              // PIPE
     TOKEN_READWRITEVAR = 315,      // READWRITEVAR
     TOKEN_DOT = 316,               // DOT
-    TOKEN_BACKTICK = 317,          // BACKTICK
-    TOKEN_UMINUS = 318             // UMINUS
+    TOKEN_BACKTICK = 317           // BACKTICK
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -380,7 +380,7 @@ namespace sc { namespace ast { namespace parser {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 64, ///< Number of tokens.
+        YYNTOKENS = 63, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
@@ -445,12 +445,12 @@ namespace sc { namespace ast { namespace parser {
         S_READWRITEVAR = 60,                     // READWRITEVAR
         S_DOT = 61,                              // DOT
         S_BACKTICK = 62,                         // BACKTICK
-        S_UMINUS = 63,                           // UMINUS
-        S_YYACCEPT = 64,                         // $accept
-        S_go = 65,                               // go
-        S_file_as_func = 66,                     // file_as_func
-        S_interpreted_function = 67,             // interpreted_function
-        S_68_region_item = 68,                   // region.item
+        S_YYACCEPT = 63,                         // $accept
+        S_go = 64,                               // go
+        S_file_as_func = 65,                     // file_as_func
+        S_interpreted_function = 66,             // interpreted_function
+        S_67_region_item = 67,                   // region.item
+        S_68_region_contents = 68,               // region.contents
         S_region = 69,                           // region
         S_70_classOrExtList_list = 70,           // classOrExtList.list
         S_71_classOrExtList_item = 71,           // classOrExtList.item
@@ -1049,9 +1049,9 @@ namespace sc { namespace ast { namespace parser {
     /// Constants.
     enum
     {
-      yylast_ = 2884,     ///< Last index in yytable_.
-      yynnts_ = 82,  ///< Number of nonterminal symbols.
-      yyfinal_ = 95 ///< Termination state number.
+      yylast_ = 2864,     ///< Last index in yytable_.
+      yynnts_ = 83,  ///< Number of nonterminal symbols.
+      yyfinal_ = 96 ///< Termination state number.
     };
 
 
@@ -1061,7 +1061,7 @@ namespace sc { namespace ast { namespace parser {
   };
 
 
-#line 68 "langutils/sc_parser/src/sc_grammar.y"
+#line 69 "langutils/sc_parser/src/sc_grammar.y"
 } } } // sc::ast::parser
 #line 1067 "langutils/sc_parser/src/sc_grammar_parser.hpp"
 

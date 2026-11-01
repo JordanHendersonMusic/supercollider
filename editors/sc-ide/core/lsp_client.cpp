@@ -183,7 +183,9 @@ void LspClient::start() {
     params["clientInfo"] = QJsonObject { { "name", "scide" } };
     params["capabilities"] = capabilities;
     params["initializationOptions"] = initializationOptions();
-    request("initialize", params, [this](const QJsonValue&) {
+    request("initialize", params, [this](const QJsonValue& result) {
+        const QJsonObject capabilities = result.toObject()["capabilities"].toObject();
+        mHasRegions = capabilities["experimental"].toObject()["regions"].toBool();
         notify("initialized", QJsonObject());
         mReady = true;
         mDocuments.clear();
@@ -212,8 +214,10 @@ void LspClient::stop() {
     mReady = false;
     mDocuments.clear();
     mDiagnostics.clear();
-    for (Document* doc : mDocManager->documents())
+    for (Document* doc : mDocManager->documents()) {
         emit diagnosticsChanged(doc);
+        emit regionsChanged(doc);
+    }
     if (wasReady)
         emit readyChanged(false);
 }
@@ -317,6 +321,10 @@ void LspClient::handle(const QJsonObject& message) {
         mDiagnostics[uri] = list;
         if (doc)
             emit diagnosticsChanged(doc);
+    } else if (method == "sclang/publishRegions") {
+        const QJsonObject params = message["params"].toObject();
+        if (Document* doc = documentFor(params["uri"].toString()))
+            setRegions(doc, params);
     }
 }
 
@@ -416,6 +424,64 @@ QList<LspClient::Diagnostic> LspClient::diagnostics(Document* doc) const {
     if (it == mDocuments.end())
         return {};
     return mDiagnostics.value(it->uri);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Regions
+////////////////////////////////////////////////////////////////////////////////
+
+QList<LspClient::Region> LspClient::toRegions(Document* doc, const QJsonValue& ranges) const {
+    QList<Region> out;
+    for (const auto& value : ranges.toArray()) {
+        const QJsonObject range = value.toObject();
+        out.append({ position(doc->textDocument(), range["start"]), position(doc->textDocument(), range["end"]) });
+    }
+    return out;
+}
+
+void LspClient::setRegions(Document* doc, const QJsonObject& published) {
+    const auto it = mDocuments.find(doc);
+    const int version = published["version"].toInt(-1);
+    if (it == mDocuments.end() || version < it->regionsVersion)
+        return;
+    it->regions = toRegions(doc, published["regions"]);
+    it->regionsVersion = version;
+    emit regionsChanged(doc);
+}
+
+QList<LspClient::Region> LspClient::regions(Document* doc) const {
+    const auto it = mDocuments.find(doc);
+    return it == mDocuments.end() ? QList<Region>() : it->regions;
+}
+
+bool LspClient::regionsCurrent(Document* doc) const {
+    const auto it = mDocuments.find(doc);
+    return it != mDocuments.end() && !it->dirty && it->regionsVersion == it->version;
+}
+
+void LspClient::currentRegions(Document* doc, RegionsCallback callback) {
+    if (!hasRegions() || !mDocuments.contains(doc)) {
+        callback({}, false);
+        return;
+    }
+    if (regionsCurrent(doc)) {
+        callback(mDocuments[doc].regions, true);
+        return;
+    }
+    sendChange(doc);
+    const int version = mDocuments[doc].version;
+    QPointer<Document> guard(doc);
+    request("sclang/regions", QJsonObject { { "textDocument", QJsonObject { { "uri", mDocuments[doc].uri } } } },
+            [this, guard, version, callback](const QJsonValue& result) {
+                Document* doc = guard.data();
+                if (doc && result.isObject())
+                    setRegions(doc, result.toObject());
+                // The text may have changed while the server answered.
+                if (doc && regionsCurrent(doc) && mDocuments[doc].regionsVersion == version)
+                    callback(mDocuments[doc].regions, true);
+                else
+                    callback({}, false);
+            });
 }
 
 ////////////////////////////////////////////////////////////////////////////////

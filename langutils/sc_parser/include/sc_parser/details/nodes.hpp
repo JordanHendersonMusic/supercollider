@@ -528,8 +528,14 @@ struct ClassOrExtensionList : ListNode<ClassOrExtensionListIndex, ClassOrExtensi
     static constexpr auto name { "ClassOrExtensionList" };
 };
 
-/// @brief Interpreted code: a list of its items.
-struct RegionList : ListNode<RegionListIndex, RegionItemIndex> {
+/// @brief One item of interpreted code. Its range is the whole of the item, so it includes the brackets of
+/// `( "hi".postln )`, which the expression's range doesn't.
+struct Region : Node<RegionIndex(RegionItemIndex)> {
+    static constexpr auto name { "Region" };
+};
+
+/// @brief Interpreted code: a list of its regions.
+struct RegionList : ListNode<RegionListIndex, RegionIndex> {
     static constexpr auto name { "RegionList" };
 };
 

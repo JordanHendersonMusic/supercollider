@@ -135,7 +135,6 @@ void GenericLookupDialog::currentChanged(const QModelIndex& item, const QModelIn
 
     mPreviewDocument->setTextInRange(stream.readAll(), 0, -1);
     mPreviewEditor->showPosition(pos, 0);
-    mPreviewEditor->selectCurrentRegion();
 }
 
 bool GenericLookupDialog::openDocumentation() {

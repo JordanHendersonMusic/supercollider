@@ -1012,6 +1012,8 @@ void GenericCodeEditor::paintLineIndicator(QPaintEvent* e) {
         ++blockNumber;
     }
 
+    paintLineIndicatorExtras(p, r);
+
     if (!mEditorBoxIsActive) {
         QColor color = plt.color(QPalette::Mid);
         if (color.lightness() >= 128)

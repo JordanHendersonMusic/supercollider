@@ -156,6 +156,17 @@ class LspTest(unittest.TestCase):
         plus = [i for i in self.items('x = 1 .') if i['label'] == '+']
         self.assertEqual([i['textEdit']['newText'] for i in plus], ['+ '])
         self.assertNotIn('filterText', [i for i in self.items('x = 1.') if i['label'] == 'abs'][0])
+        # Methods sort by how far up the hierarchy they are defined, so Object's come last.
+        def sort(text):
+            return {i['label']: i['sortText'] for i in self.items(text)}
+        s = sort('x = 1.')
+        self.assertLess(s['isPrime'], s['squared'])
+        self.assertLess(s['squared'], s['postln'])
+        s = sort('SinOsc.')
+        self.assertLess(s['ar'], s['new'])
+        self.assertLess(s['new'], s['superclass'])
+        s = sort('x = 1 ma')
+        self.assertLess(s['max:'], s['matchItem:'])
         # In a string or a comment.
         self.assertEqual(self.items('"SinO'), [])
         self.assertEqual(self.items('/* SinO'), [])
@@ -210,6 +221,31 @@ class LspTest(unittest.TestCase):
         self.change('SinOsc.ar(mul: ')
         r = self.c.request('textDocument/signatureHelp', self.at(0, 15))
         self.assertEqual(r['activeParameter'], 2)
+
+    def test_regions(self):
+        def span(start, end):
+            return {'start': {'line': start[0], 'character': start[1]}, 'end': {'line': end[0], 'character': end[1]}}
+
+        def published(version):
+            return self.c.wait_for(lambda m: m.get('method') == 'sclang/publishRegions'
+                                   and m['params']['uri'] == SCD_URI
+                                   and m['params']['version'] >= version)['params']
+
+        self.assertTrue(self.init['capabilities']['experimental']['regions'])
+        # Each statement, with its brackets. The emoji is two UTF-16 units.
+        self.open('(\nvar a = 1;\na\n);\nx = "😀"; ( "hi".postln );\n(1 + 2).postln;\n( var b = ; b )\n')
+        regions = [span((0, 0), (3, 1)), span((4, 0), (4, 8)), span((4, 10), (4, 25)), span((5, 0), (5, 14)),
+                   span((6, 0), (6, 15))]
+        p = published(self.version)
+        self.assertEqual((p['version'], p['regions']), (self.version, regions))
+        # A request answers for the latest text, before the next publish.
+        type(self).version += 1
+        self.c.notify('textDocument/didChange', {'textDocument': {'uri': SCD_URI, 'version': self.version},
+                                                 'contentChanges': [{'text': '1;\n(\n2\n)'}]})
+        r = self.c.request('sclang/regions', {'textDocument': {'uri': SCD_URI}})
+        self.assertEqual(r, {'version': self.version, 'regions': [span((0, 0), (0, 1)), span((1, 0), (3, 1))]})
+        self.assertEqual(published(self.version)['regions'], r['regions'])
+        self.assertEqual(self.c.request('sclang/regions', {'textDocument': {'uri': 'file:///not/open.scd'}}), None)
 
     def test_workspace_symbol(self):
         names = [s['name'] for s in self.c.request('workspace/symbol', {'query': 'sinosc'})]

@@ -30,6 +30,9 @@ class LineIndicator : public QWidget {
 public:
     LineIndicator(class GenericCodeEditor* editor);
     void setHideLineIndicator(bool hide);
+    // Room left of the line numbers, e.g., for region bars.
+    void setLeftMargin(int margin);
+    int leftMargin() const { return mLeftMargin; }
 Q_SIGNALS:
     void widthChanged();
 public Q_SLOTS:
@@ -49,6 +52,7 @@ private:
     int mLineCount;
     int mLastCursorPos;
     bool hideLineIndicator;
+    int mLeftMargin = 0;
 };
 
 }

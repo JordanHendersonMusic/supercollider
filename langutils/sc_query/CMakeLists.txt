@@ -9,6 +9,7 @@ add_library(sc_query STATIC
     src/jsonrpc.cpp
     src/library.cpp
     src/names.cpp
+    src/regions.cpp
     src/text.cpp
 )
 

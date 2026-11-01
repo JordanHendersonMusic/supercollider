@@ -9,7 +9,7 @@ It knows nothing about either protocol: it takes paths and text, and returns pla
 | --- | --- |
 | `library.hpp` | `build_library`: compiles the class library from disk, with editor text overlaid, and indexes its classes, methods, variables, symbols and hooks. |
 | `document.hpp` | `Document`: an editor's text and its last compile. Interpreted code is compiled against the library, a class file is compiled as part of it. |
-| `queries.hpp` | What is at a position (hover, definition, references), completion, signature help, outlines, a lint, and the name queries sc_mcp uses. |
+| `queries.hpp` | What is at a position (hover, definition, references), completion, signature help, outlines, regions, a lint, and the name queries sc_mcp uses. |
 | `hooks.hpp` | Running `LSPHook` subclasses in a running sclang over OSC. |
 | `text.hpp` | Lines and codepoint columns, UTF-16 columns, URIs. |
 | `json.hpp`, `jsonrpc.hpp` | A small JSON value, and JSON-RPC over stdio for both servers. |
@@ -41,9 +41,3 @@ hierarchy, without running anything. They only run by asking a running sclang:
 
 sclang only answers 127.0.0.1. A hook is refused when sclang compiled a different version of its file (the file sizes
 differ) or hasn't compiled it at all, so stale hooks never run. A build without `SC_LSP_CONNECTED` runs no hooks.
-
-
-
-# TODO:
-
-Suggestions ordering should be influenced by how far away they are in the heirachy.
