@@ -75,6 +75,7 @@ bool Diagnostic::within(const TextInfoPtr& text, sc::src::SourceCodeRange range)
 }
 
 [[nodiscard]] const char* Diagnostic::name() const { return m_name; }
+[[nodiscard]] const std::string& Diagnostic::extra() const { return extra_info; }
 
 std::string Diagnostic::to_string() const { return diagnosticToString(severity(), name(), locations(), extra_info); }
 

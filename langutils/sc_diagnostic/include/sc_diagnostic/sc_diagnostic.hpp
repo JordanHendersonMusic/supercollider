@@ -57,6 +57,8 @@ public:
     [[nodiscard]] const std::vector<Location>& extra_locations() const;
     [[nodiscard]] bool has_extra_locations() const;
     [[nodiscard]] const char* name() const;
+    /// @brief The explanation printed after the locations, empty if there is none.
+    [[nodiscard]] const std::string& extra() const;
 
     friend std::ostream& operator<<(std::ostream& s, const Diagnostic& d);
 

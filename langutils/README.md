@@ -250,6 +250,7 @@ If we ever wanted to 'jit' compile the language, or a subset of it to create syn
 | [sc_util](sc_util/README.md) | Strong indexes, `IndexedVector`, the typed graph. |
 | [sc_diagnostic](sc_diagnostic/README.md) | Errors and warnings with source highlights. |
 | [sc_bytecode](sc_bytecode/README.md) | Structure of the VM |
+| [sc_query](sc_query/README.md) | The queries sc_lsp and sc_mcp share: positions, completion, lookups, hooks. |
 
 Tools:
 
@@ -259,6 +260,8 @@ Tools:
 | [sc_explorer](sc_explorer/README.md) | Browser view of the compiler's output. |
 | [sc_bench_inspect](sc_bench_inspect/README.md) | Benchmarks every stage and shows the results. |
 | [sc_bench_interpreted](sc_bench_interpreted/README.md) | Benchmarks compiling interpreted code. |
+| [sc_lsp](sc_lsp/README.md) | Language server, used by the Qt IDE. |
+| [sc_mcp](sc_mcp/README.md) | MCP server, for coding agents. |
 
 ## Conventions
 

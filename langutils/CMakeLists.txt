@@ -12,6 +12,13 @@ add_subdirectory(sc_sema)
 add_subdirectory(sc_backend)
 add_subdirectory(sc_compiler)
 add_subdirectory(sc_util)
+# The language server and MCP server. Hooks reach a running sclang over OSC, so need networking.
+if(NOT EMSCRIPTEN)
+    option(SC_LSP_CONNECTED "Let sc_lsp and sc_mcp run class library hooks in a running sclang" ON)
+    add_subdirectory(sc_query)
+    add_subdirectory(sc_lsp)
+    add_subdirectory(sc_mcp)
+endif()
 add_subdirectory(sc_explorer)
 add_subdirectory(sc_inspect)
 
