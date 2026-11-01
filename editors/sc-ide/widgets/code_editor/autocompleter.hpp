@@ -30,7 +30,6 @@
 #include "tokens.hpp"
 #include "completion_menu.hpp"
 
-#include "SCDoc/SCDoc.h"
 
 namespace ScIDE {
 
@@ -60,10 +59,8 @@ private slots:
     void onContentsChange(int pos, int removed, int added);
     void onCursorChanged();
     void onCompletionMenuFinished(int result);
-    void updateCompletionMenuInfo();
     void clearMethodCallStack();
     void hideWidgets();
-    void gotoHelp(QString symbol);
 
 private:
     friend class MethodCallWidget;
@@ -76,7 +73,7 @@ private:
         bool suppressed;
     };
 
-    enum CompletionType { ClassCompletion, ClassMethodCompletion, MethodCompletion, LspCompletion, InvalidCompletion };
+    enum CompletionType { LspCompletion, InvalidCompletion };
 
     struct CompletionDescription {
         bool on;
@@ -84,10 +81,8 @@ private:
         int pos;
         int len;
         int contextPos;
-        QString base;
         QString text;
         QPointer<CompletionMenu> menu;
-        Token::Type tokenType;
     };
 
     struct MethodCallContext {
@@ -103,11 +98,9 @@ private:
     QTextDocument* document();
 
     // completion
-
-    // Asks the language server, for symbols, and when sclang's introspection isn't there. False if it doesn't.
-    bool triggerLspCompletion(bool forceShow);
+    // Asks the language server for completions, the only source of them.
+    void triggerLspCompletion(bool forceShow);
     void quitCompletion(const QString& reason = QString());
-    void showCompletionMenu(bool forceShow);
     void updateCompletionMenu(bool forceShow);
 
     // method call aid
@@ -121,27 +114,12 @@ private:
     bool testMethodCall(const MethodCall&, int cursorPos, int& argNum, TokenIterator& argNameToken,
                         bool strict = false);
 
-    static CompletionMenu* menuForClassCompletion(CompletionDescription const& completion, ScCodeEditor* editor);
-    static CompletionMenu* menuForClassMethodCompletion(CompletionDescription const& completion, ScCodeEditor* editor);
-    static CompletionMenu* menuForMethodCompletion(CompletionDescription const& completion, ScCodeEditor* editor);
 
     static const ScLanguage::Class* classForToken(Token::Type type, const QString& string);
 
     // utilities
-
     QString tokenText(TokenIterator& it);
     QRect globalCursorRect(int cursorPosition);
-    static QString findHelpClass(QString klass);
-    static DocNode* parseHelpClass(QString file);
-    static QString parseClassElement(DocNode* node, QString element);
-    QString getMethodDocs(const DocNode& node, QString methodName, bool isClassMethod) const;
-    static void parseClassNode(DocNode* node, QString* str);
-
-    // fill info box w/ docs
-
-    QString fillClassHelp(DocNode* node) const;
-    QString fillMethodHelp(const DocNode& node, const QString& methodName, const QString& className) const;
-    QString fillClassMethodHelp(const DocNode& node, const QString& methodName, const QString& className) const;
 
     // data
 

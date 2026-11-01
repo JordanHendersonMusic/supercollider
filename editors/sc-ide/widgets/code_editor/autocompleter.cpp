@@ -27,6 +27,7 @@
 #include "../../core/lsp_client.hpp"
 
 #include <QJsonArray>
+#include <algorithm>
 #include <QJsonObject>
 #include "../../core/sc_process.hpp"
 #include "../../core/main.hpp"
@@ -53,16 +54,6 @@ namespace ScIDE {
 
 static bool tokenMaybeName(Token::Type type) {
     return (type == Token::Name || type == Token::Keyword || type == Token::Builtin);
-}
-
-static QString incrementedString(const QString& other) {
-    if (other.isEmpty())
-        return QString();
-
-    QString str = other;
-    int pos = str.length() - 1;
-    str[pos] = QChar(str[pos].unicode() + 1);
-    return str;
 }
 
 class MethodCallWidget : public QWidget {
@@ -339,105 +330,14 @@ void AutoCompleter::triggerCompletion(bool forceShow) {
         updateCompletionMenu(forceShow);
         return;
     }
-
-    if (triggerLspCompletion(forceShow))
-        return;
-
-    QTextCursor cursor(mEditor->textCursor());
-    const int cursorPos = cursor.positionInBlock();
-    QTextBlock block(cursor.block());
-    TokenIterator it(block, cursorPos - 1);
-
-    if (!it.isValid())
-        return;
-
-    const Token& triggeringToken = *it;
-
-    if (triggeringToken.type == Token::Class) {
-        if (triggeringToken.length < 3)
-            return;
-        mCompletion.type = ClassCompletion;
-        mCompletion.pos = it.position();
-        mCompletion.len = it->length;
-        mCompletion.text = tokenText(it);
-        mCompletion.contextPos = mCompletion.pos + 3;
-        mCompletion.base = mCompletion.text;
-        mCompletion.base.truncate(3);
-    } else {
-        TokenIterator objectIt, dotIt, nameIt;
-
-        Token::Type objectTokenType = Token::Unknown;
-
-        if (tokenMaybeName(it.type())) {
-            nameIt = it;
-            --it;
-        }
-
-        if (it.isValid() && it.character() == '.') {
-            dotIt = it;
-            --it;
-        } else
-            // don't trigger on method names without preceding dot (for now)
-            return;
-
-        if (dotIt.isValid()) {
-            objectTokenType = it.type();
-            switch (objectTokenType) {
-            case Token::Class:
-            case Token::Char:
-            case Token::StringMark:
-            case Token::Builtin:
-            case Token::Symbol:
-            case Token::SymbolMark:
-            case Token::Float:
-            case Token::RadixFloat:
-            case Token::HexInt:
-                objectIt = it;
-                break;
-
-            default:;
-            }
-        }
-
-        if (!objectIt.isValid() && (!nameIt.isValid() || nameIt->length < 3))
-            return;
-
-        if (nameIt.isValid()) {
-            mCompletion.pos = nameIt.position();
-            mCompletion.len = nameIt->length;
-            mCompletion.text = tokenText(nameIt);
-        } else {
-            mCompletion.pos = dotIt.position() + 1;
-            mCompletion.len = 0;
-            mCompletion.text.clear();
-        }
-
-        if (objectIt.isValid()) {
-            mCompletion.contextPos = mCompletion.pos;
-            mCompletion.base = tokenText(objectIt);
-            mCompletion.tokenType = objectTokenType;
-            mCompletion.type = ClassMethodCompletion;
-        } else {
-            mCompletion.contextPos = mCompletion.pos + 3;
-            mCompletion.base = tokenText(nameIt);
-            mCompletion.type = MethodCompletion;
-        }
-    }
-
-    mCompletion.on = true;
-
-    qDebug() << QStringLiteral("Completion: ON <%1>").arg(mCompletion.base);
-
-    showCompletionMenu(forceShow);
-
-    if (mCompletion.menu.isNull())
-        mCompletion.on = false;
+    // Completion only comes from the language server, see triggerLspCompletion.
+    triggerLspCompletion(forceShow);
 }
 
-bool AutoCompleter::triggerLspCompletion(bool forceShow) {
+void AutoCompleter::triggerLspCompletion(bool forceShow) {
     LspClient* lsp = Main::lspClient();
     if (!lsp->isReady())
-        return false;
+        return;
     const QTextCursor cursor(mEditor->textCursor());
     const QString line = cursor.block().text();
     const int end = cursor.positionInBlock();
@@ -447,18 +347,14 @@ bool AutoCompleter::triggerLspCompletion(bool forceShow) {
     const QChar before = start > 0 ? line[start - 1] : QChar();
     const int length = end - start;
     const bool symbol = before == '\\';
-    const bool introspection = Main::scProcess()->introspection().introspectionAvailable();
-    // sclang's introspection completes classes and methods better, with their help, when it is there.
-    if (!symbol && introspection)
-        return false;
     if (!forceShow) {
         if (symbol ? length < 1 : (before == '.' ? false : length < 3))
-            return true;
+            return;
         if (!symbol && before != '.' && length > 0 && !line[start].isUpper() && before != '~')
-            return true; // lower case words are left alone unless asked for
+            return; // lower case words are left alone unless asked for
     }
     if (length > 0 && line[start].isDigit())
-        return true;
+        return;
 
     const int request = ++mLspRequest;
     const int wordStart = cursor.block().position() + start;
@@ -467,9 +363,19 @@ bool AutoCompleter::triggerLspCompletion(bool forceShow) {
                    [self, request, wordStart, forceShow](const QJsonValue& result) {
                        if (!self || request != self->mLspRequest || self->mCompletion.on)
                            return;
-                       const QJsonArray items = result.toObject()["items"].toArray();
+                       QList<QJsonValue> items;
+                       for (const auto& item : result.toObject()["items"].toArray())
+                           items.append(item);
                        if (items.isEmpty())
                            return;
+                       // In the server's order of relevance, then by name.
+                       std::stable_sort(items.begin(), items.end(), [](const QJsonValue& l, const QJsonValue& r) {
+                           const auto key = [](const QJsonValue& v) {
+                               const QJsonObject o = v.toObject();
+                               return o["sortText"].toString(o["label"].toString());
+                           };
+                           return key(l) < key(r);
+                       });
                        const int cursorPos = self->mEditor->textCursor().position();
                        if (cursorPos < wordStart)
                            return;
@@ -504,13 +410,11 @@ bool AutoCompleter::triggerLspCompletion(bool forceShow) {
                        c.len = wordEnd - wordStart;
                        c.contextPos = wordStart;
                        c.text = self->document()->toPlainText().mid(wordStart, cursorPos - wordStart);
-                       c.base = c.text;
                        c.menu = menu;
                        connect(menu, &CompletionMenu::finished, self, &AutoCompleter::onCompletionMenuFinished);
                        menu->popup(self->globalCursorRect(wordStart).adjusted(0, -5, 0, 5));
                        self->updateCompletionMenu(forceShow);
                    });
-    return true;
 }
 
 void AutoCompleter::quitCompletion(const QString& reason) {
@@ -525,189 +429,6 @@ void AutoCompleter::quitCompletion(const QString& reason) {
     }
 
     mCompletion.on = false;
-}
-
-void AutoCompleter::showCompletionMenu(bool forceShow) {
-    qDebug(">>> showCompletionMenu");
-
-    using namespace ScLanguage;
-    using ScLanguage::Method;
-
-    Q_ASSERT(mCompletion.on);
-    Q_ASSERT(mCompletion.menu.isNull());
-
-    QPointer<CompletionMenu> menu;
-
-    switch (mCompletion.type) {
-    case ClassCompletion:
-        menu = menuForClassCompletion(mCompletion, mEditor);
-        break;
-
-    case ClassMethodCompletion:
-        menu = menuForClassMethodCompletion(mCompletion, mEditor);
-        break;
-
-    case MethodCompletion:
-        menu = menuForMethodCompletion(mCompletion, mEditor);
-        break;
-
-    default:
-        break;
-    }
-
-
-    if (menu == NULL)
-        return;
-
-    mCompletion.menu = menu;
-
-    connect(menu, &CompletionMenu::finished, this, &AutoCompleter::onCompletionMenuFinished);
-
-    QRect popupTargetRect = globalCursorRect(mCompletion.pos).adjusted(0, -5, 0, 5);
-
-    menu->popup(popupTargetRect);
-
-    updateCompletionMenu(forceShow);
-
-    if (Main::settings()->value("IDE/editor/showAutocompleteHelp").toBool()) {
-        connect(menu, &CompletionMenu::itemChanged, this, &AutoCompleter::updateCompletionMenuInfo);
-        connect(menu, &CompletionMenu::infoClicked, this, &AutoCompleter::gotoHelp);
-        updateCompletionMenuInfo();
-    }
-}
-
-CompletionMenu* AutoCompleter::menuForClassCompletion(CompletionDescription const& completion, ScCodeEditor* editor) {
-    using namespace ScLanguage;
-    const Introspection& introspection = Main::scProcess()->introspection();
-
-    const ClassMap& classes = introspection.classMap();
-
-    QString min = completion.base;
-    QString max = incrementedString(min);
-
-    ClassMap::const_iterator matchStart, matchEnd;
-    matchStart = classes.lower_bound(min);
-    matchEnd = classes.lower_bound(max);
-    if (matchStart == matchEnd) {
-        qDebug() << "Completion: no class matches:" << completion.base;
-        return NULL;
-    }
-
-    CompletionMenu* menu = new CompletionMenu(editor);
-
-    for (ClassMap::const_iterator it = matchStart; it != matchEnd; ++it) {
-        Class* klass = it->second.data();
-        auto* item = new QStandardItem(klass->name);
-        menu->addItem(item);
-        item->setData(QVariant::fromValue(klass), CompletionMenu::ClassRole);
-    }
-
-    menu->adapt();
-
-    return menu;
-}
-
-CompletionMenu* AutoCompleter::menuForClassMethodCompletion(CompletionDescription const& completion,
-                                                            ScCodeEditor* editor) {
-    using namespace ScLanguage;
-
-    const Class* klass = NULL;
-
-    switch (completion.tokenType) {
-    case Token::Float:
-    case Token::RadixFloat:
-    case Token::HexInt:
-        // Only show completion if at least 1 character after dot
-        if (!completion.base.contains(".") && completion.text.isEmpty())
-            return NULL;
-    default:;
-    }
-
-    klass = classForToken(completion.tokenType, completion.base);
-
-    if (klass == NULL) {
-        qDebug() << "Autocompletion not implemented for" << completion.base;
-        return NULL;
-    }
-
-    QMap<QString, const Method*> methodMap; // for quick lookup
-    QList<const Method*> methodList; // to keep order by class hierarchy
-    do {
-        foreach (const Method* method, klass->methods) {
-            QString methodName = method->name.get();
-
-            // Operators are also methods, but are not valid in
-            // a method call syntax, so filter them out.
-            Q_ASSERT(!methodName.isEmpty());
-            if (!methodName[0].isLetter())
-                continue;
-
-            if (methodMap.value(methodName) != 0)
-                continue;
-
-            methodMap.insert(methodName, method);
-            methodList.append(method);
-        }
-        klass = klass->superClass;
-    } while (klass);
-
-    CompletionMenu* menu = new CompletionMenu(editor);
-    menu->setCompletionRole(CompletionMenu::CompletionRole);
-
-    foreach (const Method* method, methodList) {
-        QString methodName = method->name.get();
-        QString detail(" [ %1 ]");
-
-        QStandardItem* item = new QStandardItem();
-        item->setText(methodName + detail.arg(method->ownerClass->name));
-        item->setData(QVariant::fromValue(method), CompletionMenu::MethodRole);
-        item->setData(QVariant::fromValue(method->ownerClass), CompletionMenu::ClassRole);
-        item->setData(methodName, CompletionMenu::CompletionRole);
-        menu->addItem(item);
-    }
-
-    menu->adapt();
-
-    return menu;
-}
-
-CompletionMenu* AutoCompleter::menuForMethodCompletion(CompletionDescription const& completion, ScCodeEditor* editor) {
-    using namespace ScLanguage;
-    const Introspection& introspection = Main::scProcess()->introspection();
-
-    const MethodMap& methods = introspection.methodMap();
-
-    QString min = completion.base;
-    QString max = incrementedString(min);
-
-    MethodMap::const_iterator matchStart, matchEnd;
-    matchStart = methods.lower_bound(min);
-    matchEnd = methods.lower_bound(max);
-    if (matchStart == matchEnd) {
-        qDebug() << "Completion: no method matches:" << completion.base;
-        return NULL;
-    }
-
-    CompletionMenu* menu = new CompletionMenu(editor);
-    menu->setCompletionRole(CompletionMenu::CompletionRole);
-
-    for (MethodMap::const_iterator it = matchStart; it != matchEnd; ++it) {
-        const Method* method = it->second.data();
-
-        QStandardItem* item = new QStandardItem();
-
-        QString methodName = method->name.get();
-        item->setText(methodName + QStringLiteral(" [ %1 ]").arg(method->ownerClass->name));
-        item->setData(QVariant::fromValue(method), CompletionMenu::MethodRole);
-        item->setData(methodName, CompletionMenu::CompletionRole);
-        item->setData(QVariant::fromValue(method->ownerClass), CompletionMenu::ClassRole);
-
-        menu->addItem(item);
-    }
-
-    menu->adapt();
-
-    return menu;
 }
 
 const ScLanguage::Class* AutoCompleter::classForToken(Token::Type tokenType, const QString& tokenString) {
@@ -802,9 +523,6 @@ void AutoCompleter::updateCompletionMenu(bool forceShow) {
             menu->hide();
     } else
         menu->hide();
-
-    if (Main::settings()->value("IDE/editor/showAutocompleteHelp").toBool())
-        updateCompletionMenuInfo();
 }
 
 void AutoCompleter::onCompletionMenuFinished(int result) {
@@ -832,72 +550,6 @@ void AutoCompleter::onCompletionMenuFinished(int result) {
     // It could be hidden because of current filter yielding 0 results.
 
     // quitCompletion("cancelled");
-}
-
-QString AutoCompleter::fillClassHelp(DocNode* node) const {
-    QString examples = parseClassElement(node, "EXAMPLES");
-    if (!examples.isEmpty())
-        examples.prepend("<h4>Examples</h4>");
-    // MSVStudio 2013 does not concatenate multiple QStringliterals ("""") properly
-    // see http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/
-    return QStringLiteral("<h4>%1</h4>%2%3<p><a href=\"%4\">go to help</a>")
-        .arg(parseClassElement(node, "SUMMARY"))
-        .arg(parseClassElement(node, "DESCRIPTION"))
-        .arg(examples)
-        .arg(mCompletion.menu->currentText());
-}
-
-QString AutoCompleter::fillMethodHelp(const DocNode& node, const QString& methodName, const QString& className) const {
-    QString instanceMethods = getMethodDocs(node, methodName, false);
-    return QStringLiteral("<h4><code>%1-%2</code></h4>%3").arg(className).arg(methodName).arg(instanceMethods);
-}
-
-QString AutoCompleter::fillClassMethodHelp(const DocNode& node, const QString& methodName,
-                                           const QString& className) const {
-    QString instanceMethods = getMethodDocs(node, methodName, true);
-    return QStringLiteral("<h4><code>%1#%2</code></h4>%3").arg(className).arg(methodName).arg(instanceMethods);
-}
-
-void AutoCompleter::updateCompletionMenuInfo() {
-    const auto* klass = mCompletion.menu->currentClass();
-    if (!klass) {
-        return;
-    }
-    auto className = klass->name.get();
-    // strip Meta_ prefix for resolution of docs
-    if (className.startsWith("Meta_")) {
-        className.remove(0, 5);
-    }
-
-    DocNode* node = parseHelpClass(findHelpClass(className));
-    if (!node) {
-        mCompletion.menu->addInfo(QString());
-        return;
-    }
-
-    auto methodName = mCompletion.menu->currentText();
-    // setter methods are appended with `_`, but SCDoc maps does not have documentation for a setter method,
-    // so we fall back to the getter method.
-    if (methodName.endsWith("_")) {
-        methodName.chop(1);
-    }
-
-    QString info;
-    switch (mCompletion.type) {
-    case ClassCompletion:
-        info = fillClassHelp(node);
-        break;
-    case MethodCompletion:
-        info = fillMethodHelp(*node, methodName, className);
-        break;
-    case ClassMethodCompletion:
-        info = fillClassMethodHelp(*node, methodName, className);
-        break;
-    case InvalidCompletion:
-        break;
-    };
-    mCompletion.menu->addInfo(info);
-    doc_node_free_tree(node);
 }
 
 void AutoCompleter::triggerMethodCallAid(bool explicitTrigger) {
@@ -1284,109 +936,6 @@ QRect AutoCompleter::globalCursorRect(int cursorPosition) {
     QRect r = mEditor->cursorRect(cursor);
     r.moveTopLeft(mEditor->viewport()->mapToGlobal(r.topLeft()));
     return r;
-}
-
-QString AutoCompleter::findHelpClass(QString klass) {
-    QString file = standardDirectory(ScResourceDir).append("/HelpSource/Classes/").append(klass).append(".schelp");
-    if (QFile::exists(file))
-        return file;
-
-    return QString();
-}
-
-DocNode* AutoCompleter::parseHelpClass(QString file) {
-    if (file.isEmpty())
-        return NULL;
-
-    // note, toStdString() converts to UTF-8
-    return scdoc_parse_file(file.toStdString(), 0);
-}
-
-QString AutoCompleter::parseClassElement(DocNode* node, QString element) {
-    if (QString(node->id) == element) {
-        QString str;
-        parseClassNode(node, &str);
-        return str;
-    }
-
-    for (int i = 0; i < node->n_childs; i++) {
-        QString ret = parseClassElement(node->children[i], element);
-        if (!ret.isEmpty())
-            return ret;
-    }
-
-    return QString();
-}
-
-bool isMatchingMethod(const DocNode& node, QString methodName) {
-    if (QString(node.id) == "METHODNAMES" && node.n_childs > 0 && node.children[0]->text == methodName) {
-        return true;
-    }
-    for (int i = 0; i < node.n_childs; i++) {
-        if (isMatchingMethod(*node.children[i], methodName))
-            return true;
-    }
-    return false;
-}
-
-QString AutoCompleter::getMethodDocs(const DocNode& node, QString methodName, bool isClassMethod) const {
-    if (QString(node.id) == (isClassMethod ? "CMETHOD" : "IMETHOD") && isMatchingMethod(node, methodName)
-        && node.n_childs >= 2) {
-        QString str;
-        // first child is method name, which we want to skip here
-        // we want straight access to the body of the method doc
-        parseClassNode(node.children[1], &str);
-        return str;
-    }
-
-    for (int i = 0; i < node.n_childs; i++) {
-        QString ret = getMethodDocs(*node.children[i], methodName, isClassMethod);
-        if (!ret.isEmpty())
-            return ret;
-    }
-
-    return QString();
-}
-
-void AutoCompleter::parseClassNode(DocNode* node, QString* str) {
-    QString id = node->id;
-
-    if (id == "NOTE")
-        str->append("<br><br>Note:<br>");
-
-    if (id == "ARGUMENTS")
-        str->append("<br>");
-
-    if (node->text) {
-        if (id == "LINK") {
-            QStringList locations = QString(node->text).split('/').last().split('#');
-
-            /* if empty, the link is on the same page. No HTML link */
-            if (locations.first().isEmpty())
-                str->append(QStringLiteral(" %1 ").arg(locations.first()));
-            else
-                str->append(QStringLiteral("<a href=\"%1\">%2</a>").arg(locations.first()).arg(locations.last()));
-        } else if (id == "CODE") {
-            str->append(QStringLiteral("<code>%1</code>").arg(node->text));
-        } else if (id == "CODEBLOCK") {
-            str->append(QStringLiteral("<pre><code>%1</code></pre>").arg(node->text));
-        } else if (id == "ARGUMENT") {
-            str->append(QStringLiteral("<br><code><b>%1</b></code>: ").arg(node->text));
-        } else {
-            str->append(node->text);
-        }
-    }
-
-    for (int i = 0; i < node->n_childs; i++)
-        parseClassNode(node->children[i], str);
-}
-
-void AutoCompleter::gotoHelp(QString symbol) {
-#ifdef SC_USE_QTWEBENGINE
-    HelpBrowserDocklet* helpDock = MainWindow::instance()->helpBrowserDocklet();
-    helpDock->browser()->gotoHelpFor(symbol);
-    helpDock->focus();
-#endif // SC_USE_QTWEBENGINE
 }
 
 } // namespace ScIDE
