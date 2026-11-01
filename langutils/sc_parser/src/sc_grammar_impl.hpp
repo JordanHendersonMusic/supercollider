@@ -177,6 +177,29 @@ inline bool parser_accepts(const sc::ast::parser::parser& p, sc::ast::parser::pa
     return std::find(expected.begin(), expected.begin() + count, kind) != expected.begin() + count;
 }
 
+// Adds the lexer's tokens the parser can take next to cxt.expected_at_stop, see expected_tokens.
+inline void record_expected(const sc::ast::parser::parser& p, sc::ast::parser::ParserContext& cxt) {
+    using P = sc::ast::parser::parser;
+    using TokenType = sc::lex::TokenType;
+    std::array<P::symbol_kind_type, P::symbol_kind::YYNTOKENS> expected {};
+    P::symbol_type end_of_file {};
+    end_of_file.kind_ = P::symbol_kind::S_YYEOF;
+    const auto count =
+        P::context { p, end_of_file }.expected_tokens(expected.data(), static_cast<int>(expected.size()));
+    const auto end = expected.begin() + count;
+    for (auto t = static_cast<unsigned>(TokenType::EndOfFile); t < static_cast<unsigned>(TokenType::END_OF_OPERATORS);
+         ++t) {
+        const auto token = to_parser_token(static_cast<TokenType>(t));
+        if (token == P::token::TOKEN_YYUNDEF)
+            continue;
+        const auto kind = P::by_kind { token }.kind();
+        auto& out = cxt.expected_at_stop;
+        if (std::find(expected.begin(), end, kind) != end
+            && std::find(out.begin(), out.end(), static_cast<TokenType>(t)) == out.end())
+            out.push_back(static_cast<TokenType>(t));
+    }
+}
+
 inline int yylex(sc::ast::parser::parser::value_type* v, sc::src::SourceCodeRange* loc,
                  sc::ast::parser::ParserContext& cxt) {
     using T = sc::ast::parser::parser::token_kind_type;
@@ -195,6 +218,22 @@ inline int yylex(sc::ast::parser::parser::value_type* v, sc::src::SourceCodeRang
 
     const auto& current = cxt.tokens[cxt.next];
     *loc = current.range;
+
+    if (cxt.stop_at && *cxt.next >= **cxt.stop_at) {
+        record_expected(*cxt.owner, cxt);
+        // At a new line in an scd file, a region separator may be inserted before what comes next, so the tokens
+        // after one are accepted too.
+        const auto* before =
+            cxt.next != sc::ast::parser::TokenIndex { 0 } ? &cxt.tokens[sc::util::retreat(cxt.next)] : nullptr;
+        if (cxt.mode == sc::ast::parser::ParserContext::Mode::CommandContinue && !cxt.separator_inserted && before
+            && before->range.end.line_number < current.range.begin.line_number
+            && parser_accepts(*cxt.owner, T::TOKEN_REGION_SEPARATOR)) {
+            cxt.separator_inserted = true;
+            *loc = { before->range.end, before->range.end };
+            return T::TOKEN_REGION_SEPARATOR;
+        }
+        throw sc::ast::parser::ParserContext::Stopped {};
+    }
 
     // The lexer has reported it, see tokenise.
     if (sc::lex::is_error(current.token)) {

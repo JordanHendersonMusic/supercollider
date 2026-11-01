@@ -575,3 +575,124 @@ BOOST_AUTO_TEST_CASE(interpreted_function) {
         }
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Expected tokens
+////////////////////////////////////////////////////////////////////////////////
+
+namespace {
+// What the parser accepts at the end of src.
+std::optional<std::vector<sc::lex::TokenType>> expected_at_end(const char* src, bool is_class_file = false) {
+    auto text_info = std::make_shared<const sc::src::TextInfo>(
+        sc::src::NormalisedSource(src), sc::src::FileCodeLocation {}, "test_file",
+        is_class_file ? sc::src::TextKind::ClassFile : sc::src::TextKind::ScdFile);
+    const auto& s = text_info->source.as_string();
+    sc::src::SourceCodeLocation end { static_cast<std::uint32_t>(s.size()), 0, 0 };
+    for (const char c : s) {
+        if (c == '\n') {
+            ++end.line_number;
+            end.codepoint_in_line = 0;
+        } else {
+            ++end.codepoint_in_line;
+        }
+    }
+    return P::expected_tokens(text_info, { {}, end });
+}
+
+bool has(const std::optional<std::vector<sc::lex::TokenType>>& v, sc::lex::TokenType t) {
+    return v && std::find(v->begin(), v->end(), t) != v->end();
+}
+}
+
+BOOST_AUTO_TEST_CASE(expected_keyword_binary_operator) {
+    using T = sc::lex::TokenType;
+    // Two expressions can't be next to each other, so `Foo ba` is only the start of `Foo bar: x`.
+    const auto e = expected_at_end("Foo ");
+    BOOST_TEST(has(e, T::KeywordBinaryOperator));
+    BOOST_TEST(has(e, T::Dot));
+    BOOST_TEST(!has(e, T::Name));
+    BOOST_TEST(!has(e, T::ClassName));
+}
+
+BOOST_AUTO_TEST_CASE(expected_environment_variable) {
+    using T = sc::lex::TokenType;
+    // `while` is a keyword that can be a name.
+    const auto e = expected_at_end("x = ~ ");
+    BOOST_TEST(has(e, T::Name));
+    BOOST_REQUIRE(e);
+    for (const auto t : *e)
+        BOOST_TEST((t == T::Name || t == T::While));
+}
+
+BOOST_AUTO_TEST_CASE(expected_after_dot) {
+    using T = sc::lex::TokenType;
+    const auto e = expected_at_end("SinOsc.");
+    BOOST_TEST(has(e, T::Name));
+    BOOST_TEST(has(e, T::OpenParen));
+    BOOST_TEST(!has(e, T::ClassName));
+}
+
+BOOST_AUTO_TEST_CASE(expected_arguments) {
+    using T = sc::lex::TokenType;
+    // An unclosed bracket isn't closed first.
+    for (const auto* src : { "SinOsc.ar(", "SinOsc.ar(440, ", "f = { SinOsc.ar(440, " }) {
+        const auto e = expected_at_end(src);
+        BOOST_TEST(has(e, T::Name));
+        BOOST_TEST(has(e, T::KeywordBinaryOperator));
+        BOOST_TEST(has(e, T::SymbolSlash));
+    }
+    BOOST_TEST(has(expected_at_end("SinOsc.ar("), T::CloseParen));
+}
+
+BOOST_AUTO_TEST_CASE(expected_argument_declarations) {
+    using T = sc::lex::TokenType;
+    // Names are declared next to each other between pipes.
+    const auto e = expected_at_end("{ |a ");
+    BOOST_TEST(has(e, T::Name));
+    BOOST_TEST(has(e, T::Pipe));
+    BOOST_TEST(!has(e, T::Dot));
+}
+
+BOOST_AUTO_TEST_CASE(expected_statement_start) {
+    using T = sc::lex::TokenType;
+    const auto e = expected_at_end("(\nvar x;\nx = 1;\n");
+    BOOST_TEST(has(e, T::Name));
+    BOOST_TEST(has(e, T::ClassName));
+    BOOST_TEST(has(expected_at_end("(\n"), T::Var));
+    BOOST_TEST(has(expected_at_end(""), T::Name));
+}
+
+BOOST_AUTO_TEST_CASE(expected_missing_semicolon) {
+    using T = sc::lex::TokenType;
+    // On a new line in an scd file, a missing semicolon is assumed if needed, so a new statement can start.
+    const auto e = expected_at_end("x = 1\n");
+    BOOST_TEST(has(e, T::KeywordBinaryOperator));
+    BOOST_TEST(has(e, T::Name));
+    BOOST_TEST(!has(expected_at_end("x = 1 "), T::Name));
+}
+
+BOOST_AUTO_TEST_CASE(expected_after_error) {
+    using T = sc::lex::TokenType;
+    // The parser has recovered from the error before.
+    BOOST_TEST(has(expected_at_end("x = ;\ny = SinOsc."), T::Name));
+    // An error in a bracketed expression drops the whole bracket.
+    BOOST_TEST(!expected_at_end("(\nx = ;\ny = SinOsc."));
+    BOOST_TEST(!expected_at_end("(\nx = 1\ny = SinOsc."));
+    // Recovery from an error in a bracket doesn't skip past the end.
+    BOOST_TEST(has(expected_at_end("(\nx = [1 ; 2];\ny = SinOsc."), T::Name));
+    BOOST_TEST(has(expected_at_end("f(1 ;; SinOsc."), T::Name));
+}
+
+BOOST_AUTO_TEST_CASE(expected_class_file) {
+    using T = sc::lex::TokenType;
+    const auto method = expected_at_end("Foo {\n    bar { ^this.", true);
+    BOOST_TEST(has(method, T::Name));
+    const auto body = expected_at_end("Foo {\n    ", true);
+    BOOST_TEST(has(body, T::Var));
+    BOOST_TEST(has(body, T::Name));
+    BOOST_TEST(has(body, T::CloseCurly));
+    // Nested non-local returns before it.
+    const auto returns = expected_at_end("Foo {\n    bar { |x| if (x) { ^1 }; ^2 }\n    baz { ^x ", true);
+    BOOST_TEST(has(returns, T::KeywordBinaryOperator));
+    BOOST_TEST(!has(returns, T::Name));
+}

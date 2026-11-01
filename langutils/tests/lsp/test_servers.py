@@ -121,6 +121,60 @@ class LspTest(unittest.TestCase):
         self.change('// SinO')
         self.assertEqual(self.labels(0, 7), [])
 
+    def items(self, text, uri=SCD_URI):
+        """The completions at the end of text."""
+        lines = text.split('\n')
+        self.change(text, uri)
+        r = self.c.request('textDocument/completion', self.at(len(lines) - 1, len(lines[-1]), uri))
+        return r['items']
+
+    def test_grammar_completion(self):
+        # What the parser can take at the cursor decides what is offered.
+        self.open('')
+        # Two expressions can't be next to each other, so this is a keyword binary operator, `SinOsc ar: 440`.
+        items = self.items('SinOsc a')
+        self.assertIn('ar:', [i['label'] for i in items])
+        self.assertEqual([i['textEdit']['newText'] for i in items if i['label'] == 'ar:'], ['ar: '])
+        self.assertNotIn('SinOsc', [i['label'] for i in items])
+        self.assertIn('dist:', [i['label'] for i in self.items('x = Point(1, 2) dis')])
+        # A class name can't follow an expression.
+        self.assertEqual([i['label'] for i in self.items('SinOsc Si')], [])
+        # Whitespace and comments don't matter.
+        self.assertEqual([i['label'] for i in self.items('~ freq = 3;\n~ fr')], ['freq'])
+        self.assertEqual([i['label'] for i in self.items('~freq = 3;\n~fr')], ['freq'])
+        self.assertIn('ar', [i['label'] for i in self.items('SinOsc /* a comment */ .a')])
+        self.assertIn('ar', [i['label'] for i in self.items('SinOsc // a comment\n.a')])
+        # Numbers.
+        floor = [i.get('detail', '') for i in self.items('1.5.floo')]
+        self.assertTrue(any(d.startswith('Float:') or d.startswith('SimpleNumber:') for d in floor), floor)
+        self.assertTrue(any(d.startswith('Array:reverse') for d in
+                            [i.get('detail', '') for i in self.items('(1..4).reve')]))
+        # In a string or a comment.
+        self.assertEqual(self.items('"SinO'), [])
+        self.assertEqual(self.items('/* SinO'), [])
+        # Receivers in arguments, after keywords and argument lists.
+        self.assertEqual([i['label'] for i in self.items('SinOsc.ar(freq: Point(1, 2).rh')], ['rho'])
+        self.assertTrue(any(i.get('detail', '').startswith('Array:reverse')
+                            for i in self.items('f = { |a, b| [1].reve')))
+        # Nested non-local returns before it.
+        self.assertTrue(any(i.get('detail', '').startswith('Function:value')
+                            for i in self.items('f = { |x| if (x) { ^1 }; ^2 };\n{ 1 }.valu')))
+        # An error earlier in the bracket, here a missing semicolon, drops it in the parse, so the statement is used.
+        self.assertIn('ar', [i['label'] for i in self.items('(\nx = 1\ny = SinOsc.a')])
+        self.assertIn('ar:', [i['label'] for i in self.items('(\nx = ;\ny = SinOsc a')])
+        self.assertEqual(sorted(i['label'] for i in self.items('(\nx = ;\ny = SinO')), ['SinOsc', 'SinOscFB'])
+
+    def test_grammar_completion_class_file(self):
+        # A method's body, after nested non-local returns: `^x ma` is only the start of `^x max: y`.
+        text = CLASS_TEXT.replace('    bar {', '    baz { |x| if (x) { ^1 }; ^x ma }\n    bar {')
+        self.open(text, SC_URI)
+        line = text.split('\n').index('    baz { |x| if (x) { ^1 }; ^x ma }')
+        r = self.c.request('textDocument/completion', self.at(line, len('    baz { |x| if (x) { ^1 }; ^x ma'), SC_URI))
+        labels = [i['label'] for i in r['items']]
+        self.assertIn('max:', labels)
+        self.assertTrue(all(label.endswith(':') for label in labels), labels)
+        self.c.notify('textDocument/didClose', {'textDocument': {'uri': SC_URI}})
+
     def test_compiled_receivers(self):
         # Receivers the text alone doesn't give, compiled to find their class.
         cases = [

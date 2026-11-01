@@ -44,6 +44,12 @@ The graph keeps the text alive.
 `accepted` is false if Bison gave up. A tree with errors can still be accepted, so check `diagnostics()` for errors.
 `explicit operator bool` on the graph is false if a fatal diagnostic was added.
 
+`sc::ast::expected_tokens(text, range)` parses a range and returns the token types the parser can take at its end,
+for completion in tools. For example, after `Foo ` it allows a `KeywordBinaryOperator` but not a `Name`, as two
+expressions can't be next to each other. It stops before the brackets that are left open are closed. Error recovery
+doesn't skip past the end. If recovery reaches the end, the result is empty (`std::nullopt`), as the parser only knows
+what follows the error there. Bison's lookahead correction (`parse.lac full`) makes the set exact.
+
 ## The tree
 
 `ASTGraph` is a typed graph. Every node has a source range and a type, and its children are other nodes.

@@ -138,6 +138,17 @@ struct ParserContext {
     // A region separator was inserted before the next token
     bool separator_inserted { false };
 
+    // Where expected_tokens stops: the lexer records what the parser accepts there and throws Stopped.
+    std::optional<TokenIndex> stop_at {};
+    std::vector<sc::lex::TokenType> expected_at_stop {};
+    struct Stopped {};
+    // Error recovery reached the stop, so what the parser expects there is only what follows the error.
+    bool recovered_to_stop { false };
+    // Whether i is at or after where expected_tokens stops, which error recovery doesn't skip past.
+    [[nodiscard]] bool at_stop(TokenIndex i) const { return stop_at && *i >= **stop_at; }
+    // Records recovery stopping at i, see recovered_to_stop.
+    void recovered_to(TokenIndex i) { recovered_to_stop = recovered_to_stop || at_stop(i); }
+
     std::optional<UnexpectedToken> unexpected_token_error {};
 
     // Empties it, so it is reported once, see error_recovery::report.

@@ -18,8 +18,12 @@ It knows nothing about either protocol: it takes paths and text, and returns pla
 
 - Positions are lines and codepoint columns, as the lexer counts them. The servers convert to UTF-16 columns at the edge.
 - Hover, definition and references read the compiled IR. Completion and signature help read the text before the
-  cursor, as the code being typed rarely parses; they use the last compile only for the locals in scope.
-- A receiver's class is known only for literals, class names, and `Foo.new(...)` or `Foo(...)`. Otherwise a send
+  cursor, as the code being typed rarely parses as a whole. They use the last compile only for the locals in scope.
+- Completion asks the parser which tokens it can take at the cursor (`sc::ast::expected_tokens`). So `Foo ba` is only
+  the start of a keyword binary operator, `Foo bar: x`, as two expressions can't be next to each other. When an error
+  earlier in a bracket hides this, the statement the cursor is in is parsed on its own.
+- A receiver is found by parsing its statement with a placeholder in place of what is being typed, and its class by
+  compiling it: literals, collections, functions, class names, and `Foo.new(...)` or `Foo(...)`. Otherwise a send
   could reach every implementor, and the queries say so.
 - The lint is the tools' own: a send of a selector no class implements is an information diagnostic, as an Event,
   or anything else handling `doesNotUnderstand`, can still answer it.
@@ -41,9 +45,5 @@ differ) or hasn't compiled it at all, so stale hooks never run. A build without 
 
 
 # TODO:
-
-Why aren't we using the lexer and parser inside of sc_query?
-This means `~ foo` isn't recognised as a environment var.
-
 
 Suggestions ordering should be influenced by how far away they are in the heirachy.
