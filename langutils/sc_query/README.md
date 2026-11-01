@@ -37,3 +37,13 @@ hierarchy, without running anything. They only run by asking a running sclang:
 
 sclang only answers 127.0.0.1. A hook is refused when sclang compiled a different version of its file (the file sizes
 differ) or hasn't compiled it at all, so stale hooks never run. A build without `SC_LSP_CONNECTED` runs no hooks.
+
+
+
+# TODO:
+
+Why aren't we using the lexer and parser inside of sc_query?
+This means `~ foo` isn't recognised as a environment var.
+
+
+Suggestions ordering should be influenced by how far away they are in the heirachy.
