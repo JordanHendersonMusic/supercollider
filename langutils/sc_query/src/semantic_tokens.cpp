@@ -218,7 +218,7 @@ std::vector<SemanticToken> semantic_tokens(const Document& document) {
         // Code that doesn't parse loses most of its names, the last code that parsed fills them in.
         const auto& parsed = document.parsed();
         if (parsed.graph && parsed.graph != document.graph()) {
-            const auto older = name_spans(analyse_names(parsed), parsed.text.get(), *current);
+            const auto older = name_spans(parsed_names(document), parsed.text.get(), *current);
             names.insert(names.end(), older.begin(), older.end());
         }
     }

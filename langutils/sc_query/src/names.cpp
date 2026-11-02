@@ -413,9 +413,19 @@ void collect_class_file(const Library& library, const src::TextInfo* text, Analy
     });
 }
 
+// Sorts pointers, then moves each occurrence once, as an occurrence is large to move.
 void sort_occurrences(Analysis& a) {
-    std::stable_sort(a.occurrences.begin(), a.occurrences.end(),
-                     [](const Occurrence& l, const Occurrence& r) { return l.range.begin < r.range.begin; });
+    std::vector<Occurrence*> order;
+    order.reserve(a.occurrences.size());
+    for (auto& o : a.occurrences)
+        order.push_back(&o);
+    std::stable_sort(order.begin(), order.end(),
+                     [](const Occurrence* l, const Occurrence* r) { return l->range.begin < r->range.begin; });
+    std::vector<Occurrence> sorted;
+    sorted.reserve(a.occurrences.size());
+    for (auto* o : order)
+        sorted.push_back(std::move(*o));
+    a.occurrences = std::move(sorted);
 }
 
 std::string code_block(const std::string& code) { return "```supercollider\n" + code + "\n```"; }
@@ -507,21 +517,8 @@ const MemberInfo* find_member(const Library& library, const std::string& owner, 
 // Analysis
 ////////////////////////////////////////////////////////////////////////////////
 
-Analysis analyse_names(const Document& document) {
-    if (document.kind() == DocumentKind::Interpreted)
-        return analyse_names(CompiledText { document.graph(), document.graph_text(), document.graph_library() });
-    Analysis out;
-    const auto& library = document.library();
-    if (!library)
-        return out;
-    out.library = library;
-    if (const auto text = library->text_of(document.path()))
-        collect_class_file(*library, text.get(), out);
-    sort_occurrences(out);
-    return out;
-}
-
-Analysis analyse_names(const CompiledText& compiled) {
+namespace {
+Analysis interpreted_names(const CompiledText& compiled) {
     Analysis out;
     const auto& g = compiled.graph;
     const auto& library = compiled.library;
@@ -534,6 +531,48 @@ Analysis analyse_names(const CompiledText& compiled) {
             ir::NodeIndex { *std::get<ir::SCInterpreted_I>(*root) });
     sort_occurrences(out);
     return out;
+}
+
+Analysis class_file_names(const std::shared_ptr<Library>& library, const src::TextInfo* text) {
+    Analysis out;
+    if (!library)
+        return out;
+    out.library = library;
+    if (text)
+        collect_class_file(*library, text, out);
+    sort_occurrences(out);
+    return out;
+}
+
+bool same(const CompiledText& l, const CompiledText& r) {
+    return l.graph == r.graph && l.text == r.text && l.library == r.library;
+}
+}
+
+const Analysis& analyse_names(const Document& document) {
+    auto& cache = document.m_names;
+    CompiledText from;
+    if (document.kind() == DocumentKind::Interpreted)
+        from = { document.graph(), document.graph_text(), document.graph_library() };
+    else
+        from = { nullptr, document.library() ? document.library()->text_of(document.path()) : nullptr,
+                 document.library() };
+    if (!cache.names || !same(cache.from, from)) {
+        cache.names = std::make_shared<const Analysis>(document.kind() == DocumentKind::Interpreted
+                                                           ? interpreted_names(from)
+                                                           : class_file_names(from.library, from.text.get()));
+        cache.from = std::move(from);
+    }
+    return *cache.names;
+}
+
+const Analysis& parsed_names(const Document& document) {
+    auto& cache = document.m_parsed_names;
+    if (!cache.names || !same(cache.from, document.parsed())) {
+        cache.names = std::make_shared<const Analysis>(interpreted_names(document.parsed()));
+        cache.from = document.parsed();
+    }
+    return *cache.names;
 }
 
 const Occurrence* occurrence_at(const Analysis& analysis, Position p) {
@@ -549,7 +588,7 @@ const Occurrence* occurrence_at(const Analysis& analysis, Position p) {
 ////////////////////////////////////////////////////////////////////////////////
 
 std::optional<Hover> hover(const Document& document, Position p) {
-    const auto analysis = analyse_names(document);
+    const auto& analysis = analyse_names(document);
     const auto* o = occurrence_at(analysis, p);
     if (!o || !analysis.library)
         return std::nullopt;
@@ -608,7 +647,7 @@ std::optional<Hover> hover(const Document& document, Position p) {
 }
 
 std::vector<Location> definition(const Document& document, Position p) {
-    const auto analysis = analyse_names(document);
+    const auto& analysis = analyse_names(document);
     const auto* o = occurrence_at(analysis, p);
     if (!o || !analysis.library)
         return {};
@@ -685,7 +724,7 @@ void library_occurrences(const Library& library, const std::function<void(const 
 
 std::vector<Location> references(const Document& document, Position p, bool include_declaration,
                                  const std::vector<const Document*>& others) {
-    const auto analysis = analyse_names(document);
+    const auto& analysis = analyse_names(document);
     const auto* target = occurrence_at(analysis, p);
     std::vector<Location> out;
     if (!target || !analysis.library)
@@ -715,7 +754,7 @@ std::vector<Location> references(const Document& document, Position p, bool incl
     for (const auto* other : others) {
         if (other == &document || other->kind() != DocumentKind::Interpreted)
             continue;
-        const auto a = analyse_names(*other);
+        const auto& a = analyse_names(*other);
         for (const auto& o : a.occurrences)
             if (same_target(*target, o) && keep(o))
                 out.push_back({ other->path(), o.range });
@@ -788,7 +827,7 @@ std::vector<SymbolInfo> document_symbols(const Document& document) {
         });
         return out;
     }
-    const auto analysis = analyse_names(document);
+    const auto& analysis = analyse_names(document);
     std::set<std::string> seen;
     for (const auto& o : analysis.occurrences)
         if (o.kind == Occurrence::Kind::Environment && seen.insert(o.name).second)
@@ -842,7 +881,7 @@ std::vector<DiagnosticInfo> lint(const Document& document) {
         if (!text || !document.text_info() || text->source.as_string() != document.text_info()->source.as_string())
             return out;
     }
-    const auto analysis = analyse_names(document);
+    const auto& analysis = analyse_names(document);
     if (!analysis.library)
         return out;
     for (const auto& o : analysis.occurrences) {

@@ -28,6 +28,6 @@ namespace sc::query {
 /// expression_class(). Nothing when it has errors.
 [[nodiscard]] std::pair<std::optional<ClassId>, bool> compiled_class(Library& library, std::string_view code);
 
-/// @brief The names in a compile of interpreted code, see analyse_names(const Document&).
-[[nodiscard]] Analysis analyse_names(const CompiledText& compiled);
+/// @brief The names in the document's last compile that parsed, see Document::parsed() and analyse_names().
+[[nodiscard]] const Analysis& parsed_names(const Document& document);
 }

@@ -44,6 +44,7 @@ LineIndex::LineIndex(std::string_view text): m_text(text) {
     std::size_t start = 0;
     for (std::size_t i = 0; i < text.size(); ++i) {
         const char c = text[i];
+        m_has_surrogate_pairs = m_has_surrogate_pairs || static_cast<unsigned char>(c) >= 0xF0;
         if (c == '\n' || c == '\r' || c == '\v' || c == '\f') {
             m_starts.push_back(start);
             m_ends.push_back(i);
@@ -63,6 +64,8 @@ std::string_view LineIndex::line_text(std::uint32_t line) const {
 }
 
 std::uint32_t LineIndex::utf16_to_codepoint(std::uint32_t line, std::uint32_t utf16_column) const {
+    if (!m_has_surrogate_pairs)
+        return utf16_column;
     const auto text = line_text(line);
     std::uint32_t units = 0;
     std::uint32_t codepoints = 0;
@@ -78,6 +81,8 @@ std::uint32_t LineIndex::utf16_to_codepoint(std::uint32_t line, std::uint32_t ut
 }
 
 std::uint32_t LineIndex::codepoint_to_utf16(std::uint32_t line, std::uint32_t codepoint_column) const {
+    if (!m_has_surrogate_pairs)
+        return codepoint_column;
     const auto text = line_text(line);
     std::uint32_t units = 0;
     std::uint32_t codepoints = 0;

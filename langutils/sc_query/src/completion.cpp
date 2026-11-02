@@ -527,7 +527,7 @@ private:
 
 Completions complete(const Document& document, Position p, HookHost* hooks) {
     Completions out;
-    const auto analysis = analyse_names(document);
+    const auto& analysis = analyse_names(document);
     const auto library = analysis.library ? analysis.library : document.library();
     if (!library)
         return out;

@@ -20,6 +20,8 @@ struct IRGraph;
 
 namespace sc::query {
 
+struct Analysis;
+
 ////////////////////////////////////////////////////////////////////////////////
 // API
 ////////////////////////////////////////////////////////////////////////////////
@@ -44,7 +46,6 @@ struct DiagnosticInfo {
     Range range; ///< In the document.
     /// The other locations, each with its message. A location without a path is in the document.
     std::vector<std::pair<Location, std::string>> related;
-    std::string full; ///< As sclang prints it, with the source highlighted.
 };
 
 /// @brief A compile of interpreted code: its graph, and the text and library it was compiled from.
@@ -100,6 +101,15 @@ public:
     [[nodiscard]] const CompiledText& parsed() const { return m_parsed; }
 
 private:
+    friend const Analysis& analyse_names(const Document& document);
+    friend const Analysis& parsed_names(const Document& document);
+
+    // The names of a compile, found when first asked for, see analyse_names().
+    struct CachedNames {
+        CompiledText from {};
+        std::shared_ptr<const Analysis> names {};
+    };
+
     std::filesystem::path m_path;
     std::string m_text;
     LineIndex m_lines;
@@ -114,6 +124,8 @@ private:
     std::shared_ptr<Library> m_graph_library {};
     CompiledText m_parsed {};
     std::vector<DiagnosticInfo> m_diagnostics {};
+    mutable CachedNames m_names {};
+    mutable CachedNames m_parsed_names {};
 };
 
 /// @brief Turns a diagnostic into a DiagnosticInfo, its range the first location in @p text, or the start.

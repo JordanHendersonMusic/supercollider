@@ -1,6 +1,5 @@
 #include "sc_query/document.hpp"
 
-#include "sc_compiler/inspect.hpp"
 #include "sc_compiler/sc_compiler.hpp"
 #include "sc_diagnostic/sc_diagnostic.hpp"
 #include "sc_parser/ast.hpp"
@@ -33,7 +32,6 @@ DiagnosticInfo to_info(const diag::Diagnostic& d, const src::TextInfo* text) {
     DiagnosticInfo info;
     info.severity = d.severity() == diag::Severity::Error ? Severity::Error : Severity::Warning;
     info.name = d.name();
-    info.full = d.to_string();
     bool placed = false;
     for (const auto& l : d.locations()) {
         const bool here = l.text_info.get() == text

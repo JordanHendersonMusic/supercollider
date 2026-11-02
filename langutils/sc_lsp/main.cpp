@@ -736,12 +736,14 @@ private:
 
     // The tokens of the document's latest text, each relative to the one before, as LSP has them.
     Json on_semantic_tokens(const Json& params) {
-        Json data = Json::array();
+        Json::Array data;
         Json out = Json::object();
         if (auto* doc = fresh(params)) {
             const auto& lines = doc->lines();
+            const auto tokens = semantic_tokens(*doc);
+            data.reserve(tokens.size() * 5);
             Position previous {};
-            for (const auto& t : semantic_tokens(*doc)) {
+            for (const auto& t : tokens) {
                 const auto column = m_utf32 ? t.begin.column : lines.codepoint_to_utf16(t.begin.line, t.begin.column);
                 const auto end = m_utf32 ? t.begin.column + t.length
                                          : lines.codepoint_to_utf16(t.begin.line, t.begin.column + t.length);
@@ -754,7 +756,7 @@ private:
                 previous = { t.begin.line, column };
             }
         }
-        out["data"] = std::move(data);
+        out["data"] = Json { std::move(data) };
         return out;
     }
 

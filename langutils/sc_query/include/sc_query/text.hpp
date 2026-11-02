@@ -71,6 +71,9 @@ private:
     std::string_view m_text {};
     std::vector<std::size_t> m_starts {};
     std::vector<std::size_t> m_ends {};
+    bool m_has_surrogate_pairs {
+        false
+    }; ///< Whether a codepoint needs two UTF-16 units, otherwise columns are the same.
 };
 
 /// @brief The path of a `file:` URI, or empty if it isn't one.

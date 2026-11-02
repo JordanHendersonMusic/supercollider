@@ -61,8 +61,9 @@ struct Analysis {
     std::shared_ptr<Library> library;
 };
 
-/// @brief The names in the document, from its interpreted graph, or the library's graphs of its class file.
-[[nodiscard]] Analysis analyse_names(const Document& document);
+/// @brief The names in the document, from its interpreted graph, or the library's graphs of its class file. Kept by the
+/// document until its compile changes, so valid until the next analyse() of it.
+[[nodiscard]] const Analysis& analyse_names(const Document& document);
 /// @brief The smallest occurrence touching the position.
 [[nodiscard]] const Occurrence* occurrence_at(const Analysis& analysis, Position p);
 
