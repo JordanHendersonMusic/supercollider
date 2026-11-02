@@ -508,25 +508,30 @@ const MemberInfo* find_member(const Library& library, const std::string& owner, 
 ////////////////////////////////////////////////////////////////////////////////
 
 Analysis analyse_names(const Document& document) {
+    if (document.kind() == DocumentKind::Interpreted)
+        return analyse_names(CompiledText { document.graph(), document.graph_text(), document.graph_library() });
     Analysis out;
-    if (document.kind() == DocumentKind::ClassFile) {
-        const auto& library = document.library();
-        if (!library)
-            return out;
-        out.library = library;
-        if (const auto text = library->text_of(document.path()))
-            collect_class_file(*library, text.get(), out);
-    } else {
-        const auto& g = document.graph();
-        const auto& library = document.graph_library();
-        if (!g || !library)
-            return out;
-        out.library = library;
-        const auto root = g->root();
-        if (root && std::holds_alternative<ir::SCInterpreted_I>(*root))
-            Collector { *library, *g, document.graph_text().get(), out }.run(
-                ir::NodeIndex { *std::get<ir::SCInterpreted_I>(*root) });
-    }
+    const auto& library = document.library();
+    if (!library)
+        return out;
+    out.library = library;
+    if (const auto text = library->text_of(document.path()))
+        collect_class_file(*library, text.get(), out);
+    sort_occurrences(out);
+    return out;
+}
+
+Analysis analyse_names(const CompiledText& compiled) {
+    Analysis out;
+    const auto& g = compiled.graph;
+    const auto& library = compiled.library;
+    if (!g || !library)
+        return out;
+    out.library = library;
+    const auto root = g->root();
+    if (root && std::holds_alternative<ir::SCInterpreted_I>(*root))
+        Collector { *library, *g, compiled.text.get(), out }.run(
+            ir::NodeIndex { *std::get<ir::SCInterpreted_I>(*root) });
     sort_occurrences(out);
     return out;
 }

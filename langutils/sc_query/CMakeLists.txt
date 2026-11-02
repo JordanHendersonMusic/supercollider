@@ -10,6 +10,7 @@ add_library(sc_query STATIC
     src/library.cpp
     src/names.cpp
     src/regions.cpp
+    src/semantic_tokens.cpp
     src/text.cpp
 )
 

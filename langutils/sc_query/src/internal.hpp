@@ -1,6 +1,8 @@
 #pragma once
 
+#include "sc_query/document.hpp"
 #include "sc_query/library.hpp"
+#include "sc_query/queries.hpp"
 #include "sc_query/text.hpp"
 
 #include "sc_sema/details/const_expr.hpp"
@@ -25,4 +27,7 @@ namespace sc::query {
 /// @brief Compiles @p code as interpreted code, and gives the class of what it evaluates to when known, see
 /// expression_class(). Nothing when it has errors.
 [[nodiscard]] std::pair<std::optional<ClassId>, bool> compiled_class(Library& library, std::string_view code);
+
+/// @brief The names in a compile of interpreted code, see analyse_names(const Document&).
+[[nodiscard]] Analysis analyse_names(const CompiledText& compiled);
 }

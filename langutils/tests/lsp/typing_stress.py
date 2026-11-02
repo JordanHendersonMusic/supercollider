@@ -16,6 +16,18 @@ def position(text):
     return {'line': len(lines) - 1, 'character': len(lines[-1].encode('utf-16-le')) // 2}
 
 
+def check_tokens(result, text):
+    """Semantic tokens are in order, and inside the text's lines, in UTF-16 units."""
+    lines = [len(line.encode('utf-16-le')) // 2 for line in text.split('\n')]
+    data, line, character = result['data'], 0, 0
+    for i in range(0, len(data), 5):
+        dl, dc, length = data[i:i + 3]
+        character = dc if dl else character + dc
+        line += dl
+        if line >= len(lines) or length <= 0 or character + length > lines[line]:
+            raise Exception(f'semantic token out of the text: line {line}, character {character}, length {length}')
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser()
@@ -46,6 +58,7 @@ def main():
                 c.request('textDocument/completion', at)
                 c.request('textDocument/hover', at)
                 c.request('textDocument/signatureHelp', at)
+                check_tokens(c.request('textDocument/semanticTokens/full', {'textDocument': {'uri': uri}}), text)
             except Exception as e:
                 print('FAILED at', path, end, repr(text[-60:]), e)
                 print(''.join(c.stderr)[-3000:])

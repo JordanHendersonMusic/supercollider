@@ -30,8 +30,11 @@
 #include <QProcess>
 #include <QSet>
 #include <QTimer>
+#include <QVector>
 
 #include <functional>
+
+#include "semantic_tokens.hpp"
 
 class QTextDocument;
 
@@ -142,6 +145,10 @@ private:
     void post(const QString&);
     QList<Region> toRegions(Document*, const QJsonValue& ranges) const;
     void setRegions(Document*, const QJsonObject& published);
+    void readSemanticTokensLegend(const QJsonObject& provider);
+    // Asks for the document's tokens, and gives them to it if the text hasn't changed since.
+    void requestSemanticTokens(Document*);
+    SemanticTokens toSemanticTokens(Document*, const QJsonArray& data) const;
 
     DocumentManager* mDocManager;
     Settings::Manager* mSettings;
@@ -153,6 +160,9 @@ private:
     bool mStopping = false;
     bool mEnabled = true;
     bool mHasRegions = false;
+    // The legend of the server's semantic tokens: the kind of each type, and the SemanticToken::Modifier of each bit.
+    QVector<SemanticToken::Kind> mTokenKinds;
+    QVector<quint8> mTokenModifiers;
     QHash<Document*, Tracked> mDocuments;
     QHash<QString, QList<Diagnostic>> mDiagnostics; // by uri
     QTimer mChangeTimer;

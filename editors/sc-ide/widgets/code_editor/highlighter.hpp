@@ -21,6 +21,7 @@
 #pragma once
 
 #include "../../core/sc_lexer.hpp"
+#include "../../core/semantic_tokens.hpp"
 
 #include <QSyntaxHighlighter>
 #include <QVector>
@@ -82,13 +83,27 @@ private:
     static SyntaxHighlighterGlobals* mInstance;
 };
 
+// Highlights with the IDE's lexer, or with the language server's tokens when it has them.
+//
+// The server's tokens are of the text it was sent, which can be a little older than what is shown. Until new ones
+// arrive, they are moved along with each edit, and the lines edited are highlighted by the lexer, with the tokens
+// that survived laid over it. Other lines are highlighted by the tokens alone.
 class SyntaxHighlighter : public QSyntaxHighlighter {
     Q_OBJECT
 
 public:
-    SyntaxHighlighter(QTextDocument* parent = 0);
+    SyntaxHighlighter(QTextDocument* parent);
+
+    // Tokens of the document's current text.
+    void setSemanticTokens(const SemanticTokens&);
+    void clearSemanticTokens();
 
 private:
+    void onContentsChange(int position, int removed, int added);
+    void setLexerFormat(int start, int count, SyntaxFormat);
+    void applySemanticTokens();
+    const QTextCharFormat* semanticFormat(const SemanticToken&) const;
+
     void highlightBlock(const QString& text) override;
     void highlightBlockInCode(ScLexer& lexer);
     void highlightBlockInString(ScLexer& lexer);
@@ -96,6 +111,9 @@ private:
     void highlightBlockInComment(ScLexer& lexer);
 
     const SyntaxHighlighterGlobals* mGlobals;
+    SemanticTokens mSemanticTokens; // by start
+    bool mHasSemanticTokens = false;
+    bool mSemanticBlock = false; // whether the block being highlighted takes its formats from the tokens alone
 };
 
 }

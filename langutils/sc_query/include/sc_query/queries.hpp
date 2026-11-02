@@ -140,6 +140,46 @@ struct SymbolInfo {
 /// `( "hi".postln )`, which is what an editor evaluates. From the last analyse(), empty for a class file.
 [[nodiscard]] std::vector<Range> regions(const Document& document);
 
+/// @brief What a piece of code is, for highlighting.
+enum struct TokenKind : std::uint8_t {
+    Comment,
+    String,
+    Character,
+    Symbol,
+    Number,
+    Keyword, ///< `var`, `arg`, `classvar`, `const`, `this`, `super`.
+    Builtin, ///< `true`, `false`, `nil`, `inf`, and `thisProcess` and the like.
+    Primitive,
+    Class,
+    Method, ///< A selector, sent or declared.
+    Variable, ///< A local variable.
+    Parameter, ///< An argument.
+    Property, ///< An instance or class variable, or a constant.
+    Environment, ///< `~name`.
+    KeywordArgument, ///< `freq` in `f.(freq: 1)`.
+};
+inline constexpr std::size_t num_token_kinds = 15;
+
+/// @brief Facts about a token, as bits.
+enum TokenModifier : std::uint8_t {
+    Declaration = 1 << 0,
+    Static = 1 << 1, ///< A class variable, constant or class method.
+    Readonly = 1 << 2, ///< A constant.
+    Unknown = 1 << 3, ///< A class name that isn't in the library.
+};
+inline constexpr std::size_t num_token_modifiers = 4;
+
+/// @brief A piece of code to highlight. It is on one line.
+struct SemanticToken {
+    Position begin {};
+    std::uint32_t length { 0 }; ///< In codepoints.
+    TokenKind kind { TokenKind::Comment };
+    std::uint8_t modifiers { 0 }; ///< TokenModifier bits.
+};
+/// @brief The document's tokens, in order, from lexing its current text and the names of its last compile. Names
+/// compiled from an older text are kept where the text around them is unchanged.
+[[nodiscard]] std::vector<SemanticToken> semantic_tokens(const Document& document);
+
 /// @brief The tools' own hints: sends of a selector that no class implements, which fail unless the receiver handles
 /// them in doesNotUnderstand, as an Event does. Only for a compile of the document's current text.
 [[nodiscard]] std::vector<DiagnosticInfo> lint(const Document& document);

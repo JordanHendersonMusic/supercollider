@@ -19,6 +19,7 @@
 #include <deque>
 #include <future>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <optional>
@@ -154,6 +155,8 @@ private:
                 return m_transport.respond(id, on_status());
             if (method == "sclang/regions")
                 return m_transport.respond(id, on_regions(params));
+            if (method == "textDocument/semanticTokens/full")
+                return m_transport.respond(id, on_semantic_tokens(params));
             m_transport.respond_error(id, rpc::error_code::method_not_found, "Unknown method " + method);
         } catch (const std::exception& e) {
             log("error handling " + method + ": " + e.what());
@@ -207,6 +210,7 @@ private:
         caps["referencesProvider"] = true;
         caps["documentSymbolProvider"] = true;
         caps["workspaceSymbolProvider"] = true;
+        caps["semanticTokensProvider"] = semantic_tokens_provider();
         Json experimental = Json::object();
         experimental["regions"] = true;
         caps["experimental"] = experimental;
@@ -705,6 +709,53 @@ private:
         if (!fresh(params))
             return {};
         return regions_json(*find(params));
+    }
+
+    // In the order of TokenKind and the bits of TokenModifier.
+    static Json semantic_tokens_provider() {
+        static constexpr const char* types[] = {
+            "comment",        "string", "character", "symbol",   "number",    "keyword",  "builtin",
+            "primitive",      "class",  "method",    "variable", "parameter", "property", "environmentVariable",
+            "keywordArgument"
+        };
+        static constexpr const char* modifiers[] = { "declaration", "static", "readonly", "unknown" };
+        static_assert(std::size(types) == num_token_kinds);
+        static_assert(std::size(modifiers) == num_token_modifiers);
+        Json legend = Json::object();
+        legend["tokenTypes"] = Json::array();
+        for (const auto* t : types)
+            legend["tokenTypes"].push_back(t);
+        legend["tokenModifiers"] = Json::array();
+        for (const auto* m : modifiers)
+            legend["tokenModifiers"].push_back(m);
+        Json out = Json::object();
+        out["legend"] = std::move(legend);
+        out["full"] = true;
+        return out;
+    }
+
+    // The tokens of the document's latest text, each relative to the one before, as LSP has them.
+    Json on_semantic_tokens(const Json& params) {
+        Json data = Json::array();
+        Json out = Json::object();
+        if (auto* doc = fresh(params)) {
+            const auto& lines = doc->lines();
+            Position previous {};
+            for (const auto& t : semantic_tokens(*doc)) {
+                const auto column = m_utf32 ? t.begin.column : lines.codepoint_to_utf16(t.begin.line, t.begin.column);
+                const auto end = m_utf32 ? t.begin.column + t.length
+                                         : lines.codepoint_to_utf16(t.begin.line, t.begin.column + t.length);
+                const auto previous_column = t.begin.line == previous.line ? previous.column : 0;
+                data.push_back(t.begin.line - previous.line);
+                data.push_back(column - previous_column);
+                data.push_back(end - column);
+                data.push_back(static_cast<unsigned>(t.kind));
+                data.push_back(static_cast<unsigned>(t.modifiers));
+                previous = { t.begin.line, column };
+            }
+        }
+        out["data"] = std::move(data);
+        return out;
     }
 
     Json on_status() {

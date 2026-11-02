@@ -186,6 +186,7 @@ void LspClient::start() {
     request("initialize", params, [this](const QJsonValue& result) {
         const QJsonObject capabilities = result.toObject()["capabilities"].toObject();
         mHasRegions = capabilities["experimental"].toObject()["regions"].toBool();
+        readSemanticTokensLegend(capabilities["semanticTokensProvider"].toObject());
         notify("initialized", QJsonObject());
         mReady = true;
         mDocuments.clear();
@@ -217,6 +218,7 @@ void LspClient::stop() {
     for (Document* doc : mDocManager->documents()) {
         emit diagnosticsChanged(doc);
         emit regionsChanged(doc);
+        doc->clearSemanticTokens();
     }
     if (wasReady)
         emit readyChanged(false);
@@ -319,8 +321,13 @@ void LspClient::handle(const QJsonObject& message) {
             }
         }
         mDiagnostics[uri] = list;
-        if (doc)
+        if (doc) {
             emit diagnosticsChanged(doc);
+            // Published after each analysis, e.g., of a change, or after the library is compiled again.
+            const auto it = mDocuments.find(doc);
+            if (it != mDocuments.end() && !it->dirty && params["version"].toInt(-1) == it->version)
+                requestSemanticTokens(doc);
+        }
     } else if (method == "sclang/publishRegions") {
         const QJsonObject params = message["params"].toObject();
         if (Document* doc = documentFor(params["uri"].toString()))
@@ -482,6 +489,96 @@ void LspClient::currentRegions(Document* doc, RegionsCallback callback) {
                 else
                     callback({}, false);
             });
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Semantic tokens
+////////////////////////////////////////////////////////////////////////////////
+
+void LspClient::readSemanticTokensLegend(const QJsonObject& provider) {
+    mTokenKinds.clear();
+    mTokenModifiers.clear();
+    if (!provider["full"].toBool() && !provider["full"].isObject())
+        return;
+    static const QHash<QString, SemanticToken::Kind> kinds {
+        { "comment", SemanticToken::Comment },
+        { "string", SemanticToken::String },
+        { "character", SemanticToken::Character },
+        { "symbol", SemanticToken::Symbol },
+        { "number", SemanticToken::Number },
+        { "keyword", SemanticToken::Keyword },
+        { "builtin", SemanticToken::Builtin },
+        { "primitive", SemanticToken::Primitive },
+        { "class", SemanticToken::Class },
+        { "method", SemanticToken::Method },
+        { "variable", SemanticToken::Variable },
+        { "parameter", SemanticToken::Parameter },
+        { "property", SemanticToken::Property },
+        { "environmentVariable", SemanticToken::Environment },
+        { "keywordArgument", SemanticToken::KeywordArgument },
+    };
+    static const QHash<QString, quint8> modifiers {
+        { "declaration", SemanticToken::Declaration },
+        { "static", SemanticToken::Static },
+        { "readonly", SemanticToken::Readonly },
+        { "unknown", SemanticToken::Unknown },
+    };
+    const QJsonObject legend = provider["legend"].toObject();
+    for (const auto& type : legend["tokenTypes"].toArray())
+        mTokenKinds.append(kinds.value(type.toString(), SemanticToken::Other));
+    for (const auto& modifier : legend["tokenModifiers"].toArray())
+        mTokenModifiers.append(modifiers.value(modifier.toString(), 0));
+}
+
+void LspClient::requestSemanticTokens(Document* doc) {
+    if (mTokenKinds.isEmpty())
+        return;
+    const int version = mDocuments[doc].version;
+    QPointer<Document> guard(doc);
+    request("textDocument/semanticTokens/full",
+            QJsonObject { { "textDocument", QJsonObject { { "uri", mDocuments[doc].uri } } } },
+            [this, guard, version](const QJsonValue& result) {
+                Document* doc = guard.data();
+                if (!doc || !result.isObject())
+                    return;
+                // The tokens are of the text the server had, which must still be the document's.
+                const auto it = mDocuments.find(doc);
+                if (it == mDocuments.end() || it->dirty || it->version != version)
+                    return;
+                doc->setSemanticTokens(toSemanticTokens(doc, result.toObject()["data"].toArray()));
+            });
+}
+
+SemanticTokens LspClient::toSemanticTokens(Document* doc, const QJsonArray& data) const {
+    SemanticTokens out;
+    out.reserve(data.size() / 5);
+    QTextBlock block = doc->textDocument()->begin();
+    int character = 0;
+    for (int i = 0; i + 4 < data.size(); i += 5) {
+        const int deltaLine = data[i].toInt();
+        const int deltaCharacter = data[i + 1].toInt();
+        const int length = data[i + 2].toInt();
+        const int type = data[i + 3].toInt();
+        const int bits = data[i + 4].toInt();
+        for (int n = 0; n < deltaLine && block.isValid(); ++n)
+            block = block.next();
+        if (!block.isValid())
+            break;
+        character = deltaLine ? deltaCharacter : character + deltaCharacter;
+        // A block is a line, and its positions are UTF-16, as LSP's are.
+        if (character >= block.length())
+            continue;
+        SemanticToken token;
+        token.start = block.position() + character;
+        token.length = qMin(length, block.length() - 1 - character);
+        token.kind = type >= 0 && type < mTokenKinds.size() ? mTokenKinds[type] : SemanticToken::Other;
+        token.modifiers = 0;
+        for (int b = 0; b < mTokenModifiers.size(); ++b)
+            if (bits & (1 << b))
+                token.modifiers |= mTokenModifiers[b];
+        out.append(token);
+    }
+    return out;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

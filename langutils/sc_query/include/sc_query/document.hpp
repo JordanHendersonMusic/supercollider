@@ -47,6 +47,13 @@ struct DiagnosticInfo {
     std::string full; ///< As sclang prints it, with the source highlighted.
 };
 
+/// @brief A compile of interpreted code: its graph, and the text and library it was compiled from.
+struct CompiledText {
+    std::shared_ptr<const ir::IRGraph> graph {};
+    std::shared_ptr<const src::TextInfo> text {};
+    std::shared_ptr<Library> library {};
+};
+
 /// @brief A document's text, and the last compile of it.
 class Document {
 public:
@@ -88,6 +95,9 @@ public:
     [[nodiscard]] const std::shared_ptr<const src::TextInfo>& graph_text() const { return m_graph_text; }
     /// @brief The library the graph was compiled against, whose symbols it uses.
     [[nodiscard]] const std::shared_ptr<Library>& graph_library() const { return m_graph_library; }
+    /// @brief The last compile of interpreted code that parsed without errors. The graph of code that doesn't parse
+    /// misses much of it, so this one's names are better while code is being typed. Empty for a class file.
+    [[nodiscard]] const CompiledText& parsed() const { return m_parsed; }
 
 private:
     std::filesystem::path m_path;
@@ -102,6 +112,7 @@ private:
     std::shared_ptr<const ir::IRGraph> m_graph {};
     std::shared_ptr<const src::TextInfo> m_graph_text {};
     std::shared_ptr<Library> m_graph_library {};
+    CompiledText m_parsed {};
     std::vector<DiagnosticInfo> m_diagnostics {};
 };
 

@@ -247,6 +247,62 @@ class LspTest(unittest.TestCase):
         self.assertEqual(published(self.version)['regions'], r['regions'])
         self.assertEqual(self.c.request('sclang/regions', {'textDocument': {'uri': 'file:///not/open.scd'}}), None)
 
+    def semantic_tokens(self, text, uri=SCD_URI):
+        """The tokens of the document as (line, character, text, type, modifiers)."""
+        legend = self.init['capabilities']['semanticTokensProvider']['legend']
+        data = self.c.request('textDocument/semanticTokens/full', {'textDocument': {'uri': uri}})['data']
+        lines = text.split('\n')
+        out, line, character = [], 0, 0
+        for i in range(0, len(data), 5):
+            dl, dc, length, kind, bits = data[i:i + 5]
+            character = dc if dl else character + dc
+            line += dl
+            mods = [m for b, m in enumerate(legend['tokenModifiers']) if bits & (1 << b)]
+            out.append((line, character, lines[line][character:character + length], legend['tokenTypes'][kind], mods))
+        return out
+
+    def test_semantic_tokens(self):
+        text = ('(\nvar freq = 440, f = { |amp| amp * freq * this.x }, g = { |gain = 1| gain };\n'
+                '~env = SinOsc.ar(freq: 1, phase: 0.5pi) + \\sym + $c + "s" + nil + NoSuchClass; // done\n)\n')
+        self.open(text)
+        tokens = self.semantic_tokens(text)
+        expected = [
+            (1, 0, 'var', 'keyword', []), (1, 4, 'freq', 'variable', ['declaration']), (1, 11, '440', 'number', []),
+            (1, 16, 'f', 'variable', ['declaration']), (1, 23, 'amp', 'parameter', ['declaration']),
+            (1, 28, 'amp', 'parameter', []), (1, 32, '*', 'method', []), (1, 34, 'freq', 'variable', []),
+            (1, 39, '*', 'method', []), (1, 41, 'this', 'keyword', []), (1, 46, 'x', 'method', []),
+            # An argument's declaration, without its default value.
+            (1, 51, 'g', 'variable', ['declaration']), (1, 58, 'gain', 'parameter', ['declaration']),
+            (1, 65, '1', 'number', []), (1, 68, 'gain', 'parameter', []),
+            (2, 0, '~env', 'environmentVariable', []), (2, 7, 'SinOsc', 'class', []), (2, 14, 'ar', 'method', []),
+            (2, 17, 'freq', 'keywordArgument', []), (2, 23, '1', 'number', []),
+            (2, 26, 'phase', 'keywordArgument', []), (2, 33, '0.5', 'number', []), (2, 36, 'pi', 'number', []),
+            (2, 40, '+', 'method', []),
+        ]
+        self.assertEqual(tokens[:len(expected)], expected)
+        rest = [(t[2], t[3], t[4]) for t in tokens[len(expected):] if t[3] != 'method']
+        self.assertEqual(rest, [('\\sym', 'symbol', []), ('$c', 'character', []), ('"s"', 'string', []),
+                                ('nil', 'builtin', []), ('NoSuchClass', 'class', ['unknown']),
+                                ('// done', 'comment', [])])
+        self.assertTrue(self.init['capabilities']['semanticTokensProvider']['full'])
+
+        # While the text doesn't compile, names away from the change are kept, but not the one being typed.
+        broken = text.replace('this.x', 'this.x(').replace('amp * freq', 'amp * freqq')
+        self.change(broken)
+        tokens = {(t[0], t[1]): (t[2], t[3]) for t in self.semantic_tokens(broken)}
+        self.assertEqual(tokens[(1, 4)], ('freq', 'variable'))
+        self.assertEqual(tokens[(1, 28)], ('amp', 'parameter'))
+        self.assertNotIn((1, 34), tokens)
+        self.assertEqual(tokens[(2, 7)], ('SinOsc', 'class'))
+
+        # Multiline comments are split into lines, and columns are UTF-16.
+        text = '/* 😀\nb */ "😀" 1'
+        self.change(text)
+        tokens = self.semantic_tokens(text)
+        self.assertEqual([(t[0], t[1], t[3]) for t in tokens], [(0, 0, 'comment'), (1, 0, 'comment'),
+                                                                 (1, 5, 'string'), (1, 10, 'number')])
+        self.assertEqual(tokens[0][2], '/* 😀')
+
     def test_workspace_symbol(self):
         names = [s['name'] for s in self.c.request('workspace/symbol', {'query': 'sinosc'})]
         self.assertIn('SinOsc', names)

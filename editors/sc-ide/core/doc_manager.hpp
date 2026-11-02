@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "semantic_tokens.hpp"
 #include "../widgets/code_editor/editor.hpp"
 #include <QDateTime>
 #include <QFileSystemWatcher>
@@ -76,6 +77,9 @@ public:
     void deleteTrailingSpaces();
 
     bool isPlainText() const { return mHighlighter == NULL; }
+    // Highlights from the language server's tokens of the current text, see SyntaxHighlighter.
+    void setSemanticTokens(const SemanticTokens&);
+    void clearSemanticTokens();
     bool isModified() const { return mDoc->isModified(); }
 
     QStandardItem* modelItem() { return mModelItem; }

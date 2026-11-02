@@ -120,6 +120,7 @@ void Document::analyse(const std::shared_ptr<Library>& library) {
         errors = errors || d.severity() == diag::Severity::Error;
         m_diagnostics.push_back(to_info(d, m_text_info.get()));
     }
+    const bool parse_errors = errors;
     m_ast = parsed.ast;
     if (!library || !parsed.ast)
         return;
@@ -134,6 +135,8 @@ void Document::analyse(const std::shared_ptr<Library>& library) {
     m_graph = ir.graph;
     m_graph_text = m_text_info;
     m_graph_library = library;
+    if (!parse_errors)
+        m_parsed = { m_graph, m_graph_text, m_graph_library };
     // As sclang, the backend only runs on code without errors.
     if (errors)
         return;

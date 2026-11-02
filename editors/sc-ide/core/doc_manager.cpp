@@ -84,6 +84,16 @@ void Document::setPlainText(bool set_plain_text) {
         mHighlighter = new SyntaxHighlighter(mDoc);
 }
 
+void Document::setSemanticTokens(const SemanticTokens& tokens) {
+    if (mHighlighter)
+        mHighlighter->setSemanticTokens(tokens);
+}
+
+void Document::clearSemanticTokens() {
+    if (mHighlighter)
+        mHighlighter->clearSemanticTokens();
+}
+
 void Document::applySettings(Settings::Manager* settings) {
     QFont font = settings->codeFont();
     int indentWidth = settings->value("IDE/editor/indentWidth").toInt();
